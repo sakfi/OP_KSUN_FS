@@ -73,23 +73,6 @@ Device configs are located in [`configs/`](./configs/). Devices are grouped by O
 
 ---
 
-## 🔨 How to Build
-
-1. **Fork or use this repository** on your own GitHub account
-2. Go to **Actions** → **Build and Release OnePlus Kernels**
-3. Click **Run workflow** and fill in the inputs:
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `op_model` | Target device group (e.g. `OOS14+15+16`, `android15-6.6`) | `OOS14+15+16` |
-| `ksu_options` | KernelSU type + hash (JSON) | `[{"type":"ksun","hash":"dev"}]` |
-| `optimize_level` | Compiler optimization (`O2` or `O3`) | `O2` |
-| `clean_build` | Bypass ccache for a fresh build | `false` |
-| `make_release` | Create a GitHub Release with artifacts | `false` |
-| `android15-6_6_susfs_...` | Override SUSFS branch per kernel version | *(auto)* |
-
----
-
 ## 📥 Installation
 
 ### Prerequisites
@@ -141,7 +124,3 @@ If you encounter any issues, feel free to [open an issue](../../issues) in this 
 
 ---
 
-## 📬 Contact
-
-- **GitHub:** [@sakfi](https://github.com/sakfi)
-- **Email:** ananno.sakib@gmail.com
