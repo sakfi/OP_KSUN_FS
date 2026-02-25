@@ -89,7 +89,7 @@ Flashing this kernel will void your warranty, and there is always a risk of bric
 # Special thanks to the following people for their contributions!
 This helps me alot! <3
 
-[fatalcoder524](https://github.com/fatalcoder524) - Created Original Repository!
+[fatalcoder524](https://github.com/fatalcoder524) - Created Original Repository!  
 [simonpunk](https://gitlab.com/simonpunk/susfs4ksu.git) - Created SUSFS!  
 [sidex15](https://github.com/sidex15) - Created module!  
 [backslashxx](https://github.com/backslashxx) - Helped with patches!  
