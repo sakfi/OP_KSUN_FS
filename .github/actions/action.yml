@@ -249,6 +249,8 @@ runs:
         set -euo pipefail
         CONFIG="$OP_MODEL"
         echo "CONFIG=$CONFIG" >> "$GITHUB_ENV"
+        # Set safe default for NEED_HOOKS so it is always defined
+        echo "NEED_HOOKS=false" >> "$GITHUB_ENV"
         REPO="/usr/local/bin/repo"
         if [ ! -x "$REPO" ]; then
           curl -s https://storage.googleapis.com/git-repo-downloads/repo -o "$REPO"
@@ -652,25 +654,21 @@ runs:
         retry_clone "https://github.com/TheWildJames/kernel_patches.git"
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
-          retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
-          
-          cd susfs4ksu
-          
-          # Try to checkout the specified branch/commit
-          if git rev-parse --verify "origin/$SUSFS_BRANCH" >/dev/null 2>&1; then
-            # It's a remote branch
-            echo "✅ Checking out remote branch: $SUSFS_BRANCH"
-            git checkout "$SUSFS_BRANCH"
-          elif git rev-parse --verify "$SUSFS_BRANCH" >/dev/null 2>&1; then
-            # It's a local ref or commit hash
-            echo "✅ Checking out ref/commit: $SUSFS_BRANCH"
+          # Clone susfs4ksu targeting the correct branch directly.
+          # If SUSFS_BRANCH looks like a commit hash, fall back to master+checkout.
+          # This is more reliable than clone-master + git fetch --all on GitLab.
+          if [[ "$SUSFS_BRANCH" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "ℹ️  SUSFS ref appears to be a commit hash - cloning master full history"
+            retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
+            cd susfs4ksu
+            echo "🔄 Fetching all remote branches for commit checkout..."
+            git fetch --all --prune
+            echo "✅ Checking out commit: $SUSFS_BRANCH"
             git checkout "$SUSFS_BRANCH"
           else
-            echo "::error::SUSFS branch or commit '$SUSFS_BRANCH' not found in repository"
-            echo ""
-            echo "Available remote branches:"
-            git branch -r | head -n 20
-            exit 1
+            echo "ℹ️  Cloning SUSFS branch directly: $SUSFS_BRANCH"
+            retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "$SUSFS_BRANCH" 1
+            cd susfs4ksu
           fi
           
           SUSFS_COMMIT_SHA=$(git rev-parse HEAD)
@@ -898,7 +896,7 @@ runs:
         
         patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
         
-        # Revert Fake kernel patch
+        # Revert Fake kernel patch (android15/6.6 only needs sed revert)
         if [ "$fake_patched" = 1 ]; then
           if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
             if grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
@@ -906,25 +904,24 @@ runs:
               sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' -e '/pagemap_entry_t \*res = NULL;/d' ./fs/proc/task_mmu.c
             fi
           fi
-          if [ "${{ env.ANDROID_VER }}" = "android12" ] && [ "${{ env.KERNEL_VER }}" = "5.10" ]; then
-            if grep -qxF $'\t\tgoto show_pad;' ./fs/proc/task_mmu.c; then
-              echo "vma_pages Line found. Revert Fake Patching!"
-              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-            fi
-          fi
-          if [ "${{ env.ANDROID_VER }}" = "android13" ] && [ "${{ env.KERNEL_VER }}" = "5.15" ]; then
-            if grep -qxF $'\t\tgoto show_pad;' ./fs/proc/task_mmu.c; then
-              echo "vma_pages Line found. Revert Fake Patching!"
-              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-            fi
-          fi
-          if [ "${{ env.ANDROID_VER }}" = "android14" ] && [ "${{ env.KERNEL_VER }}" = "6.1" ]; then
-            if grep -qxF $'\t\tgoto show_pad;' ./fs/proc/task_mmu.c; then
-              echo "vma_pages Line found. Revert Fake Patching!"
-              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
-            fi
-          fi
         fi
+        
+        # Unconditional show_pad safety fix for kernels where the SUSFS patch may
+        # introduce 'goto show_pad;' without the matching 'show_pad:' label.
+        # This happens on some OEM kernels (e.g. MTK dimensity variants) where
+        # context differs enough for some hunks to land incorrectly via --fuzz=3.
+        for _kv in "android12 5.10" "android13 5.15" "android14 6.1"; do
+          _av=$(echo "$_kv" | cut -d' ' -f1)
+          _kver=$(echo "$_kv" | cut -d' ' -f2)
+          if [ "${{ env.ANDROID_VER }}" = "$_av" ] && [ "${{ env.KERNEL_VER }}" = "$_kver" ]; then
+            if grep -q 'goto show_pad;' ./fs/proc/task_mmu.c 2>/dev/null; then
+              if ! grep -q '^show_pad:' ./fs/proc/task_mmu.c 2>/dev/null; then
+                echo "⚠️  show_pad label missing in task_mmu.c for $_av/$_kver — replacing goto with return 0"
+                sed -i 's/\bgoto show_pad;/return 0;/g' ./fs/proc/task_mmu.c
+              fi
+            fi
+          fi
+        done
         echo "✅ SUSFS patches applied"
         echo "::endgroup::"
 
@@ -1333,8 +1330,8 @@ runs:
         
         make O="$OUT" olddefconfig
         
-        KCFLAGS="$KCFLAGS -Wno-error -pipe -fno-stack-protector ${KCFLAGS_EXTRA}"
-        KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
+        KCFLAGS="${KCFLAGS:-} -Wno-error -pipe -fno-stack-protector ${KCFLAGS_EXTRA}"
+        KCPPFLAGS="${KCPPFLAGS:-} -DCONFIG_OPTIMIZE_INLINING"
         
         echo "============================================"
         echo "🔧 Build Configuration"
@@ -1470,6 +1467,9 @@ runs:
           IMG="$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image"
         fi
         
+        # Share the resolved image path so Create Kernel ZIP uses the same one
+        echo "RESOLVED_IMAGE_PATH=$IMG" >> "$GITHUB_ENV"
+        
         if [ -f "$COMMON_KERNEL_FOLDER/build.log" ]; then
           WARNINGS_COUNT="$(grep -ciE '\bwarning:' "$COMMON_KERNEL_FOLDER/build.log" || true)"
           [ -n "$WARNINGS_COUNT" ] || WARNINGS_COUNT="0"
@@ -1520,13 +1520,8 @@ runs:
         set -euo pipefail
         echo "::group::Create kernel ZIP package"
         
-        IMAGE_PATH="$COMMON_KERNEL_FOLDER/out/arch/arm64/boot/Image"
-        
-        if [ -f "$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image" ]; then
-          IMAGE_PATH="$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image"
-        elif [ -f "$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image" ]; then
-          IMAGE_PATH="$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image"
-        fi
+        # Reuse the image path resolved by Collect Build Stats to avoid divergence
+        IMAGE_PATH="${RESOLVED_IMAGE_PATH:-$COMMON_KERNEL_FOLDER/out/arch/arm64/boot/Image}"
         
         if [ ! -f "$IMAGE_PATH" ]; then
           echo "::error::Built Image not found at: $IMAGE_PATH"
