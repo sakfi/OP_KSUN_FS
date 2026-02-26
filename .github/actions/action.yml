@@ -849,6 +849,20 @@ runs:
             ;;
         esac
         
+        # Hotfix: Ensure syscall_hook_manager.h is included in supercalls.c
+        # This fixes a13-5.15 SUSFS not being updated to the latest KSU that introduces ksu_mark_running_process
+        if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+          KSU_TARGET_FOLDER="$KSUN_FOLDER"
+        else
+          KSU_TARGET_FOLDER="$KSU_FOLDER"
+        fi
+        if [ -f "$KSU_TARGET_FOLDER/kernel/supercalls.c" ]; then
+          if grep -q "ksu_mark_running_process" "$KSU_TARGET_FOLDER/kernel/supercalls.c" && ! grep -q "syscall_hook_manager.h" "$KSU_TARGET_FOLDER/kernel/supercalls.c"; then
+            echo "Adding missing syscall_hook_manager.h to supercalls.c..."
+            sed -i '1s/^/#include "syscall_hook_manager.h"\n/' "$KSU_TARGET_FOLDER/kernel/supercalls.c"
+          fi
+        fi
+        
         cd "$COMMON_KERNEL_FOLDER"
         if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
           if ! grep -qxF '#include <trace/hooks/fs.h>' ./fs/namespace.c; then
