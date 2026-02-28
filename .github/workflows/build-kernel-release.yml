@@ -7,11 +7,6 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      make_release:
-        description: 'Do you want to create a release?'
-        required: true
-        type: boolean
-        default: false
       op_model:
         description: 'Select the OnePlus kernels to build'
         required: true
@@ -28,6 +23,51 @@ on:
           - android14-6.1
           - android13-5.15
           - android12-5.10
+          - OP-ACE
+          - OP-ACE-2
+          - OP-ACE-2-PRO
+          - OP-ACE-2V
+          - OP-ACE-3
+          - OP-ACE-3-PRO
+          - OP-ACE-3V
+          - OP-ACE-5
+          - OP-ACE-5-PRO
+          - OP-ACE-5-RACE
+          - OP-ACE-5-ULTRA
+          - OP-ACE-6
+          - OP-ACE-6T
+          - OP-ACE-RACE
+          - OP-NORD-3
+          - OP-NORD-4
+          - OP-NORD-4-CE
+          - OP-NORD-5
+          - OP-NORD-CE-5
+          - OP-NORD-CE4-LITE
+          - OP-OPEN
+          - OP-PAD-2-MT6991
+          - OP-PAD-2-PRO
+          - OP-PAD-2-SM8650
+          - OP-PAD-3-MT6897
+          - OP-PAD-3-SM8750
+          - OP-PAD-GO-2
+          - OP-PAD-LITE
+          - OP-PAD-MT6983
+          - OP-PAD-PRO
+          - OP10pro
+          - OP10r
+          - OP10t
+          - OP11
+          - OP11r
+          - OP12
+          - OP12r
+          - OP13
+          - OP13-CPH
+          - OP13-PJZ
+          - OP13S
+          - OP13T
+          - OP13r
+          - OP15
+          - OP15r
         default: OOS14+15+16
       ksu_options:
         description: 'Enter KernelSU build json'
@@ -137,8 +177,8 @@ jobs:
               echo "   Restricted to: OOS15 and OOS16 only"
               ;;
             *)
-              echo "::warning::Unknown input '$input'. Using empty filter."
-              jq_filter="map(select(false))"
+              echo "ℹ️  Device-specific filter applied: $input"
+              jq_filter="map(select(.model == \"$input\"))"
               ;;
           esac
           
@@ -194,7 +234,6 @@ jobs:
           # - KSU Config: `"$KSU_OPTIONS"`
           # - Optimization: `${{ inputs.optimize_level }}`
           # - Clean Build/No Ccache: ${{ inputs.clean_build && '✅ Yes' || '❌ No' }}
-          # - Create Release: ${{ inputs.make_release && '✅ Yes' || '❌ No' }}
           
           # **SUSFS Configuration:**
           # EOF
@@ -217,7 +256,6 @@ jobs:
           `
           - Optimization: ${{ inputs.optimize_level }}
           - Clean Build/No Ccache: ${{ inputs.clean_build && '✅ Yes' || '❌ No' }}
-          - Create Release: ${{ inputs.make_release && '✅ Yes' || '❌ No' }}
           
           **SUSFS Configuration:**
           EOF
@@ -530,7 +568,7 @@ jobs:
   trigger-release:
     needs: [build]
     runs-on: ubuntu-latest
-    if: ${{ inputs.make_release }}
+    environment: Production-Release
     env:
       REPO_OWNER: ${{ github.repository_owner }}
       REPO_NAME: ${{ github.event.repository.name }}
@@ -545,18 +583,22 @@ jobs:
 
       - name: 🏷️ Generate and Create New Tag
         run: |
-          BASE_TAG="$SUSFS_BASE_VERSION-r0"
-          LATEST_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name')
+          LATEST_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[].name' 2>/dev/null | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
           if [ -z "$LATEST_TAG" ]; then
-            LATEST_TAG="$BASE_TAG"
+            NEW_TAG="v1.0.1"
           else
-            LATEST_TAG=$(printf "%s\n%s\n" "$LATEST_TAG" "$BASE_TAG" | sort -rV | head -n1)
+            MAJOR=$(echo "$LATEST_TAG" | awk -F. '{print $1}' | sed 's/v//')
+            MINOR=$(echo "$LATEST_TAG" | awk -F. '{print $2}')
+            PATCH=$(echo "$LATEST_TAG" | awk -F. '{print $3}')
+            PATCH=$((PATCH + 1))
+            NEW_TAG="v$MAJOR.$MINOR.$PATCH"
           fi
-          NEW_TAG=$(echo "$LATEST_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')
           echo "New tag: $NEW_TAG"
           echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
-          git tag $NEW_TAG
-          git push origin $NEW_TAG
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
@@ -848,8 +890,7 @@ jobs:
           gh release create "${{ env.NEW_TAG }}" \
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
-            --notes-file release_notes.md \
-            --draft
+            --notes-file release_notes.md
 
       - name: 📤 Upload Release Assets Dynamically
         run: |
