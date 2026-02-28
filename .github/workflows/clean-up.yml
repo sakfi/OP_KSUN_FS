@@ -1,4 +1,4 @@
-name: Cleanup CCache 🧹 
+name: 🧹 Cleanup CCache
 
 on:
   workflow_dispatch:
