@@ -858,6 +858,17 @@ runs:
         
         # Fake kernel patch to fix failures
         fake_patched=0
+        if [ "${{ env.ANDROID_VER }}" = "android16" ] && [ "${{ env.KERNEL_VER }}" = "6.12" ]; then
+          if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
+            echo "nr_subpages Line not found. Fake Patching!"
+            sed -i -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t \*res = NULL;' ./fs/proc/task_mmu.c
+            fake_patched=1
+          fi
+          if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
+            echo "#include <linux/dma-buf.h> Line not found. Adding missing header for android16/6.12"
+            sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
+          fi
+        fi
         if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
           if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
             echo "nr_subpages Line not found. Fake Patching!"
@@ -896,8 +907,14 @@ runs:
         
         patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
         
-        # Revert Fake kernel patch (android15/6.6 only needs sed revert)
+        # Revert Fake kernel patch (android15/6.6 and android16/6.12 only needs sed revert)
         if [ "$fake_patched" = 1 ]; then
+          if [ "${{ env.ANDROID_VER }}" = "android16" ] && [ "${{ env.KERNEL_VER }}" = "6.12" ]; then
+            if grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
+              echo "nr_subpages Line found. Revert Fake Patching!"
+              sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' -e '/pagemap_entry_t \*res = NULL;/d' ./fs/proc/task_mmu.c
+            fi
+          fi
           if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
             if grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
               echo "nr_subpages Line found. Revert Fake Patching!"
