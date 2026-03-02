@@ -942,11 +942,19 @@ runs:
         
         echo "Applying OnePlus 15 Recovery Bootloop Fixes..."
         # Fix 1: Add a safety check to the mnt->mnt_parent while loops in fs/statfs.c and fs/proc/fd.c to prevent infinite loops / panics in recovery
-        sed -i 's/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID; mnt = mnt->mnt_parent) {\n/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID \&\& mnt->mnt_parent \&\& mnt != mnt->mnt_parent; mnt = mnt->mnt_parent) {/g' ./fs/statfs.c
-        sed -i 's/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID; mnt = mnt->mnt_parent) {\n/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID \&\& mnt->mnt_parent \&\& mnt != mnt->mnt_parent; mnt = mnt->mnt_parent) {/g' ./fs/proc/fd.c
+        if grep -q "mnt = mnt->mnt_parent" ./fs/statfs.c; then
+          sed -i 's/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID; mnt = mnt->mnt_parent) {/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID \&\& mnt->mnt_parent \&\& mnt != mnt->mnt_parent; mnt = mnt->mnt_parent) {/g' ./fs/statfs.c
+        fi
+        if grep -q "mnt = mnt->mnt_parent" ./fs/proc/fd.c; then
+          sed -i 's/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID; mnt = mnt->mnt_parent) {/for (; mnt->mnt_id >= DEFAULT_KSU_MNT_ID \&\& mnt->mnt_parent \&\& mnt != mnt->mnt_parent; mnt = mnt->mnt_parent) {/g' ./fs/proc/fd.c
+        fi
         
         # Fix 2: Restore original behavior for statfs in Recovery by conditionally checking if it is a umounted app, rather than doing it unconditionally for all processes
-        sed -i 's/error = statfs_by_dentry(mnt->mnt_root, buf);/if (susfs_is_current_proc_umounted_app(mnt)) { error = statfs_by_dentry(mnt->mnt_root, buf); } else { error = statfs_by_dentry(path->dentry, buf); }/g' ./fs/statfs.c
+        if grep -q "error = statfs_by_dentry(mnt->mnt_root, buf);" ./fs/statfs.c; then
+          sed -i 's/error = statfs_by_dentry(mnt->mnt_root, buf);/if (likely(susfs_is_current_proc_umounted())) { error = statfs_by_dentry(mnt->mnt_root, buf); } else { error = statfs_by_dentry(path->dentry, buf); }/g' ./fs/statfs.c
+        elif grep -q "error = statfs_by_dentry(mnt->mnt.mnt_root, buf);" ./fs/statfs.c; then
+          sed -i 's/error = statfs_by_dentry(mnt->mnt.mnt_root, buf);/if (likely(susfs_is_current_proc_umounted())) { error = statfs_by_dentry(mnt->mnt.mnt_root, buf); } else { error = statfs_by_dentry(path->dentry, buf); }/g' ./fs/statfs.c
+        fi
         
         echo "✅ SUSFS patches applied"
         echo "::endgroup::"
