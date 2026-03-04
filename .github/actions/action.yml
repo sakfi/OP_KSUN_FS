@@ -667,26 +667,54 @@ runs:
         
         retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH"
         
-        # --- Patch AnyKernel3 flashing output for SakFi ---
-        echo "Patching AnyKernel3 flashing output..."
-        sed -i 's/WildKernels Telegram Channel:/SakFi Kernel Releases:/g' AnyKernel3/anykernel.sh
-        sed -i 's/https:\/\/t.me\/WildKernels/https:\/\/github.com\/sakfi\/OP_KSUN_FS/g' AnyKernel3/anykernel.sh
-        sed -i '/WildKernels Website:/d' AnyKernel3/anykernel.sh
-        sed -i '/https:\/\/wildkernels.dev/d' AnyKernel3/anykernel.sh
-        sed -i '/Wild_KSU GitHub Repository:/d' AnyKernel3/anykernel.sh
-        sed -i '/https:\/\/github.com\/WildKernels\/Wild_KSU/d' AnyKernel3/anykernel.sh
-        sed -i 's/KernelSU-Next fork focused on customization and root-hiding features!/OnePlus kernels tailored with KernelSU Next and SUSFS./g' AnyKernel3/anykernel.sh
-        sed -i '/GKI_KernelSU_SUSFS GitHub Repository:/d' AnyKernel3/anykernel.sh
-        sed -i '/https:\/\/github.com\/WildKernels\/GKI_KernelSU_SUSFS/d' AnyKernel3/anykernel.sh
-        sed -i '/GKI kernels with KernelSU and SUSFS./d' AnyKernel3/anykernel.sh
-        sed -i '/OnePlus_KernelSU_SUSFS GitHub Repository:/d' AnyKernel3/anykernel.sh
-        sed -i '/https:\/\/github.com\/WildKernels\/OnePlus_KernelSU_SUSFS/d' AnyKernel3/anykernel.sh
-        sed -i '/OnePlus kernels with KernelSU and SUSFS./d' AnyKernel3/anykernel.sh
-        
-        sed -i 's/Wild Kernels by TheWildJames aka Morgan Weedman/SakFi OP Kernels by sakfi/' AnyKernel3/anykernel.sh
-        sed -i '/AnyKernel3 by osm0sis @ xda-developers/a ui_print "Wild Kernels by TheWildJames\\n"' AnyKernel3/anykernel.sh
-        sed -i 's/Wild Kernels Supported/SakFi Kernels Supported/g' AnyKernel3/anykernel.sh
-        sed -i 's/ui_print "Done!";/ui_print "Done! Good Luck with your new Kernel!!";/' AnyKernel3/anykernel.sh
+        # --- Patch AnyKernel3 flashing output for SakFi ---\n        echo "Patching AnyKernel3 flashing output..."\n
+        cat << 'EOF' > patch_anykernel.py
+import sys
+import re
+
+with open('AnyKernel3/anykernel.sh', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Replace texts
+content = content.replace('WildKernels Telegram Channel:', 'SakFi Kernel Releases:')
+content = content.replace('https://t.me/WildKernels', 'https://github.com/sakfi/OP_KSUN_FS')
+content = content.replace('WildKernels Website:', '')
+content = content.replace('https://wildkernels.dev', '')
+content = content.replace('Wild_KSU GitHub Repository:', '')
+content = content.replace('https://github.com/WildKernels/Wild_KSU', '')
+content = content.replace('KernelSU-Next fork focused on customization and root-hiding features!', 'OnePlus kernels tailored with KernelSU Next and SUSFS.')
+content = content.replace('GKI_KernelSU_SUSFS GitHub Repository:', '')
+content = content.replace('https://github.com/WildKernels/GKI_KernelSU_SUSFS', '')
+content = content.replace('GKI kernels with KernelSU and SUSFS.', '')
+content = content.replace('OnePlus_KernelSU_SUSFS GitHub Repository:', '')
+content = content.replace('https://github.com/WildKernels/OnePlus_KernelSU_SUSFS', '')
+content = content.replace('OnePlus kernels with KernelSU and SUSFS.', '')
+
+content = content.replace('Wild Kernels by TheWildJames aka Morgan Weedman', 'SakFi OP Kernels by sakfi')
+content = content.replace('AnyKernel3 by osm0sis @ xda-developers', 'AnyKernel3 by osm0sis @ xda-developers\\nui_print "Wild Kernels by TheWildJames"\\nui_print "& fatalcoder524"')
+content = content.replace('Wild Kernels Supported', 'SakFi Kernels Supported')
+
+# Inject ASCII replacing 'Done!'
+ascii_commands = """ui_print "                                         .&&&&&&&&&; &&&&&  &&&&&   ..                                                   "\\nui_print "                         ;;              &&&&&&&&&&+ &&&&&  &&&&&  &&&&  &&&&x                                           "\\nui_print "                      &&&&&&&&           &&&&&&$.    &&&&& x&&&&+ &&&&&  &&&&&&&&&;  &&                                  "\\nui_print "                     $&&&$&&&&&           &&&&&&&&&  &&&&&&&&&&&  &&&&X    &&&&&&&&&&&&;                                 "\\nui_print "                     &&&&X:&&&&&               &&&&& &&&&x &&&&& .&&&&    $&&&&  .&&&$                                   "\\nui_print "                 &&  x&&&&&&&&&&&        &&&&&&&&&&. &&&&  &&&&: &&&&$    &&&&:                                          "\\nui_print "                :&&&&&&&&&&;x&&&&         .&&&&&&x   ;&&&  &&&&  &&&&    &&&&&                                           "\\nui_print "                  &&&&x&&&&X &&&&                                 &&     &&&&                                            "\\nui_print "                        &&&.                                             $&&                                             "\\nui_print "                                               :X&&&&&&&;                                                                "\\nui_print "                                         .&&&&&&&&&&&&&&&&&&&&x                                                          "\\nui_print "                                      &&&&&&&&&&&&&&&&&&&&&&&&&&&&                                                       "\\nui_print "                                   .&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&x                                                    "\\nui_print "                                 X&&&&&.X&&&&.$&&&&&&&&&&& $&&&&&.&&&&&                                                  "\\nui_print "                               &&&&&;&&&&&&&&&&;&&&&&&&& &&&&&&&&&&$x&&&&                                                "\\nui_print "                            :&&&&&+&&&&&&&&&&&&&x$&&&&&.&&&&&&&&&&&&&;&&&&&;                                             "\\nui_print "                         .&&&&&&x&&&&&&&&&&&&&&&& &&&& &&&&&&&&&&&&&&&:&&&&&&&$                                          "\\nui_print "                     :&&&&&&&&& &+x$&&&&&&&&&&&&$ &&&& xx$&&&&&&&&&&&&.&;x&&&&&&&&$                                      "\\nui_print "                 $&&&&&$$XX$&X &&& .;;:;+xx+:..  &$&&$$ ....:;;;;:;;. X&&:.$$$X$$&&&&&&+                                 "\\nui_print "             .&X   .....      &&&&&&;         x&&&x  ;&&&x.        ;$&&&&&       ..... .x&&                              "\\nui_print "           & +$$$$$$$$ +$$X+; &&&&&&&&&&&&&&&&&&$&&&&&&X&&&&&&&&&&&&&&&&&& :xXXXx x$$$$$$$+ &&                           "\\nui_print "         &X$&&&&&&&&&.$&&&$$;.$&&&&&&&&&&&&&&&$ :  ;x:   &&&&&&&&&&&&&&&&&  $&&&&&.&&&&&&&&&$Xx&                         "\\nui_print "       $&&&&&&&&&&&&&x&&&&&.&&;+&$&&&&&&&&&$X :xxxxxxxxxx+ +&&&&&&&&&&&&& $& &&&&&;&&&&&&&&&&&&&&+                       "\\nui_print "      $&&&&&&&&&&&&&&&&&&&$ &&&&.;$$$$$$$x;;xxxxxxx&&$xxxxxxx;;$$$$$$&$ ;&&&$ &&&&&&&&&&&&&&&&&&&&$                      "\\nui_print "     &&&&&&&&&&&&&&&&&&&&&;.&&&&&&&. .;xxx;      :xxxx.      .xxxx:   &&&&&$X &&&&&&&&&&&&&&&&&&&&&&                     "\\nui_print "   .&&&$:          :xXXXXX  &&&&&&&&&&&&&&&&&&&&&&.;&&&&&&&&&&&&&&&&&&&;&&&$  XXxxxx;.          .X&&&                    "\\nui_print "   $:                      . ;&&&&&&&&&&&&&&&&&& &&&&&&&&&&&&&&&&&&&&+X&&$x;:                       ;;                   "\\nui_print "                            ;; ;&&&&&&&&&&&&&&& &&&&&&&&&&&&&&&&x$& x&&$xx+.                                             "\\nui_print "                             ;;xx..&&&$XxxXXXX; $$$$$$$$+;;;xXX&x X&&xxx+;                                               "\\nui_print "                               :;;+++++x++;++x :$$$$$XXXxxxx;  +xxxxx+;;.                                                "\\nui_print "                              ;;  .:;;;;;;:..  ;xxxxxxx;:..;;;;;;;;;:.                                                   "\\nui_print "                            .&&&&X              ;;;;;;;;;;;;;::...      :&&&                                             "\\nui_print "                 &:&    &&&&& &&$$&x;:             .........         .Xx$&$ &&&&&   &:;x                                 "\\nui_print "               $   .&:&&&&&&&&&.&XX ;xxXXXXX;.                  .;+; ;x$& &&&&&&&&X&;  .;                                "\\nui_print "              x&&:&&&&$; &&&&&&& X; :xXX&&&$$$$X: ....  .;;xXXXX$$xx. ;.;&&&&&&+ &&&&&.&&&:                              "\\nui_print "             &&&. xX&&&&& $&&&&&X   .:;xX$$$$$$X  ;...  :+xX$XX&$Xx+.   X$&&&& .$&&&&&;.&&&&                             "\\nui_print "             &&&&&&&&&&&$: &&&&$+  .&&&&  .xXXXx; :...   ;+x+.  :&&&+   +xX$$: x$$$&&&&&&&&X                             "\\nui_print "                  :&$$xx:  X$X. +&&&&&&&&&     .:  ..          &&&&&&&&. ...   .xx$$$&:.;:                               "\\nui_print "                +$Xxx.       &&&&&&&&&&x;&&&&&&&;      ;&&&&&&&&;&&&&&&&&&&       .;xxxX.                                "\\nui_print "              X$x+          &&&&&&&&&;$&&&&&&&&&&&&  $&&$&&&&&&&&&xX&&&&&&&x           xxX                               "\\nui_print "                           ;&&&&&&$$x&&&&&&&&.$ $&X   &&x.X$&&&&&&&&;$$XXxx+;                                            "\\nui_print "                            +xxxXXx$&&&&&&&& $ X&&&x &&&&& &.&&&&&&&&;Xx+;;:.                                            "\\nui_print "                            . ::;;;x$&&&&&$ X x$&&&$:&&&&& $;x&&&&&&Xx;;...                                              "\\nui_print "                                 ..;;++xxx+ + ;x&&&X;&&&&x x+ xxxxx+;;..                                                 "\\nui_print "                                     ::;;;.   +x&&&; &&&$x ;  ;;:::.                                                     "\\nui_print "                                        ....  ;x$&&$ &&&xx    ..                                                         "\\nui_print "                                               xxxx; xXxx;                                                               "\\nui_print "     x                                          x      ..                                         :                      "\\nui_print "   $&&&                                           .. .                                       &&&&&&&.                    "\\nui_print "   &&&&        &&&.                                                                    x&&x&&&&&&&                       "\\nui_print "  &&&&        :&&&&&&.                                                        ;+ .&&&  &&&&+&&&&  ;$+                    "\\nui_print " $&&&$        &&&&&&&&$  :&&&&&&   :&+                               x&&&&&& &&&& &&&& &&&& &&&&&&&&&                    "\\nui_print " &&&&        +&&&. &&&& X&&&&&&&& :&&&& $&&& X&&&  &&&&&&&&X        &&&&&&&& ;&&&.$&&&&&&&&  &&&&                        "\\nui_print "$&&&         &&&&  &&&& &&&$ x&&& &&&&&&&&&&  &&&. &&&&&&&&         &&&       &&&& &&&&&&&&  &&&&&&&&&&&                 "\\nui_print " X&         +&&&  &&&&:&&&&  $&&& &&&&&&&&&&  &&&    &&&&          x&&& &&&&& &&&&  &&&&&&&   &&&&&&&&                   "\\nui_print "            &&&&&&&&&; &&&&  &&&& &&&&&&&&&&         &&&&          .&&& X&&&&&:&&&X  &&&&&&    ;+.                       "\\nui_print "             &&&&&&;   x&&&&&&&&$ &&&$&&&&&&         &&&&           &&&&  &&&+ &&&&    &&&                               "\\nui_print "                        .&&&&&&; $&&& .&&&&.         &&&&            &&&&&&&&   &&                                       "\\nui_print "                                  &&$  &&&&          &&&&              ;$x                                               """"
+
+lines = content.split('\n')
+for i, line in enumerate(lines):
+    if 'ui_print "Done!";' in line:
+        art_lines = [l+";" for l in ascii_commands.splitlines() if l.strip()]
+        lines.insert(i, '\n'.join(art_lines))
+        break
+
+content = '\n'.join(lines)
+content = content.replace('ui_print "Done!";', 'ui_print "Done! Good Luck with your new Kernel!!";')
+
+# Remove duplicate empty ui_prints caused by deleted urls
+content = re.sub(r'(ui_print "";\s*){2,}', 'ui_print "";\n', content)
+
+with open('AnyKernel3/anykernel.sh', 'w', encoding='utf-8') as f:
+    f.write(content)
+EOF
+        python3 patch_anykernel.py
+        rm patch_anykernel.py
         # --------------------------------------------------
         
         retry_clone "https://github.com/TheWildJames/kernel_patches.git"
