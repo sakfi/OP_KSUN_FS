@@ -666,6 +666,57 @@ runs:
         }
         
         retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH"
+        
+        # --- Patch AnyKernel3 flashing output for SakFi ---\n        echo "Patching AnyKernel3 flashing output..."\n
+        cat << 'EOF' > patch_anykernel.py
+import sys
+import re
+
+with open('AnyKernel3/anykernel.sh', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Replace texts
+content = content.replace('WildKernels Telegram Channel:', 'SakFi Kernel Releases:')
+content = content.replace('https://t.me/WildKernels', 'https://github.com/sakfi/OP_KSUN_FS')
+content = content.replace('WildKernels Website:', '')
+content = content.replace('https://wildkernels.dev', '')
+content = content.replace('Wild_KSU GitHub Repository:', '')
+content = content.replace('https://github.com/WildKernels/Wild_KSU', '')
+content = content.replace('KernelSU-Next fork focused on customization and root-hiding features!', 'OnePlus kernels tailored with KernelSU Next and SUSFS.')
+content = content.replace('GKI_KernelSU_SUSFS GitHub Repository:', '')
+content = content.replace('https://github.com/WildKernels/GKI_KernelSU_SUSFS', '')
+content = content.replace('GKI kernels with KernelSU and SUSFS.', '')
+content = content.replace('OnePlus_KernelSU_SUSFS GitHub Repository:', '')
+content = content.replace('https://github.com/WildKernels/OnePlus_KernelSU_SUSFS', '')
+content = content.replace('OnePlus kernels with KernelSU and SUSFS.', '')
+
+content = content.replace('Wild Kernels by TheWildJames aka Morgan Weedman', 'SakFi OP Kernels by sakfi')
+content = content.replace('AnyKernel3 by osm0sis @ xda-developers', 'AnyKernel3 by osm0sis @ xda-developers\\nui_print "Wild Kernels by TheWildJames"\\nui_print "& fatalcoder524"')
+content = content.replace('Wild Kernels Supported', 'SakFi Kernels Supported')
+
+# Inject ASCII replacing 'Done!'
+ascii_commands = """ui_print "_nnnn_"\\nui_print "dGGGGMMb     ,\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"\\"."\\nui_print "@p~qp~~qMb    | SakFi OP Kernel  |"\\nui_print "M|@||@) M|   _;..................'"\\nui_print "@,----.JM| -'"\\nui_print "JS^\\\\__/  qKL"\\nui_print "dZP        qKRb"\\nui_print "dZP          qKKb"\\nui_print "fZP            SMMb"\\nui_print "HZM            MMMM"\\nui_print "FqM            MMMM"\\nui_print "__| \\".        |\\\\dS\\"qML"\\nui_print "|    `.       | `' \\\\Zq"\\nui_print "_)      \\\\.___.,|     .'"\\nui_print "\\\\____   )MMMMMM|   .'"\\nui_print "`-'       `--' hjm""""
+
+lines = content.split('\n')
+for i, line in enumerate(lines):
+    if 'ui_print "Done!";' in line:
+        art_lines = [l+";" for l in ascii_commands.splitlines() if l.strip()]
+        lines.insert(i, '\n'.join(art_lines))
+        break
+
+content = '\n'.join(lines)
+content = content.replace('ui_print "Done!";', 'ui_print "Done! Good Luck with your new Kernel!!";')
+
+# Remove duplicate empty ui_prints caused by deleted urls
+content = re.sub(r'(ui_print "";\s*){2,}', 'ui_print "";\n', content)
+
+with open('AnyKernel3/anykernel.sh', 'w', encoding='utf-8') as f:
+    f.write(content)
+EOF
+        python3 patch_anykernel.py
+        rm patch_anykernel.py
+        # --------------------------------------------------
+        
         retry_clone "https://github.com/TheWildJames/kernel_patches.git"
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
