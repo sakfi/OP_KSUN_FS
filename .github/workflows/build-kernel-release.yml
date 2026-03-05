@@ -69,6 +69,19 @@ on:
           - OP15
           - OP15r
         default: OOS14+15+16
+      android_version_filter:
+        description: 'Select the Android Version to build'
+        required: true
+        type: choice
+        options:
+          - All
+          - oos14
+          - oos15
+          - oos16
+          - oos14+oos15
+          - oos15+oos16
+          - oos14+oos16
+        default: All
       ksu_options:
         description: 'Enter KernelSU build json'
         required: true
@@ -182,7 +195,38 @@ jobs:
               ;;
           esac
           
-          filtered=$(jq -c "$jq_filter" matrix.json)
+          android_input="${{ github.event.inputs.android_version_filter }}"
+          android_jq_filter=""
+          
+          case "$android_input" in
+            "All")
+              # No additional filtering needed
+              ;;
+            "oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\"))"
+              ;;
+            "oos15")
+              android_jq_filter=" | map(select(.os_version == \"OOS15\"))"
+              ;;
+            "oos16")
+              android_jq_filter=" | map(select(.os_version == \"OOS16\"))"
+              ;;
+            "oos14+oos15" | "oos15+oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))"
+              ;;
+            "oos15+oos16" | "oos16+oos15")
+              android_jq_filter=" | map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))"
+              ;;
+            "oos14+oos16" | "oos16+oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS16\"))"
+              ;;
+            *)
+              echo "::warning::Unknown Android version filter '$android_input'."
+              ;;
+          esac
+
+          combined_filter="${jq_filter}${android_jq_filter}"
+          filtered=$(jq -c "$combined_filter" matrix.json)
           count=$(jq 'length' <<<"$filtered")
           
           if [ "$count" -eq 0 ]; then
