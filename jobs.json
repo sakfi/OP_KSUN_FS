@@ -1,0 +1,4309 @@
+{
+  "total_count": 81,
+  "jobs": [
+    {
+      "id": 65792311121,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYb_UQ",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792311121",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792311121",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-03-04T22:40:23Z",
+      "started_at": "2026-03-04T22:40:26Z",
+      "completed_at": "2026-03-04T22:40:33Z",
+      "name": "set-op-model",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:27Z",
+          "completed_at": "2026-03-04T22:40:27Z"
+        },
+        {
+          "name": "📥 Checkout Code (to access configs/)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:27Z",
+          "completed_at": "2026-03-04T22:40:29Z"
+        },
+        {
+          "name": "🔍 Generate build matrix",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:29Z",
+          "completed_at": "2026-03-04T22:40:29Z"
+        },
+        {
+          "name": "Upload build matrix",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:29Z",
+          "completed_at": "2026-03-04T22:40:30Z"
+        },
+        {
+          "name": "📊 Build plan summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:30Z",
+          "completed_at": "2026-03-04T22:40:30Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code (to access configs/)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:30Z",
+          "completed_at": "2026-03-04T22:40:30Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:30Z",
+          "completed_at": "2026-03-04T22:40:30Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792311121",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002076,
+      "runner_name": "GitHub Actions 1000002076",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333165,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVbQ",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333165",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333165",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:03Z",
+      "completed_at": null,
+      "name": "build (OP11, kalama, wild/sm8550, oneplus_11_u.xml, android13, 5.15, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:04Z",
+          "completed_at": "2026-03-04T22:41:04Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "in_progress",
+          "conclusion": null,
+          "number": 2,
+          "started_at": "2026-03-04T22:41:04Z",
+          "completed_at": null
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "pending",
+          "conclusion": null,
+          "number": 3,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "pending",
+          "conclusion": null,
+          "number": 4,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "pending",
+          "conclusion": null,
+          "number": 5,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "pending",
+          "conclusion": null,
+          "number": 6,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 7,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 8,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 9,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "pending",
+          "conclusion": null,
+          "number": 10,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "pending",
+          "conclusion": null,
+          "number": 11,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "pending",
+          "conclusion": null,
+          "number": 12,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "pending",
+          "conclusion": null,
+          "number": 13,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333165",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002102,
+      "runner_name": "GitHub Actions 1000002102",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333169,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVcQ",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333169",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333169",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:37Z",
+      "completed_at": "2026-03-04T22:42:56Z",
+      "name": "build (OP10pro, waipio, wild/sm8450, oneplus_10_pro_u.xml, android12, 5.10, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:41:32Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:32Z",
+          "completed_at": "2026-03-04T22:42:38Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:42:38Z",
+          "completed_at": "2026-03-04T22:42:38Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:42:38Z",
+          "completed_at": "2026-03-04T22:42:39Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:42:39Z",
+          "completed_at": "2026-03-04T22:42:52Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:42:52Z",
+          "completed_at": "2026-03-04T22:42:52Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:42:52Z",
+          "completed_at": "2026-03-04T22:42:52Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:42:52Z",
+          "completed_at": "2026-03-04T22:42:52Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:42:52Z",
+          "completed_at": "2026-03-04T22:42:53Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:42:53Z",
+          "completed_at": "2026-03-04T22:42:53Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:42:53Z",
+          "completed_at": "2026-03-04T22:42:53Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:42:53Z",
+          "completed_at": "2026-03-04T22:42:53Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:42:53Z",
+          "completed_at": "2026-03-04T22:42:53Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:42:53Z",
+          "completed_at": "2026-03-04T22:42:53Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333169",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002078,
+      "runner_name": "GitHub Actions 1000002078",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333175,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVdw",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333175",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333175",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:43Z",
+      "completed_at": "2026-03-04T22:40:59Z",
+      "name": "build (OP10r, dimensity8000, wild/mt6895, oneplus_10r_u.xml, android12, 5.10, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:43Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:56Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:56Z",
+          "completed_at": "2026-03-04T22:40:56Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:56Z",
+          "completed_at": "2026-03-04T22:40:56Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:56Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333175",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002088,
+      "runner_name": "GitHub Actions 1000002088",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333176,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVeA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333176",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333176",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:43Z",
+      "completed_at": "2026-03-04T22:41:02Z",
+      "name": "build (OP-ACE, dimensity8000, wild/mt6895, oneplus_ace_u.xml, android12, 5.10, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:01Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:01Z",
+          "completed_at": "2026-03-04T22:41:01Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333176",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002087,
+      "runner_name": "GitHub Actions 1000002087",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333182,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVfg",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333182",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333182",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:37Z",
+      "completed_at": "2026-03-04T22:40:53Z",
+      "name": "build (OP-ACE-2-PRO, kalama, wild/sm8550, oneplus_ace2_pro_w.xml, android13, 5.15, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:37Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:49Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:49Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:40:50Z",
+          "completed_at": "2026-03-04T22:40:50Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333182",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002077,
+      "runner_name": "GitHub Actions 1000002077",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333183,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVfw",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333183",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333183",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:42Z",
+      "completed_at": null,
+      "name": "build (OP-PAD-PRO, pineapple, wild/sm8650, oneplus_pad_pro_u.xml, android14, 6.1, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:43Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:41:53Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "in_progress",
+          "conclusion": null,
+          "number": 3,
+          "started_at": "2026-03-04T22:41:53Z",
+          "completed_at": null
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "pending",
+          "conclusion": null,
+          "number": 4,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "pending",
+          "conclusion": null,
+          "number": 5,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "pending",
+          "conclusion": null,
+          "number": 6,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 7,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 8,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 9,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "pending",
+          "conclusion": null,
+          "number": 10,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "pending",
+          "conclusion": null,
+          "number": 11,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "pending",
+          "conclusion": null,
+          "number": 12,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "pending",
+          "conclusion": null,
+          "number": 13,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333183",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002080,
+      "runner_name": "GitHub Actions 1000002080",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333184,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVgA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333184",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333184",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:43Z",
+      "completed_at": "2026-03-04T22:41:02Z",
+      "name": "build (OP13r, pineapple, wild/sm8650, oneplus_13r_w.xml, android14, 6.1, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:45Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:45Z",
+          "completed_at": "2026-03-04T22:40:46Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:46Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:40:58Z",
+          "completed_at": "2026-03-04T22:40:58Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333184",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002086,
+      "runner_name": "GitHub Actions 1000002086",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333193,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdViQ",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333193",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333193",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:09Z",
+      "completed_at": null,
+      "name": "build (OP-ACE-3-PRO, pineapple, wild/sm8650, oneplus_ace3_pro_u.xml, android14, 6.1, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:10Z",
+          "completed_at": "2026-03-04T22:41:11Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:11Z",
+          "completed_at": "2026-03-04T22:42:12Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "in_progress",
+          "conclusion": null,
+          "number": 3,
+          "started_at": "2026-03-04T22:42:12Z",
+          "completed_at": null
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "pending",
+          "conclusion": null,
+          "number": 4,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "pending",
+          "conclusion": null,
+          "number": 5,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "pending",
+          "conclusion": null,
+          "number": 6,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 7,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 8,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 9,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "pending",
+          "conclusion": null,
+          "number": 10,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "pending",
+          "conclusion": null,
+          "number": 11,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "pending",
+          "conclusion": null,
+          "number": 12,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "pending",
+          "conclusion": null,
+          "number": 13,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333193",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002105,
+      "runner_name": "GitHub Actions 1000002105",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333195,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdViw",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333195",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333195",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:42Z",
+      "completed_at": "2026-03-04T22:41:02Z",
+      "name": "build (OP-ACE-6, sun, wild/sm8750, oneplus_ace_6_w.xml, android15, 6.6, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:43Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:44Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:44Z",
+          "completed_at": "2026-03-04T22:40:59Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:59Z",
+          "completed_at": "2026-03-04T22:40:59Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:59Z",
+          "completed_at": "2026-03-04T22:40:59Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:59Z",
+          "completed_at": "2026-03-04T22:40:59Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:59Z",
+          "completed_at": "2026-03-04T22:40:59Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:59Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:00Z",
+          "completed_at": "2026-03-04T22:41:00Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333195",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002084,
+      "runner_name": "GitHub Actions 1000002084",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333198,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVjg",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333198",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333198",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:42:26Z",
+      "completed_at": null,
+      "name": "build (OP12, pineapple, wild/sm8650, oneplus_12_u.xml, android14, 6.1, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:42:27Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-03-04T22:42:28Z",
+          "completed_at": "2026-03-04T22:42:57Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "in_progress",
+          "conclusion": null,
+          "number": 3,
+          "started_at": "2026-03-04T22:42:57Z",
+          "completed_at": null
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "pending",
+          "conclusion": null,
+          "number": 4,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "pending",
+          "conclusion": null,
+          "number": 5,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "pending",
+          "conclusion": null,
+          "number": 6,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 7,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 8,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 9,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "pending",
+          "conclusion": null,
+          "number": 10,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "pending",
+          "conclusion": null,
+          "number": 11,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "pending",
+          "conclusion": null,
+          "number": 12,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "pending",
+          "conclusion": null,
+          "number": 13,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333198",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002152,
+      "runner_name": "GitHub Actions 1000002152",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333200,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVkA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333200",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333200",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:29Z",
+      "completed_at": "2026-03-04T22:41:48Z",
+      "name": "build (OP-PAD-MT6983, dimensity9000, wild/mt6983, oneplus_pad_mt6983_w.xml, android12, 5.10, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:31Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:31Z",
+          "completed_at": "2026-03-04T22:41:31Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:31Z",
+          "completed_at": "2026-03-04T22:41:42Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:42Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:43Z",
+          "completed_at": "2026-03-04T22:41:43Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333200",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002121,
+      "runner_name": "GitHub Actions 1000002121",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333201,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVkQ",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333201",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333201",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:55Z",
+      "completed_at": "2026-03-04T22:42:15Z",
+      "name": "build (OP-ACE-3, kalama, wild/sm8550, oneplus_ace3_w.xml, android13, 5.15, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:56Z",
+          "completed_at": "2026-03-04T22:41:57Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:57Z",
+          "completed_at": "2026-03-04T22:41:57Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:57Z",
+          "completed_at": "2026-03-04T22:41:57Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:57Z",
+          "completed_at": "2026-03-04T22:41:57Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:57Z",
+          "completed_at": "2026-03-04T22:41:58Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:58Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:10Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:42:10Z",
+          "completed_at": "2026-03-04T22:42:11Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:42:11Z",
+          "completed_at": "2026-03-04T22:42:11Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333201",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002137,
+      "runner_name": "GitHub Actions 1000002137",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333204,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVlA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333204",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333204",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:12Z",
+      "completed_at": "2026-03-04T22:41:31Z",
+      "name": "build (OP-ACE-RACE, dimensity8000, wild/mt6895, oneplus_ace_race_u.xml, android12, 5.10, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:13Z",
+          "completed_at": "2026-03-04T22:41:13Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:13Z",
+          "completed_at": "2026-03-04T22:41:13Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:13Z",
+          "completed_at": "2026-03-04T22:41:13Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:13Z",
+          "completed_at": "2026-03-04T22:41:13Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:13Z",
+          "completed_at": "2026-03-04T22:41:14Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:14Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:27Z",
+          "completed_at": "2026-03-04T22:41:27Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333204",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002109,
+      "runner_name": "GitHub Actions 1000002109",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333212,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVnA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333212",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333212",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:57Z",
+      "completed_at": "2026-03-04T22:42:21Z",
+      "name": "build (OP-PAD-3-SM8750, sun, wild/sm8750, oneplus_pad_3_sm8750_w.xml, android15, 6.6, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:58Z",
+          "completed_at": "2026-03-04T22:41:58Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:58Z",
+          "completed_at": "2026-03-04T22:41:58Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:58Z",
+          "completed_at": "2026-03-04T22:41:58Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:58Z",
+          "completed_at": "2026-03-04T22:41:58Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:58Z",
+          "completed_at": "2026-03-04T22:41:59Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:59Z",
+          "completed_at": "2026-03-04T22:42:18Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:42:18Z",
+          "completed_at": "2026-03-04T22:42:18Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:42:18Z",
+          "completed_at": "2026-03-04T22:42:18Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:42:18Z",
+          "completed_at": "2026-03-04T22:42:18Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:42:18Z",
+          "completed_at": "2026-03-04T22:42:18Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:42:18Z",
+          "completed_at": "2026-03-04T22:42:18Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:42:18Z",
+          "completed_at": "2026-03-04T22:42:18Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:42:18Z",
+          "completed_at": "2026-03-04T22:42:19Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:42:19Z",
+          "completed_at": "2026-03-04T22:42:19Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:42:19Z",
+          "completed_at": "2026-03-04T22:42:19Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333212",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002140,
+      "runner_name": "GitHub Actions 1000002140",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333214,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVng",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333214",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333214",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:38Z",
+      "completed_at": "2026-03-04T22:41:01Z",
+      "name": "build (OP-NORD-5, cliffs, wild/sm8635, oneplus_nord_5_w.xml, android14, 6.1, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:41Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:41Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:40:57Z",
+          "completed_at": "2026-03-04T22:40:57Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333214",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002094,
+      "runner_name": "GitHub Actions 1000002094",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333227,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVqw",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333227",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333227",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:34Z",
+      "completed_at": "2026-03-04T22:41:57Z",
+      "name": "build (OP11, kalama, wild/sm8550, oneplus_11_w.xml, android13, 5.15, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:35Z",
+          "completed_at": "2026-03-04T22:41:35Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:35Z",
+          "completed_at": "2026-03-04T22:41:36Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:36Z",
+          "completed_at": "2026-03-04T22:41:36Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:36Z",
+          "completed_at": "2026-03-04T22:41:36Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:36Z",
+          "completed_at": "2026-03-04T22:41:36Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:36Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:55Z",
+          "completed_at": "2026-03-04T22:41:55Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333227",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002126,
+      "runner_name": "GitHub Actions 1000002126",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333228,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVrA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333228",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333228",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:37Z",
+      "completed_at": "2026-03-04T22:40:55Z",
+      "name": "build (OP13, sun, wild/sm8750, oneplus_13_w.xml, android15, 6.6, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333228",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002081,
+      "runner_name": "GitHub Actions 1000002081",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333245,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdVvQ",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333245",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333245",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:33Z",
+      "completed_at": null,
+      "name": "build (OP11r, waipio, wild/sm8475, oneplus_11r_u.xml, android12, 5.10, OOS14, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:34Z",
+          "completed_at": "2026-03-04T22:41:34Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:34Z",
+          "completed_at": "2026-03-04T22:41:59Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:59Z",
+          "completed_at": "2026-03-04T22:42:57Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:42:57Z",
+          "completed_at": "2026-03-04T22:42:57Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:42:57Z",
+          "completed_at": "2026-03-04T22:42:58Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "in_progress",
+          "conclusion": null,
+          "number": 6,
+          "started_at": "2026-03-04T22:42:58Z",
+          "completed_at": null
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 7,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 8,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 9,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "pending",
+          "conclusion": null,
+          "number": 10,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "pending",
+          "conclusion": null,
+          "number": 11,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "pending",
+          "conclusion": null,
+          "number": 12,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "pending",
+          "conclusion": null,
+          "number": 13,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "pending",
+          "conclusion": null,
+          "number": 26,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333245",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002120,
+      "runner_name": "GitHub Actions 1000002120",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333275,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdV2w",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333275",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333275",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:06Z",
+      "completed_at": "2026-03-04T22:41:25Z",
+      "name": "build (OP13S, sun, wild/sm8750, oneplus_13s_w.xml, android15, 6.6, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:06Z",
+          "completed_at": "2026-03-04T22:41:07Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:07Z",
+          "completed_at": "2026-03-04T22:41:07Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:07Z",
+          "completed_at": "2026-03-04T22:41:07Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:07Z",
+          "completed_at": "2026-03-04T22:41:07Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:07Z",
+          "completed_at": "2026-03-04T22:41:08Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:08Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:20Z",
+          "completed_at": "2026-03-04T22:41:20Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333275",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002108,
+      "runner_name": "GitHub Actions 1000002108",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333276,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdV3A",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333276",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333276",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:37Z",
+      "completed_at": "2026-03-04T22:41:00Z",
+      "name": "build (OP-ACE-3V, pineapple, wild/sm7675, oneplus_ace_3v_w.xml, android14, 6.1, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:40Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:40Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:40:54Z",
+          "completed_at": "2026-03-04T22:40:54Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333276",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002079,
+      "runner_name": "GitHub Actions 1000002079",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333288,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdV6A",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333288",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333288",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:21Z",
+      "completed_at": "2026-03-04T22:41:36Z",
+      "name": "build (OP-ACE-2, waipio, wild/sm8475, oneplus_ace2_w.xml, android12, 5.10, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:22Z",
+          "completed_at": "2026-03-04T22:41:22Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:22Z",
+          "completed_at": "2026-03-04T22:41:22Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:22Z",
+          "completed_at": "2026-03-04T22:41:22Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:22Z",
+          "completed_at": "2026-03-04T22:41:22Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:22Z",
+          "completed_at": "2026-03-04T22:41:23Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:23Z",
+          "completed_at": "2026-03-04T22:41:34Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:34Z",
+          "completed_at": "2026-03-04T22:41:34Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:34Z",
+          "completed_at": "2026-03-04T22:41:34Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:34Z",
+          "completed_at": "2026-03-04T22:41:34Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:34Z",
+          "completed_at": "2026-03-04T22:41:35Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:35Z",
+          "completed_at": "2026-03-04T22:41:35Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:35Z",
+          "completed_at": "2026-03-04T22:41:35Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:35Z",
+          "completed_at": "2026-03-04T22:41:35Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:35Z",
+          "completed_at": "2026-03-04T22:41:35Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:35Z",
+          "completed_at": "2026-03-04T22:41:35Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333288",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002114,
+      "runner_name": "GitHub Actions 1000002114",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333296,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdV8A",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333296",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333296",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:16Z",
+      "completed_at": "2026-03-04T22:41:34Z",
+      "name": "build (OP-ACE-5, pineapple, wild/sm8650, oneplus_ace5_w.xml, android14, 6.1, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:18Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:18Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:30Z",
+          "completed_at": "2026-03-04T22:41:30Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333296",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002115,
+      "runner_name": "GitHub Actions 1000002115",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333299,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdV8w",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333299",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333299",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:40:37Z",
+      "completed_at": "2026-03-04T22:40:55Z",
+      "name": "build (OP-PAD-2-MT6991, dimensity9400, wild/mt6991, oneplus_pad2_mt6991_w.xml, android15, 6.6, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:40:37Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:38Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:40:38Z",
+          "completed_at": "2026-03-04T22:40:39Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:40:39Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:51Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:40:51Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:40:52Z",
+          "completed_at": "2026-03-04T22:40:52Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333299",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002082,
+      "runner_name": "GitHub Actions 1000002082",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333308,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdV_A",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333308",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333308",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:42:00Z",
+      "completed_at": "2026-03-04T22:42:18Z",
+      "name": "build (OP12, pineapple, wild/sm8650, oneplus_12_w.xml, android14, 6.1, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:42:01Z",
+          "completed_at": "2026-03-04T22:42:02Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:42:02Z",
+          "completed_at": "2026-03-04T22:42:02Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:42:02Z",
+          "completed_at": "2026-03-04T22:42:02Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:42:02Z",
+          "completed_at": "2026-03-04T22:42:02Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:42:02Z",
+          "completed_at": "2026-03-04T22:42:03Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:42:03Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:16Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:42:16Z",
+          "completed_at": "2026-03-04T22:42:16Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333308",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002141,
+      "runner_name": "GitHub Actions 1000002141",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333312,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdWAA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333312",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333312",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:02Z",
+      "completed_at": "2026-03-04T22:41:20Z",
+      "name": "build (OP-PAD-GO-2, dimensity7300ultra, wild/mt6878, oneplus_pad_go_2_mt6878_w.xml, android14, 6.1, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:03Z",
+          "completed_at": "2026-03-04T22:41:03Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:03Z",
+          "completed_at": "2026-03-04T22:41:03Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:03Z",
+          "completed_at": "2026-03-04T22:41:03Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:03Z",
+          "completed_at": "2026-03-04T22:41:03Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:03Z",
+          "completed_at": "2026-03-04T22:41:04Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:04Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333312",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002101,
+      "runner_name": "GitHub Actions 1000002101",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333313,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdWAQ",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333313",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333313",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:00Z",
+      "completed_at": "2026-03-04T22:41:21Z",
+      "name": "build (OP-NORD-4-CE, crow, wild/sm7550, oneplus_nord_ce4_w.xml, android13, 5.15, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:01Z",
+          "completed_at": "2026-03-04T22:41:01Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:01Z",
+          "completed_at": "2026-03-04T22:41:01Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:01Z",
+          "completed_at": "2026-03-04T22:41:01Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:01Z",
+          "completed_at": "2026-03-04T22:41:01Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:01Z",
+          "completed_at": "2026-03-04T22:41:02Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:02Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:18Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:18Z",
+          "completed_at": "2026-03-04T22:41:18Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:18Z",
+          "completed_at": "2026-03-04T22:41:18Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333313",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002100,
+      "runner_name": "GitHub Actions 1000002100",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333314,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdWAg",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333314",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333314",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:41:15Z",
+      "completed_at": "2026-03-04T22:41:31Z",
+      "name": "build (OP-ACE-3-PRO, pineapple, wild/sm8650, oneplus_ace3_pro_w.xml, android14, 6.1, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:41:16Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:17Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:41:17Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:41:29Z",
+          "completed_at": "2026-03-04T22:41:29Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333314",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002113,
+      "runner_name": "GitHub Actions 1000002113",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333318,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdWBg",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333318",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333318",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:42:18Z",
+      "completed_at": "2026-03-04T22:42:36Z",
+      "name": "build (OP-ACE-5-ULTRA, dimensity9400, wild/mt6991, oneplus_ace5_ultra_w.xml, android15, 6.6, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:42:19Z",
+          "completed_at": "2026-03-04T22:42:20Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:42:20Z",
+          "completed_at": "2026-03-04T22:42:20Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:42:20Z",
+          "completed_at": "2026-03-04T22:42:20Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:42:20Z",
+          "completed_at": "2026-03-04T22:42:20Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:42:20Z",
+          "completed_at": "2026-03-04T22:42:21Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:42:21Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:33Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:42:33Z",
+          "completed_at": "2026-03-04T22:42:34Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:42:34Z",
+          "completed_at": "2026-03-04T22:42:34Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333318",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002147,
+      "runner_name": "GitHub Actions 1000002147",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 65792333320,
+      "run_id": 22692212457,
+      "workflow_name": "🔨 Build and Release OnePlus Kernels",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/runs/22692212457",
+      "run_attempt": 2,
+      "node_id": "CR_kwDORJJSCc8AAAAPUYdWCA",
+      "head_sha": "3b4ee37f0199ca1b301a5b9b83ebf5f6e5ff5244",
+      "url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/actions/jobs/65792333320",
+      "html_url": "https://github.com/sakfi/OP_KSUN_FS/actions/runs/22692212457/job/65792333320",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-03-04T22:40:34Z",
+      "started_at": "2026-03-04T22:42:13Z",
+      "completed_at": "2026-03-04T22:42:30Z",
+      "name": "build (OP11r, waipio, wild/sm8475, oneplus_11r_w.xml, android12, 5.10, OOS16, KSUN)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-03-04T22:42:14Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "🧹 Emergency Disk Cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 2,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "Download Apache Arrow's util_free_space.sh",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 3,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "🔍 Resolve SUSFS branch from inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:15Z"
+        },
+        {
+          "name": "Install Minimal Dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-03-04T22:42:15Z",
+          "completed_at": "2026-03-04T22:42:27Z"
+        },
+        {
+          "name": "📦 Disk usage (pre-build)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-03-04T22:42:27Z",
+          "completed_at": "2026-03-04T22:42:27Z"
+        },
+        {
+          "name": "♻️ Configure ccache (bounded)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-03-04T22:42:27Z",
+          "completed_at": "2026-03-04T22:42:27Z"
+        },
+        {
+          "name": "🧹 Prepare op_config_json (without KSU fields)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-03-04T22:42:27Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        },
+        {
+          "name": "🔨 Build Kernel",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 10,
+          "started_at": "2026-03-04T22:42:28Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        },
+        {
+          "name": "📊 Build statistics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-03-04T22:42:28Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        },
+        {
+          "name": "📝 Job summary",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-03-04T22:42:28Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        },
+        {
+          "name": "🧹 Final cleanup and space report",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-03-04T22:42:28Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        },
+        {
+          "name": "Post 📥 Checkout Code",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2026-03-04T22:42:28Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2026-03-04T22:42:28Z",
+          "completed_at": "2026-03-04T22:42:28Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/sakfi/OP_KSUN_FS/check-runs/65792333320",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000002148,
+      "runner_name": "GitHub Actions 1000002148",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}
