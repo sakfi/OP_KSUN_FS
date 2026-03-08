@@ -666,46 +666,7 @@ runs:
         }
         
         retry_clone "https://github.com/sakfi/AnyKernel3.1.git" "$ANYKERNEL_BRANCH"
-        
-        # --- Patch AnyKernel3 flashing output for SakFi ---
-        echo "Patching AnyKernel3 flashing output..."
-        AK3="AnyKernel3/anykernel.sh"
 
-        # === Box Banner: repurpose WildKernels header lines ===
-        sed -i 's/WildKernels Telegram Channel:/*****************************************/' "$AK3"
-        sed -i 's|https://t.me/WildKernels|*___________SakFi OP Kernel_____________*|' "$AK3"
-        sed -i 's/WildKernels Website:/*_______________________________________*/' "$AK3"
-        sed -i 's|https://wildkernels.dev|*________Powered by KSUN and SUSFS_______*|' "$AK3"
-        sed -i 's/Wild_KSU GitHub Repository:/*****************************************/' "$AK3"
-
-        # === Clear remaining WildKernels links and descriptions ===
-        sed -i 's|https://github.com/WildKernels/Wild_KSU||g' "$AK3"
-        sed -i 's/KernelSU-Next fork focused on customization and root-hiding features!//g' "$AK3"
-        sed -i 's/GKI_KernelSU_SUSFS GitHub Repository://g' "$AK3"
-        sed -i 's|https://github.com/WildKernels/GKI_KernelSU_SUSFS||g' "$AK3"
-        sed -i 's/GKI kernels with KernelSU and SUSFS.//g' "$AK3"
-        sed -i 's/OnePlus_KernelSU_SUSFS GitHub Repository://g' "$AK3"
-        sed -i 's|https://github.com/WildKernels/OnePlus_KernelSU_SUSFS||g' "$AK3"
-        sed -i 's/OnePlus kernels with KernelSU and SUSFS.//g' "$AK3"
-
-        # === Author line ===
-        sed -i 's/Wild Kernels by TheWildJames aka Morgan Weedman/SakFi OP Kernels by sakfi/g' "$AK3"
-
-        # === Append credit lines after AK3 credit ===
-        sed -i '/ui_print "AnyKernel3 by osm0sis @ xda-developers";/a\        ui_print "Wild Kernels by TheWildJames";' "$AK3"
-        sed -i '/ui_print "Wild Kernels by TheWildJames";/a\        ui_print "OnePlus KernelSU and SUSFS by fatalcoder524";' "$AK3"
-        sed -i '/ui_print "OnePlus KernelSU and SUSFS by fatalcoder524";/a\        ui_print "SUSFS by sidex15 and simonpunk";' "$AK3"
-
-        # === Rename device check label ===
-        sed -i 's/Wild Kernels Supported/SakFi OP Kernels Supported/g' "$AK3"
-
-        # === Replace Done message (no ASCII art) ===
-        sed -i 's/ui_print "Done!";/ui_print "Flashing Done! Good Luck with your new Kernel!!";/' "$AK3"
-
-        # === Clean up consecutive empty ui_print lines ===
-        python3 -c "import re; f=open('$AK3', 'r'); c=f.read(); f.close(); c=re.sub(r'(ui_print \"\";\\s*){2,}', 'ui_print \"\";\\n', c); f=open('$AK3', 'w'); f.write(c)"
-
-        # --------------------------------------------------
         
         retry_clone "https://github.com/TheWildJames/kernel_patches.git"
         
