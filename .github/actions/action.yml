@@ -599,7 +599,7 @@ runs:
         echo "::group::Clone dependencies"
         echo "Cloning AnyKernel3 and other dependencies..."
         
-        ANYKERNEL_BRANCH="Testing"
+        ANYKERNEL_BRANCH="gki-2.0"
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           # Determine SUSFS branch/commit to use
