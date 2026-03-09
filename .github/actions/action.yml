@@ -980,7 +980,8 @@ runs:
           echo "Applying __stack_chk_guard dedup fix for android12/5.10..."
           for ksu_ksu in KernelSU-Next/kernel/ksu.c KernelSU/kernel/ksu.c; do
             if [ -f "$ksu_ksu" ]; then
-              sed -i '/extern unsigned long __stack_chk_guard;/d' "$ksu_ksu"
+              sed -i 's/unsigned long __stack_chk_guard __ro_after_init/extern unsigned long __stack_chk_guard;/g' "$ksu_ksu"
+              sed -i 's/__stack_chk_guard = canary;/\/\/ __stack_chk_guard = canary;/g' "$ksu_ksu"
               echo "  Removed duplicate __stack_chk_guard from $ksu_ksu"
             fi
           done
