@@ -743,6 +743,7 @@ runs:
         KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
         sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile
         echo "ccflags-y += -fno-stack-protector" >> Makefile
+        echo "ccflags-y += -fno-stack-protector" >> Kbuild
         
         cd ..
         KSU_COMMIT_SHA=$(git rev-parse HEAD)
@@ -774,6 +775,7 @@ runs:
         KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" $BASE_VERSION)
         sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" Makefile
         echo "ccflags-y += -fno-stack-protector" >> Makefile
+        echo "ccflags-y += -fno-stack-protector" >> Kbuild
         
         echo "NEED_HOOKS=false" >> $GITHUB_ENV
         
