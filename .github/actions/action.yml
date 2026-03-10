@@ -975,8 +975,17 @@ runs:
           sed -i 's/error = statfs_by_dentry(mnt->mnt.mnt_root, buf);/if (likely(susfs_is_current_proc_umounted_app())) { error = statfs_by_dentry(mnt->mnt.mnt_root, buf); } else { error = statfs_by_dentry(path->dentry, buf); }/g' ./fs/statfs.c
         fi
 
-        # Note: __stack_chk_guard duplicate symbol is handled by -fno-stack-protector in KCFLAGS
-        # during the Build Kernel step — no source-level patching needed here.
+        # Fix __stack_chk_guard duplicate symbol for Android 12-5.10 which lacks CONFIG_STACKPROTECTOR_PER_TASK
+        if [ "${{ env.ANDROID_VER }}" = "android12" ] && [ "${{ env.KERNEL_VER }}" = "5.10" ]; then
+          echo "Applying manual __stack_chk_guard redaction for a12-5.10..."
+          if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+             find "$KSUN_FOLDER/kernel" -type f -name "*.c" -exec sed -i 's/unsigned long __stack_chk_guard;/\/\/ unsigned long __stack_chk_guard;/g' {} +
+          else
+             find "$KSU_FOLDER/kernel" -type f -name "*.c" -exec sed -i 's/unsigned long __stack_chk_guard;/\/\/ unsigned long __stack_chk_guard;/g' {} +
+          fi
+          # Also redact in SusFS source if defined there
+          find "$COMMON_KERNEL_FOLDER/fs" -type f -name "susfs.c" -exec sed -i 's/unsigned long __stack_chk_guard;/\/\/ unsigned long __stack_chk_guard;/g' {} +
+        fi
 
         echo "✅ SUSFS patches applied"
         echo "::endgroup::"
