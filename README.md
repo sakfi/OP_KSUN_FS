@@ -7,7 +7,7 @@
 [![Stars](https://img.shields.io/github/stars/sakfi/OP_KSUN_FS?style=flat-square&color=yellow)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
 
 <a href="https://github.com/sakfi/OP_KSUN_FS">
-  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=A+GitHub+Actions+build+toolkit;For+KernelSU-Next+%2B+SUSFS;On+OnePlus+GKI+devices;Maintained+by+SakFi" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=An+Open+Source+Kernel;Integrated+With+KernelSU-Next+%2B+SUSFS;For+OnePlus+Devices;Maintained+by+SakFi" alt="Typing SVG" />
 </a>
 
 [![KernelSU](https://img.shields.io/badge/KernelSU-Supported-green)](https://kernelsu.org/)
