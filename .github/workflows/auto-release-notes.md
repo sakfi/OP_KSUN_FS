@@ -35,7 +35,7 @@ Add a step at the end of `build-kernel-release.yml` that:
 
     # Create or update the release
     gh release create "$TAG" \
-      --title "OnePlus Kernels with KernelSU Next & SUSFS — SakFi Edition $TAG" \
+      --title "OnePlus Kernels With KSUN & SUSFS integrated — SakFi $TAG" \
       --notes-file /tmp/release_body.md \
       --latest
 
@@ -111,7 +111,7 @@ jobs:
 
           # Create release
           gh release create "$TAG" \
-            --title "OnePlus Kernels — SakFi Edition $TAG" \
+            --title "OnePlus Kernels With KSUN & SUSFS integrated — SakFi $TAG" \
             --notes-file /tmp/release_body.md \
             --latest
 ```
