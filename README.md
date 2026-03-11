@@ -153,7 +153,7 @@ If you encounter any issues or need help, feel free to:
 
 ---
 
-## 📱 Connect With Us
+## 📱 Connect With Me
 
 <div align="center">
 
