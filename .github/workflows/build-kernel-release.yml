@@ -73,7 +73,7 @@ jobs:
       device_count: ${{ steps.set-matrix.outputs.count }}
     steps:
       - name: 📥 Checkout Code (to access configs/)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout: |
             configs/
@@ -171,11 +171,12 @@ jobs:
           echo "::endgroup::"
 
       - name: Upload build matrix
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-matrix
           path: matrix.json
-          retention-days: 1
+          archive: false
+          retention-days: 7
 
       - name: 📊 Build plan summary
         run: |
@@ -338,7 +339,7 @@ jobs:
           echo "susfs_branch=$susfs_branch" >> "$GITHUB_OUTPUT"
 
       - name: 📥 Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -539,7 +540,7 @@ jobs:
       SUSFS_BASE_VERSION: 'v2.0.0'
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -634,7 +635,7 @@ jobs:
             feature_flags=$(jq -r --arg MODEL "$model" '
               .[] | 
               select(.model == $MODEL) |
-              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)"
+              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)"
             ' <<< "$JSON_BUILD_DATA")
             
             features=""
@@ -642,15 +643,16 @@ jobs:
             if [[ -z "$feature_flags" ]]; then
               echo "Warning: No JSON entry found for model: $model" >&2
             else
-              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set <<< "$feature_flags"
+              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode <<< "$feature_flags"
               
               # Build features string based on boolean values
               [[ "$hmbird" == "true" ]] && features+="🐦 HMBIRD "
               [[ "$susfs" == "true" ]] && features+="ඞ SusFS "
               [[ "$bbr" == "true" ]] && features+="🚀 BBR "
               [[ "$bbg" == "true" ]] && features+="🛡️ BBG "
-              [[ "$ttl" == "true" ]] && features+="⏱️ TTL "
-              [[ "$ip_set" == "true" ]] && features+="🔧 IP_SET"
+              [[ "$ttl" == "true" ]] && features+="🌐 TTL "
+              [[ "$ip_set" == "true" ]] && features+="🧱 IP_SET & IPv6 NAT"
+              [[ "$unicode" == "true" ]] && features+="🔧 Unicode Fix"
             fi
             
             printf "| %-13s | %-10s | %-16s | %-30s |\n" \
@@ -723,9 +725,18 @@ jobs:
           fi
           cat << EOF >> release_notes.md
           - **SUSFS $SUSFS_BASE_VERSION** - Advanced hiding and security features
+          EOF
+          if [ -n "$KSUN_BRANCH" ] && [ "${ksu_ver_global:-0}" -lt 12884 ]; then
+            cat << EOF >> release_notes.md
           - **Magic Mount Support** - Seamless file system modifications
+          EOF
+          fi
+          if [ "${ksu_ver_global:-0}" -lt 12884 ]; then
+            cat << EOF >> release_notes.md
           - **Manual Hooks** - scope_min_manual_hooks_v1.4 for better compatibility
-          
+          EOF
+          fi
+          cat << EOF >> release_notes.md
           ### 🛡️ Security & Privacy
           - **Baseband Guard (BBG)** - LSM-based baseband security
           - **SUSFS Hide Features**:
@@ -738,20 +749,21 @@ jobs:
             - ✅ SUS_MAP - Memory mapping protection
             - ✅ AVC_SPOOF - Spoof Procfs avc denial logs
           - **Ptrace Leak Fix** - For kernels < 5.16
+          - **Unicode Fix** - Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental]
           
           ### 🚀 Performance & Networking
-          - **BBR** - Improved TCP congestion control
+          - **BBRv1** - Improved TCP congestion control
           - **Wireguard** - Built-in VPN support
-          - **IP Set Support** - Advanced firewall capabilities
+          - **IP Set & IPv6 NAT Support** - Advanced firewall capabilities and IPv6 NAT Support
           - **TTL Target Support** - Network packet manipulation
           - **LTO (Link Time Optimization)** - Optimized binary size and performance
           - **ccache-accelerated builds** - Faster compilation times
-          - **Optimisation Patches** - General Optimisation Patches for overall improvement
+          - **Optimisation Patches** - Memory, I/O, CPU scheduler, network and other general tunings
           
           ### 🔧 System Features
           - **TMPFS_XATTR** - Extended attributes for tmpfs (Mountify support)
           - **TMPFS_POSIX_ACL** - POSIX ACLs for tmpfs
-          - **HMBIRD SCX** - Scheduler extensions for all sm8750 devices
+          - **HMBIRD SCX** - Scheduler extensions for all SM8750/MT6991 devices
           
           ---
           
@@ -805,15 +817,16 @@ jobs:
           
           ### This Release
           - Updated SUSFS to v2.0.0.
-          - Added HMBIRD support for all sm8750 devices.
+          - Added HMBIRD support for all SM8750/MT6991 devices.
           - Improved ccache build system.
           - Enhanced SUSFS hiding capabilities.
-          - Added IP_SET and TTL support.
+          - Added IP_SET, IPv6 NAT and TTL support.
           - Added TMPFS_XATTR and TMPFS_POSIX_ACL support for Mountify.
           - Added Ptrace leak fix for kernels < 5.16.
           - Compiler optimizations (${{ inputs.optimize_level }}).
           - Additional General Optimisations.
           - Wild_KSU Manager Support.
+          - Unicode Bypass Fix
           
           ### Previous Releases
           See [Releases Page](${{ github.server_url }}/${{ github.repository }}/releases)

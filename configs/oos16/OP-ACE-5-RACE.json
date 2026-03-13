@@ -15,5 +15,6 @@
   "bbr": true,
   "ttl": true,
   "ip_set": true,
+  "unicode": true,
   "uname": "OP-WILD"
 }
