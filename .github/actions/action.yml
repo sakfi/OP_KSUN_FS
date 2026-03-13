@@ -90,16 +90,16 @@ runs:
         android_version="${OP_ANDROID_VERSION:-}"
         kernel_version="${OP_KERNEL_VERSION:-}"
         os_version="${OP_OS_VERSION:-}"
-        hmbird="${OP_HMBIRD:-}"
-        susfs="${OP_SUSFS:-}"
-        bbg="${OP_BBG:-}"
-        bbr="${OP_BBR:-}"
-        ttl="${OP_TTL:-}"
-        ip_set="${OP_IP_SET:-}"
-        rust_build="${OP_RUST_BUILD:-}"
-        lto="${OP_LTO:-}"
-        uname="${OP_UNAME:-}"
-        unicode="${OP_UNICODE:-}"
+        hmbird="${OP_HMBIRD:-false}"
+        susfs="${OP_SUSFS:-false}"
+        bbg="${OP_BBG:-false}"
+        bbr="${OP_BBR:-false}"
+        ttl="${OP_TTL:-false}"
+        ip_set="${OP_IP_SET:-false}"
+        rust_build="${OP_RUST_BUILD:-false}"
+        lto="${OP_LTO:-none}"
+        uname="${OP_UNAME:-OnePlus}"
+        unicode="${OP_UNICODE:-false}"
         optimize='${{ inputs.optimize_level }}'
 
         errors=()
@@ -158,63 +158,43 @@ runs:
           errors+=("Input 'os_version' does not start with 'OOS'. Got: '$os_version'")
         fi
 
-        if [[ -z "$hmbird" ]]; then
-          errors+=("Input 'hmbird' cannot be empty")
-        elif [[ "$hmbird" != "true" && "$hmbird" != "false" ]]; then
+        if [[ "$hmbird" != "true" && "$hmbird" != "false" ]]; then
           errors+=("Input 'hmbird' contains invalid characters. Allowed: 'true' or 'false'. Got: '$hmbird'")
         fi
 
-        if [[ -z "$susfs" ]]; then
-          errors+=("Input 'susfs' cannot be empty")
-        elif [[ "$susfs" != "true" && "$susfs" != "false" ]]; then
+        if [[ "$susfs" != "true" && "$susfs" != "false" ]]; then
           errors+=("Input 'susfs' contains invalid characters. Allowed: 'true' or 'false'. Got: '$susfs'")
         fi
 
-        if [[ -z "$bbg" ]]; then
-          errors+=("Input 'bbg' cannot be empty")
-        elif [[ "$bbg" != "true" && "$bbg" != "false" ]]; then
+        if [[ "$bbg" != "true" && "$bbg" != "false" ]]; then
           errors+=("Input 'bbg' contains invalid characters. Allowed: 'true' or 'false'. Got: '$bbg'")
         fi
 
-        if [[ -z "$bbr" ]]; then
-          errors+=("Input 'bbr' cannot be empty")
-        elif [[ "$bbr" != "true" && "$bbr" != "false" ]]; then
+        if [[ "$bbr" != "true" && "$bbr" != "false" ]]; then
           errors+=("Input 'bbr' contains invalid characters. Allowed: 'true' or 'false'. Got: '$bbr'")
         fi
 
-        if [[ -z "$ttl" ]]; then
-          errors+=("Input 'ttl' cannot be empty")
-        elif [[ "$ttl" != "true" && "$ttl" != "false" ]]; then
+        if [[ "$ttl" != "true" && "$ttl" != "false" ]]; then
           errors+=("Input 'ttl' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ttl'")
         fi
 
-        if [[ -z "$ip_set" ]]; then
-          errors+=("Input 'ip_set' cannot be empty")
-        elif [[ "$ip_set" != "true" && "$ip_set" != "false" ]]; then
+        if [[ "$ip_set" != "true" && "$ip_set" != "false" ]]; then
           errors+=("Input 'ip_set' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ip_set'")
         fi
 
-        if [[ -z "$rust_build" ]]; then
-          errors+=("Input 'rust_build' cannot be empty")
-        elif [[ "$rust_build" != "true" && "$rust_build" != "false" ]]; then
+        if [[ "$rust_build" != "true" && "$rust_build" != "false" ]]; then
           errors+=("Input 'rust_build' contains invalid characters. Allowed: 'true' or 'false'. Got: '$rust_build'")
         fi
 
-        if [[ -z "$lto" ]]; then
-          errors+=("Input 'lto' cannot be empty")
-        elif [[ "$lto" != "none" && "$lto" != "thin" && "$lto" != "full" ]]; then
+        if [[ "$lto" != "none" && "$lto" != "thin" && "$lto" != "full" ]]; then
           errors+=("Input 'lto' contains invalid characters. Allowed: 'thin', 'full' or 'none'. Got: '$lto'")
         fi
 
-        if [[ -z "$uname" ]]; then
-          errors+=("Input 'uname' cannot be empty")
-        elif [[ ${#uname} -gt 44 ]]; then
+        if [[ ${#uname} -gt 44 ]]; then
           errors+=("Input 'uname' too long. Maximum length: 44. Got: '$uname'")
         fi
 
-        if [[ -z "$unicode" ]]; then
-          errors+=("Input 'unicode' cannot be empty")
-        elif [[ "$unicode" != "true" && "$unicode" != "false" ]]; then
+        if [[ "$unicode" != "true" && "$unicode" != "false" ]]; then
           errors+=("Input 'unicode' contains invalid characters. Allowed: 'true' or 'false'. Got: '$unicode'")
         fi
 
