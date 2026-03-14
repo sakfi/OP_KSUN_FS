@@ -1,4 +1,4 @@
-name: 🔍 Check SUSFS Update
+name: 🔨 Check SUSFS Update
 
 on:
   workflow_dispatch:

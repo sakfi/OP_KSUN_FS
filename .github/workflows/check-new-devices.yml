@@ -1,4 +1,4 @@
-name: 🆕 Check for New OnePlus Devices
+name: 🔨 Check for New OnePlus Devices
 
 on:
   schedule:
