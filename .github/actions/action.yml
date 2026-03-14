@@ -844,15 +844,9 @@ runs:
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              echo "Applying KSUN fix patches for $susfs_version (auto-detecting .rej files)..."
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1); do
-                patch_file="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
-                if [ -f "$patch_file" ]; then
-                  echo "Patching file: $file.c with fix_$file.c.patch"
-                  patch -p1 --forward < "$patch_file"
-                else
-                  echo "⚠️ Skipping missing patch: fix_$file.c.patch"
-                fi
+                echo "Patching file: $file.c with fix_$file.c.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
               done
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
             else
@@ -864,15 +858,9 @@ runs:
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              echo "Applying KSUN fix patches for v2.0.0 (auto-detecting .rej files)..."
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-                FIX_PATCH="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
-                if [ -f "$FIX_PATCH" ]; then
-                  echo "Patching file: $file with fix_$file.patch"
-                  patch -p1 --forward < "$FIX_PATCH" || true
-                else
-                  echo "⚠️ No fix patch found for $file at $FIX_PATCH, skipping..."
-                fi
+                echo "Patching file: $file with fix_$file.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
               done
               echo "Patching Hook Mode!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
@@ -1415,7 +1403,7 @@ runs:
         
         make O="$OUT" gki_defconfig
         
-        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--OP-WILD}"
+        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--SakFi-OP}"
         if [ -n "${LOCAL_LOCALVERSION:-}" ]; then
           scripts/config --file "$OUT/.config" --set-str LOCALVERSION "${LOCAL_LOCALVERSION}"
           scripts/config --file "$OUT/.config" -d LOCALVERSION_AUTO || true
