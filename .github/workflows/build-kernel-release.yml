@@ -84,6 +84,14 @@ on:
           - android15-6.6
           - android16-6.12
         default: All
+      runner_type:
+        description: 'Select the Runner to use'
+        required: true
+        type: choice
+        options:
+          - GitHub Hosted
+          - Self Hosted
+        default: GitHub Hosted
       ksu_options:
         description: 'Enter KernelSU build json'
         required: true
@@ -122,7 +130,7 @@ on:
 
 jobs:
   set-op-model:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner_type == 'Self Hosted' && 'self-hosted' || 'ubuntu-latest' }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       device_count: ${{ steps.set-matrix.outputs.count }}
@@ -322,7 +330,7 @@ jobs:
   build:
     name: build (${{ matrix.model }}, ${{ matrix.soc }}, ${{ matrix.branch }}, ${{ matrix.manifest }}, ${{ matrix.android_version }}, ${{ matrix.kernel_version }}, ${{ matrix.os_version }}, ${{ matrix.ksu_type }})
     needs: set-op-model
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner_type == 'Self Hosted' && 'self-hosted' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.set-op-model.outputs.matrix) }}
@@ -597,7 +605,7 @@ jobs:
 
   trigger-release:
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner_type == 'Self Hosted' && 'self-hosted' || 'ubuntu-latest' }}
     environment: Production-Release
     env:
       REPO_OWNER: ${{ github.repository_owner }}
