@@ -9,7 +9,7 @@ on:
       dry_run:
         description: 'Dry run — only report, do not open issue'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       upstream_repo:
         description: 'Upstream repo to compare against'

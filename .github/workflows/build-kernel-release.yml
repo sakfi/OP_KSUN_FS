@@ -8,21 +8,11 @@ on:
   workflow_dispatch:
     inputs:
       op_model:
-        description: 'Select the OnePlus kernels to build'
+        description: 'Select the OnePlus Devices to build'
         required: true
         type: choice
         options:
-          - OOS14+15+16
-          - OOS15+16
-          - OOS14+15
-          - OOS16
-          - OOS15
-          - OOS14
-          - android16-6.12
-          - android15-6.6
-          - android14-6.1
-          - android13-5.15
-          - android12-5.10
+          - All
           - OP-ACE
           - OP-ACE-2
           - OP-ACE-2-PRO
@@ -68,7 +58,7 @@ on:
           - OP13r
           - OP15
           - OP15r
-        default: OOS14+15+16
+        default: All
       android_version_filter:
         description: 'Select the Android Version to build'
         required: true
@@ -174,32 +164,7 @@ jobs:
           jq_filter="."
           
           case "$input" in
-            OOS14+15+16)
-              ;;
-            OOS15+16)
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))"
-              ;;
-            OOS14+15)
-              jq_filter="map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))"
-              ;;
-            OOS16)
-              jq_filter="map(select(.os_version == \"OOS16\"))"
-              ;;
-            OOS15)
-              jq_filter="map(select(.os_version == \"OOS15\"))"
-              ;;
-            OOS14)
-              jq_filter="map(select(.os_version == \"OOS14\"))"
-              ;;
-            android*-*.*)
-              # Extract android version and kernel version
-              IFS='-' read -r av kv <<< "$input"
-              
-              # Build android*-* only for OOS15 and OOS16
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\")) | map(select(.android_version == \"$av\" and .kernel_version == \"$kv\"))"
-              
-              echo "ℹ️  Android-Kernel filter applied: $av-$kv"
-              echo "   Restricted to: OOS15 and OOS16 only"
+            All)
               ;;
             *)
               echo "ℹ️  Device-specific filter applied: $input"

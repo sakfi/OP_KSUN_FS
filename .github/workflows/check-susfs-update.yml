@@ -10,7 +10,7 @@ on:
       dry_run:
         description: 'Dry run — report only, do not open GitHub issue'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 jobs:
