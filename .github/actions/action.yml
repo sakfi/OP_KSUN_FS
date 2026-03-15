@@ -1133,8 +1133,12 @@ runs:
         patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/use_unlikely_wrap_cpufreq.patch" || true
 
         if [ "${{ env.OP_UNICODE }}" = true ]; then
-          echo "Patching Unicode Fix Patch"
-          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/unicode_fix.patch"
+          echo "Patching unicode bypass fix!"
+          if [ "$(printf '%s\n' "$KERNEL_VERSION" "5.16" | sort -V | head -n1)" = "$KERNEL_VERSION" ]; then
+              patch -p1 -F 3 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1-.patch"
+          else
+              patch -p1 -F 3 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1+.patch"
+          fi
         fi
 
         echo "✅ Other patches applied"
