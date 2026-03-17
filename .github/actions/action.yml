@@ -1253,7 +1253,6 @@ runs:
         CONFIG_OPTIMIZE_INLINING=y
         CONFIG_FRAME_WARN=0
         CONFIG_TRACEPOINTS=y
-        CONFIG_WQ_POWER_EFFICIENT_DEFAULT=y
         EOF
 
     - name: Add RUST build configs
