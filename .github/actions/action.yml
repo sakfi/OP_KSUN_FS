@@ -1475,10 +1475,17 @@ runs:
         fi
         
         BUILD_START=$(date +%s)
-        set -o pipefail
+        
+        # We disable strict pipefail/exit so we can manually catch make errors
+        # This allows the subsequent 'tail' of the build log to actually run
+        set +e
+        set +o pipefail
         
         make -j"$(nproc --all)" O="$OUT" KCFLAGS="$KCFLAGS" KCPPFLAGS="$KCPPFLAGS" 2>&1 | tee build.log
+        MAKE_EXIT_CODE=${PIPESTATUS[0]}
         
+        set -e
+        set -o pipefail
         BUILD_END=$(date +%s)
         BUILD_TIME=$((BUILD_END - BUILD_START))
         
@@ -1487,8 +1494,8 @@ runs:
         echo "BUILD_TIME=$BUILD_TIME" >> "$GITHUB_ENV"
         
         IMG="$OUT/arch/arm64/boot/Image"
-        if [ ! -f "$IMG" ]; then
-          echo "::error::Kernel Image missing"
+        if [ ! -f "$IMG" ] || [ "$MAKE_EXIT_CODE" -ne 0 ]; then
+          echo "::error::Kernel Build Failed or Image missing. Exit code: $MAKE_EXIT_CODE"
           echo "::group::Last 100 lines of build log"
           tail -n 100 build.log || echo "Build log not available"
           echo "::endgroup::"
