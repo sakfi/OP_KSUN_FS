@@ -1138,22 +1138,6 @@ runs:
         echo "✅ Other patches applied"
         echo "::endgroup::"
 
-    - name: Add IP SET & IPv6_NAT Support
-      if: ${{ env.OP_IP_SET == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "Add IP SET & IPv6_NAT Support"
-        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
-        CONFIG_IP_SET_LIST_SET=y
-        CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
-        CONFIG_NETFILTER_XT_SET=y
-        CONFIG_IP6_NF_NAT=y
-        CONFIG_IP6_NF_TARGET_MASQUERADE=y
-        EOF
-
-        patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
-
     - name: Apply Unicode Fix Patch
       shell: bash
       if: ${{ env.OP_UNICODE == 'true' }}
