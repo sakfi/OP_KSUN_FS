@@ -642,8 +642,8 @@ jobs:
           
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "$TAG_TO_USE"
-          git push origin "$TAG_TO_USE"
+          # We no longer git tag and push here. 
+          # gh release create will automatically generate the tag using the GitHub API!
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v8
@@ -975,6 +975,7 @@ jobs:
           gh release create "${{ env.NEW_TAG }}" \
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
+            --target "$GITHUB_SHA" \
             --notes-file release_notes.md
 
       - name: 📤 Upload Release Assets Dynamically
