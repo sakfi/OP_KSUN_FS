@@ -241,10 +241,11 @@ jobs:
           echo "::endgroup::"
 
       - name: Upload build matrix
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-matrix
           path: matrix.json
+          archive: false
           retention-days: 1
 
       - name: 📊 Build plan summary
