@@ -1634,6 +1634,26 @@ runs:
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
         cd "$AK3_FOLDER"
         
+        BANNER_FILE="${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt"
+        if [ -f "$BANNER_FILE" ]; then
+          echo "Applying custom banner to anykernel.sh..."
+          sed -i '/^ui_print/d' anykernel.sh
+          sed -i '/^kernel.string=/d' anykernel.sh
+          sed -i '/AnyKernel3 by osm0sis/d' META-INF/com/google/android/update-binary || true
+          
+          rm -f custom_banner.sh
+          awk '/\[ASCII_BANNER_START\]/{flag=1; next} /\[ASCII_BANNER_END\]/{flag=0; next} flag {
+            if ($0 ~ /^sleep/) { print $0 }
+            else { gsub(/"/, "\\\"", $0); print "ui_print \"" $0 "\"" }
+          }' "$BANNER_FILE" > custom_banner.sh
+          
+          awk '/\[UI_PRINT_START\]/{flag=1; next} /\[UI_PRINT_END\]/{flag=0; next} flag' "$BANNER_FILE" >> custom_banner.sh
+          
+          awk -v f="$(cat custom_banner.sh)" '/^\. tools\/ak3-core\.sh;/{print f; print ""; print $0; next} 1' anykernel.sh > anykernel.sh.tmp
+          mv anykernel.sh.tmp anykernel.sh
+          rm -f custom_banner.sh banner
+        fi
+        
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
         else
