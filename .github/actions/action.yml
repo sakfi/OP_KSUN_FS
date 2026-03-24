@@ -876,7 +876,7 @@ runs:
                 fi
                 if [ -f "$patch_file" ]; then
                   echo "Patching file: $file with $(basename "$patch_file")"
-                  patch "./kernel/$file" --forward < "$patch_file" || true
+                  patch -p1 --forward < "$patch_file" || true
                 else
                   echo "⚠️ Skipping missing patch: fix_$file.patch"
                 fi
@@ -910,7 +910,7 @@ runs:
                 fi
                 if [ -f "$patch_file" ]; then
                   echo "Patching file: $file with $(basename "$patch_file")"
-                  patch "./kernel/$file" --forward < "$patch_file" || true
+                  patch -p1 --forward < "$patch_file" || true
                 else
                   echo "⚠️ Skipping missing patch: fix_$file.patch"
                 fi
@@ -1219,6 +1219,11 @@ runs:
         set -euo pipefail
         echo "Add IP SET & IPv6_NAT Support"
         cd "$COMMON_KERNEL_FOLDER"
+        KERNEL_VERSION="${{ env.KERNEL_VER }}"
+        
+        if [[ "$KERNEL_VERSION" != "6.12" ]]; then
+            echo "CONFIG_BPF_STREAM_PARSER=y" >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+        fi
         
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_IP_SET=y
