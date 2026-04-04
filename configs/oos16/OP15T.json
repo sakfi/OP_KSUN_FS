@@ -1,8 +1,8 @@
 {
-  "model": "OP-ACE-6T",
+  "model": "OP15T",
   "soc": "canoe",
-  "branch": "wild/sm8845",
-  "manifest": "oneplus_ace_6t_w.xml",
+  "branch": "wild/sm8850",
+  "manifest": "oneplus_15t_w.xml",
   "android_version": "android16",
   "kernel_version": "6.12",
   "os_version": "OOS16",

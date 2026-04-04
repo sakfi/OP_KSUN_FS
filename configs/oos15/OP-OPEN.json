@@ -7,6 +7,9 @@
   "kernel_version": "5.15",
   "os_version": "OOS15",
   "lto": "thin",
+  "zyc_compiler": "",
+  "c_compiler": "kernel_platform/prebuilts/clang/host/linux-x86/clang-r450784e/bin",
+  "rust_compiler": "",
   "rust_build": false,
   "disk_cleanup": false,
   "hmbird": false,
@@ -16,5 +19,5 @@
   "ttl": true,
   "ip_set": true,
   "unicode": true,
-  "uname": "SakFi-OP"
+  "uname": "OP-WILD"
 }
