@@ -13,21 +13,11 @@ on:
         type: string
         default: ''
       op_model:
-        description: 'Select the OnePlus kernels to build'
+        description: 'Select the OnePlus Devices to build'
         required: true
         type: choice
         options:
-          - OOS14+15+16
-          - OOS15+16
-          - OOS14+15
-          - OOS16
-          - OOS15
-          - OOS14
-          - android16-6.12
-          - android15-6.6
-          - android14-6.1
-          - android13-5.15
-          - android12-5.10
+          - All
           - OP-ACE
           - OP-ACE-2
           - OP-ACE-2-PRO
@@ -76,7 +66,32 @@ on:
           - OP15T
           - OP-TURBO-6
           - OP-TURBO-6V
-        default: OOS14+15+16
+        default: All
+      android_version_filter:
+        description: 'Select the Android Version to build'
+        required: true
+        type: choice
+        options:
+          - All
+          - oos14
+          - oos15
+          - oos16
+          - oos14+oos15
+          - oos15+oos16
+          - oos14+oos16
+        default: All
+      kernel_version_filter:
+        description: 'Select the Kernel Version to build'
+        required: true
+        type: choice
+        options:
+          - All
+          - android12-5.10
+          - android13-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+        default: All
       ksu_options:
         description: 'Enter KernelSU build json'
         required: true
@@ -170,39 +185,55 @@ jobs:
           jq_filter="."
           
           case "$input" in
-            OOS14+15+16)
-              ;;
-            OOS15+16)
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))"
-              ;;
-            OOS14+15)
-              jq_filter="map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))"
-              ;;
-            OOS16)
-              jq_filter="map(select(.os_version == \"OOS16\"))"
-              ;;
-            OOS15)
-              jq_filter="map(select(.os_version == \"OOS15\"))"
-              ;;
-            OOS14)
-              jq_filter="map(select(.os_version == \"OOS14\"))"
-              ;;
-            android*-*.*)
-              # Extract android version and kernel version
-              IFS='-' read -r av kv <<< "$input"
-              
-              # Build android*-* only for OOS15 and OOS16
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\")) | map(select(.android_version == \"$av\" and .kernel_version == \"$kv\"))"
-              
-              echo "ℹ️  Android-Kernel filter applied: $av-$kv"
-              echo "   Restricted to: OOS15 and OOS16 only"
+            All)
               ;;
             *)
+              echo "ℹ️  Device-specific filter applied: $input"
               jq_filter="map(select(.model == \"$input\"))"
               ;;
           esac
           
-          filtered=$(jq -c "$jq_filter" matrix.json)
+          android_input="${{ github.event.inputs.android_version_filter }}"
+          android_jq_filter=""
+          
+          case "$android_input" in
+            "All")
+              # No additional filtering needed
+              ;;
+            "oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\"))"
+              ;;
+            "oos15")
+              android_jq_filter=" | map(select(.os_version == \"OOS15\"))"
+              ;;
+            "oos16")
+              android_jq_filter=" | map(select(.os_version == \"OOS16\"))"
+              ;;
+            "oos14+oos15" | "oos15+oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))"
+              ;;
+            "oos15+oos16" | "oos16+oos15")
+              android_jq_filter=" | map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))"
+              ;;
+            "oos14+oos16" | "oos16+oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS16\"))"
+              ;;
+            *)
+              echo "::warning::Unknown Android version filter '$android_input'."
+              ;;
+          esac
+
+          kernel_input="${{ github.event.inputs.kernel_version_filter }}"
+          kernel_jq_filter=""
+          
+          if [[ "$kernel_input" != "All" ]]; then
+            IFS='-' read -r ak_android ak_kernel <<< "$kernel_input"
+            kernel_jq_filter=" | map(select(.android_version == \"$ak_android\" and .kernel_version == \"$ak_kernel\"))"
+            echo "ℹ️  Kernel version filter applied: $kernel_input"
+          fi
+
+          combined_filter="${jq_filter}${android_jq_filter}${kernel_jq_filter}"
+          filtered=$(jq -c "$combined_filter" matrix.json)
           count=$(jq 'length' <<<"$filtered")
           
           if [ "$count" -eq 0 ]; then
