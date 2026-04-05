@@ -1,4 +1,4 @@
-name: Build and Release OnePlus Kernels
+name: 🔨 Build and Release OnePlus Kernels
 
 permissions:
   contents: write
