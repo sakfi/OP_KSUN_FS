@@ -1163,4 +1163,41 @@ jobs:
             fi
           done
 
+      - name: 📣 Send message to Telegram
+        if: success()
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GROUP_ID: ${{ secrets.TELEGRAM_GROUP }}
+          CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL }}
+          REL_NAME: ${{ env.RELEASE_NAME }}
+          REL_TAG: ${{ env.NEW_TAG }}
+          REL_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Build message (HTML formatted)
+          MESSAGE=$(cat <<EOF
+          <b>🚀 New release published</b>
+          
+          <b>Repository:</b> $REPO
+          <b>Tag:</b> $REL_TAG
+          <b>Title:</b> $REL_NAME
+          <b>Link:</b> $REL_URL
+          EOF
+          )
 
+          send_telegram() {
+            local chat_id="$1"
+            if [ -n "$chat_id" ]; then
+              echo "Sending to $chat_id..."
+              curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+                --data-urlencode "chat_id=$chat_id" \
+                --data-urlencode "text=$MESSAGE" \
+                --data-urlencode "parse_mode=HTML" \
+                -w "\n"
+            else
+              echo "Warning: Chat ID missing"
+            fi
+          }
+
+          send_telegram "$GROUP_ID"
+          send_telegram "$CHANNEL_ID"

@@ -2,7 +2,7 @@ name: Telegram on Release
 
 on:
   release:
-    types: [published, edited]
+    types: [edited]
 
 jobs:
   notify:
@@ -18,16 +18,10 @@ jobs:
           REL_TAG: ${{ github.event.release.tag_name }}
           REL_URL: ${{ github.event.release.html_url }}
           REPO: ${{ github.repository }}
-          ACTION: ${{ github.event.action }}
         run: |
           # Set message type
-          EMOJI="🚀"
-          STATUS="New release published"
-
-          if [ "$ACTION" = "edited" ]; then
-            EMOJI="✏️"
-            STATUS="Release updated"
-          fi
+          EMOJI="✏️"
+          STATUS="Release updated"
 
           # Build message (HTML formatted)
           MESSAGE=$(cat <<EOF
