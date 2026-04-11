@@ -22,7 +22,7 @@ jobs:
               echo 'Release URL: ${{ github.event.release.html_url }}'
               echo 'EOF'
             } >> $GITHUB_ENV
-          else
+          elif [ "${{ github.event.action }}" = "edited" ]; then
             {
               echo 'MESSAGE<<EOF'
               echo '✏️ Release updated'
@@ -33,6 +33,9 @@ jobs:
               echo 'Release URL: ${{ github.event.release.html_url }}'
               echo 'EOF'
             } >> $GITHUB_ENV
+          else
+            echo "Unsupported release action: ${{ github.event.action }}"
+            exit 0
           fi
 
       - name: Send message to Telegram group
