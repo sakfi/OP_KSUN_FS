@@ -11,7 +11,7 @@
 </a>
 
 [![KernelSU-Next](https://img.shields.io/badge/KernelSU_Next-Supported-green)](https://kernelsu-next.github.io/webpage/)
-[![Wild KSU](https://img.shields.io/badge/Wild_KSU-Temporary%Not%Supported-cb2431)](https://github.com/WildKernels/Wild_KSU/)
+[![Wild KSU](https://img.shields.io/badge/Wild_KSU-Not%Supported-cb2431)](https://github.com/WildKernels/Wild_KSU/)
 [![KernelSU](https://img.shields.io/badge/KernelSU-Not%20Supported-cb2431)](https://kernelsu.org/)
 [![SUSFS](https://img.shields.io/badge/SUSFS_2.1-Integrated-orange)](https://gitlab.com/simonpunk/susfs4ksu)
 
