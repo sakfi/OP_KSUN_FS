@@ -2,35 +2,47 @@ name: Telegram on Release
 
 on:
   release:
-    types: [published]
+    types: [published, edited]
 
 jobs:
   notify:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send release message to Telegram group
+      - name: Build Telegram message
         run: |
-          MESSAGE="🚀 New release published
+          if [ "${{ github.event.action }}" = "published" ]; then
+            {
+              echo 'MESSAGE<<EOF'
+              echo '🚀 New release published'
+              echo
+              echo 'Repository: ${{ github.repository }}'
+              echo 'Tag: ${{ github.event.release.tag_name }}'
+              echo 'Title: ${{ github.event.release.name }}'
+              echo 'Release URL: ${{ github.event.release.html_url }}'
+              echo 'EOF'
+            } >> $GITHUB_ENV
+          else
+            {
+              echo 'MESSAGE<<EOF'
+              echo '✏️ Release updated'
+              echo
+              echo 'Repository: ${{ github.repository }}'
+              echo 'Tag: ${{ github.event.release.tag_name }}'
+              echo 'Title: ${{ github.event.release.name }}'
+              echo 'Release URL: ${{ github.event.release.html_url }}'
+              echo 'EOF'
+            } >> $GITHUB_ENV
+          fi
 
-Repository: ${{ github.repository }}
-Tag: ${{ github.event.release.tag_name }}
-Title: ${{ github.event.release.name }}
-Release URL: ${{ github.event.release.html_url }}"
-
+      - name: Send message to Telegram group
+        run: |
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             --data-urlencode "chat_id=${{ secrets.TELEGRAM_GROUP }}" \
             --data-urlencode "text=$MESSAGE"
 
-      - name: Send release message to Telegram channel
+      - name: Send message to Telegram channel
         run: |
-          MESSAGE="🚀 New release published
-
-Repository: ${{ github.repository }}
-Tag: ${{ github.event.release.tag_name }}
-Title: ${{ github.event.release.name }}
-Release URL: ${{ github.event.release.html_url }}"
-
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHANNEL }}" \
             --data-urlencode "text=$MESSAGE"
