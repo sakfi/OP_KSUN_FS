@@ -1,13 +1,13 @@
-name: Test Telegram Notification
+#name: Test Telegram Notification
 
-on:
-  workflow_dispatch:
+#on:
+  #workflow_dispatch:
 
-jobs:
-  notify:
+#jobs:
+  #notify:
     runs-on: ubuntu-latest
 
-    steps:
+    #steps:
       - name: Send message to Telegram group
         run: |
           echo "Sending to group..."
