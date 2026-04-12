@@ -866,7 +866,7 @@ jobs:
           [![Workflow](https://img.shields.io/badge/Workflow-Build--Kernel-orange?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           
           <a href="${{ github.server_url }}/${{ github.repository }}">
-            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
+            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Integrated+NTSync+%26+WireGuard;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
           </a>
           
           > **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC') | **Build ID:** \`${{ github.run_id }}\`
@@ -904,8 +904,10 @@ jobs:
               [[ "$bbr" == "true" ]] && features+="🚀 BBR "
               [[ "$bbg" == "true" ]] && features+="🛡️ BBG "
               [[ "$ttl" == "true" ]] && features+="🌐 TTL "
-              [[ "$ip_set" == "true" ]] && features+="🔧 IP_SET & IPv6 NAT"
-              [[ "$unicode" == "true" ]] && features+="🔧 Unicode Fix"
+              [[ "$ip_set" == "true" ]] && features+="🔧 IP_SET & IPv6 NAT "
+              [[ "$unicode" == "true" ]] && features+="🔧 Unicode Fix "
+              [[ "${{ inputs.enable_ntsync }}" == "true" ]] && [[ "$kernel_ver" == "6.1"* || "$kernel_ver" == "6.6"* || "$kernel_ver" == "6.12"* ]] && features+="🕹️ NTSync "
+              features+="🛂 WireGuard "
             fi
             
             printf "| %-13s | %-10s | %-16s | %-30s |\n" \
@@ -1001,6 +1003,8 @@ jobs:
           | 🛡️ **BBG** | LSM-based Baseband Guard security |
           | 🌐 **TTL Target Support** | Network packet manipulation |
           | 🧱 **IP Set Support** | Advanced firewall capabilities |
+          | 🔄 **NTSync** | Universal NT synchronization primitives for gaming |
+          | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
           | 🏗️ **HMBIRD SCX** | Scheduler extensions for SM8750 devices |
           | ✅ **LTO** | Link Time Optimization |
           | ⚡️ **TMPFS XATTR** | Extended attributes for Mountify support |

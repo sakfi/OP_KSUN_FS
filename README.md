@@ -69,6 +69,8 @@ This repository provides a fully automated GitHub Actions workflow that:
 | 🛡️ **BBG** | LSM-based Baseband Guard security |
 | 🌐 **TTL Target Support** | Network packet manipulation |
 | 🧱 **IP Set Support** | Advanced firewall capabilities |
+| 🔄 **NTSync** | Universal NT synchronization primitives for gaming |
+| 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
 | 🏗️ **HMBIRD SCX** | Scheduler extensions for SM8750 devices |
 | ✅ **LTO** | Link Time Optimization (thin/full/none configurable) |
 | ⚡️ **TMPFS XATTR / POSIX ACL** | Extended attributes for Mountify support |

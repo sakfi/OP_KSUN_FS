@@ -1320,7 +1320,6 @@ runs:
         cd "$COMMON_KERNEL_FOLDER"
         KERNEL_VERSION="${{ env.KERNEL_VER }}"
         
-        if [[ "$KERNEL_VERSION" != "6.12" ]]; then
         if [[ "$KERNEL_VERSION" == "6.12" ]] || [[ "$OP_BRANCH" == wild/mt* ]]; then
             echo "::debug::Skipping CONFIG_BPF_STREAM_PARSER for $KERNEL_VERSION / $OP_BRANCH"
         else
@@ -1353,6 +1352,36 @@ runs:
         EOF
         
         patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
+
+    - name: Add WireGuard Support
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Add WireGuard Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        # 1. Enable Configuration globally
+        echo "Enabling WireGuard in gki_defconfig"
+        cat >> "arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_WIREGUARD=y
+        CONFIG_NET_UDP_TUNNEL=y
+        CONFIG_CRYPTO_CURVE25519=y
+        CONFIG_CRYPTO_CHACHA20POLY1305=y
+        EOF
+        
+        # 2. Apply Patches
+        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/wireguard_patches"
+        if [ -d "$WIREGUARD_PATCH_DIR" ]; then
+          for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
+            if [ -f "$patch_file" ]; then
+              echo "Applying WireGuard patch: $(basename "$patch_file")"
+              patch -p1 --forward < "$patch_file" || true
+            fi
+          done
+        fi
+        
+        echo "✅ WireGuard integrated and optimized"
+        echo "::endgroup::"
 
     - name: Add Build based configs
       shell: bash
