@@ -190,7 +190,7 @@ jobs:
           echo "ksu_resolved_hash=$K_HASH" >> $GITHUB_OUTPUT
           
           # Resolve SUSFS via API + Version Detection
-          PROJECT_ID="simonpunk%2fsusfs4ksu"
+          PROJECT_ID="56471372"  # Numeric ID for simonpunk/susfs4ksu
           declare -A s_branches=( ["android12-5.10"]="gki-android12-5.10" ["android13-5.15"]="gki-android13-5.15" ["android14-6.1"]="gki-android14-6.1" ["android15-6.6"]="gki-android15-6.6" ["android16-6.12"]="gki-android16-6.12" )
           
           susfs_base=""
@@ -200,11 +200,12 @@ jobs:
           
           for k in $active_keys; do
             br="${s_branches[$k]}"
-            S_DATA=$(curl -s "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${br}")
-            S_H=$(echo "$S_DATA" | jq -r '.id')
+            S_DATA=$(curl -sf "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${br}" || echo "{}")
+            S_H=$(echo "$S_DATA" | jq -r '.id // empty')
             
             if [ -z "$susfs_base" ]; then
-              susfs_base=$(curl -s "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/files/include%2flinux%2fsusfs.h/raw?ref=${br}" | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}')
+              # Note: Upstream recently moved include/linux/susfs.h to kernel_patches/include/linux/susfs.h
+              susfs_base=$(curl -sf "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/files/kernel_patches%2Finclude%2flinux%2fsusfs.h/raw?ref=${br}" | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}' || echo "v2.x.x")
             fi
             echo "susfs_hash_${k//./_}=$S_H" >> $GITHUB_OUTPUT
             merged=$(echo "$merged" | jq -c --arg key "$k" --arg hash "$S_H" 'map(if "\(.android_version)-\(.kernel_version)" == $key then . + {susfs_resolved_hash: $hash} else . end)')
