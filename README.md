@@ -13,7 +13,7 @@
 [![KernelSU-Next](https://img.shields.io/badge/KernelSU_Next-Supported-green)](https://kernelsu-next.github.io/webpage/)
 [![Wild KSU](https://img.shields.io/badge/Wild_KSU-Temporary%20Not%20Supported-cb2431)](https://github.com/WildKernels/Wild_KSU/)
 [![KernelSU](https://img.shields.io/badge/KernelSU-Not%20Supported-cb2431)](https://kernelsu.org/)
-[![SUSFS](https://img.shields.io/badge/SUSFS_2.1-Integrated-orange)](https://gitlab.com/simonpunk/susfs4ksu)
+[![SUSFS](https://img.shields.io/badge/SUSFS-Integrated-orange?logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu)
 
 > **Forked from [WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)**
 
@@ -65,7 +65,7 @@ This repository provides a fully automated GitHub Actions workflow that:
 | 🏷️ Feature | 📝 Description |
 |:---|:---|
 | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
-| 🥷 **SUSFS v2.1.0+** | Advanced root hiding with Magic Mount support (Auto-synced) |
+| 🛡️ **SUSFS v2.1.0+** | Advanced root hiding with Magic Mount support (Auto-synced) |
 | 🔋 **Battery Optimization** | Modular suite: Wakelock hard-caps, Schedutil tuning, MGLRU, and Log Silencing |
 | 🛠️ **Manual Hooks** | `scope_min_manual_hooks_v1.4` for better app compatibility |
 | 🖧 **BBR** | Improved TCP congestion control |
