@@ -1359,10 +1359,18 @@ runs:
         echo "Applying patch to enable SYSVIPC without breaking ABI"
         case "$OP_BRANCH" in
           wild/sm8550|wild/sm7550)
-            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch"
+            if [ -f "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch" ]; then
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch" || true
+            else
+              echo "::warning::Droidspaces patch 1_2_3 not found. Skipping."
+            fi
             ;;
           *)
-            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch"
+            if [ -f "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch" ]; then
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch" || true
+            else
+              echo "::warning::Droidspaces patch 6_7_8 not found. Skipping."
+            fi
             ;;
         esac
         
