@@ -64,6 +64,8 @@ This repository provides a fully automated GitHub Actions workflow that:
 
 ## ✨ Features
 
+<br>
+
 | 🏷️ Feature | 📝 Description |
 |:---|:---|
 | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
