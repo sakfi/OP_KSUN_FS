@@ -98,6 +98,26 @@ on:
         description: 'Clean build (no ccache)'
         type: boolean
         default: false
+      android12-5_10_susfs_branch_or_commit:
+        description: 'Enter SusFS Branch or commit hash for android12-5.10'
+        type: string
+        default: '6b92a79fa6476f36aae81c6ec284a5cd4391d0d9'
+      android13-5_15_susfs_branch_or_commit:
+        description: 'Enter SusFS Branch or commit hash for android13-5.15'
+        type: string
+        default: '92b9a4977672181b7a9c462b5ee4c31e78a9aad1'
+      android14-6_1_susfs_branch_or_commit:
+        description: 'Enter SusFS Branch or commit hash for android14-6.1'
+        type: string
+        default: 'ff05609254d5c9f90f1a815bc9fafed91338530c'
+      android15-6_6_susfs_branch_or_commit:
+        description: 'Enter SusFS Branch or commit hash for android15-6.6'
+        type: string
+        default: 'f2cc10c131760fd6d2cfeeef1b1135f02afb24b9'
+      android16-6_12_susfs_branch_or_commit:
+        description: 'Enter SusFS Branch or commit hash for android16-6.12'
+        type: string
+        default: '1fe81d23fa8c6b6039ea732c7bf1d787d38d9429'
       build_timestamp:
         description: 'Custom kernel build timestamp for uname -a'
         type: string
@@ -189,31 +209,68 @@ jobs:
           [ -z "$K_HASH" ] && { echo "::error::KSU unresolved"; exit 1; }
           echo "ksu_resolved_hash=$K_HASH" >> $GITHUB_OUTPUT
           
-          # Resolve SUSFS via API + Version Detection
-          PROJECT_ID="56471372"  # Numeric ID for simonpunk/susfs4ksu
-          declare -A s_branches=( ["android12-5.10"]="gki-android12-5.10" ["android13-5.15"]="gki-android13-5.15" ["android14-6.1"]="gki-android14-6.1" ["android15-6.6"]="gki-android15-6.6" ["android16-6.12"]="gki-android16-6.12" )
+          # Resolve SUSFS via API (Main Branch Logic)
+          PROJECT_ID="simonpunk%2fsusfs4ksu"
           
-          susfs_base=""
-          merged=$(jq -n --argjson d "$filtered" --argjson list "$ksu_options_normalized" '[ $d[] as $dev | $list[] as $ksu | ($dev + {ksu_type: $ksu.type, ksu_hash: $ksu.hash, ksu_resolved_hash: "'$K_HASH'"}) ]')
+          declare -A default_branches=(
+            ["android12-5.10"]="gki-android12-5.10"
+            ["android13-5.15"]="gki-android13-5.15"
+            ["android14-6.1"]="gki-android14-6.1"
+            ["android15-6.6"]="gki-android15-6.6"
+            ["android16-6.12"]="gki-android16-6.12"
+          )
           
-          active_keys=$(echo "$filtered" | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' | sort -u)
+          declare -A user_inputs=(
+            ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
+            ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
+            ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
+            ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
+            ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
+          )
           
-          for k in $active_keys; do
-            br="${s_branches[$k]}"
-            S_DATA=$(curl -sf "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${br}" || echo "{}")
-            S_H=$(echo "$S_DATA" | jq -r '.id // empty')
+          mapfile -t active_keys < <(
+            echo "$merged" \
+              | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' \
+              | sort -u
+          )
+          
+          echo "🔍 Resolving SUSFS hashes for: ${active_keys[*]:-none}"
+          
+          declare -A susfs_hashes
+          for key in "${active_keys[@]}"; do
+            default_val="${default_branches[$key]}"
+            user_val="${user_inputs[$key]:-$default_val}"
             
-            if [ -z "$susfs_base" ]; then
-              # Note: Upstream recently moved include/linux/susfs.h to kernel_patches/include/linux/susfs.h
-              susfs_base=$(curl -sf "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/files/kernel_patches%2Finclude%2flinux%2fsusfs.h/raw?ref=${br}" | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}' || echo "v2.x.x")
+            # Use GitLab API to resolve Branch/Tag/SHA to a full OID
+            RESULT=$(curl -sf "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${user_val}" || echo "{}")
+            resolved=$(echo "$RESULT" | jq -r '.id // empty')
+            
+            if [ -z "$resolved" ]; then
+               echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
+               exit 1
             fi
-            echo "susfs_hash_${k//./_}=$S_H" >> $GITHUB_OUTPUT
-            merged=$(echo "$merged" | jq -c --arg key "$k" --arg hash "$S_H" 'map(if "\(.android_version)-\(.kernel_version)" == $key then . + {susfs_resolved_hash: $hash} else . end)')
+            
+            susfs_hashes["$key"]="$resolved"
+            echo "  ✅ Resolved: $key -> $resolved"
           done
           
+          # Inject susfs_resolved_hash into the matrix
+          merged=$(echo "$merged" | jq -c --argjson hashes "$(jq -n --argjson h "$(declare -p susfs_hashes | sed 's/declare -A susfs_hashes=//' | tr -d '()')" '$h')" '
+            map(if .susfs == true then . + {susfs_resolved_hash: $hashes["\(.android_version)-\(.kernel_version)"]} else . end)')
+
+          # Final Matrix Assembly
           echo "matrix=$(jq -nc --argjson items "$merged" "{include: \$items}")" >> $GITHUB_OUTPUT
-          echo "susfs_base_version=$susfs_base" >> $GITHUB_OUTPUT
-          echo "active_gki_keys=$(echo "$active_keys" | jq -Rc 'split("\n") | select(. != "")')" >> $GITHUB_OUTPUT
+          echo "active_gki_keys=$(echo "${active_keys[*]:-}" | jq -Rc 'split(" ") | select(. != [""])')" >> $GITHUB_OUTPUT
+          
+          # Outputs for individual versions (backwards compatibility)
+          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> $GITHUB_OUTPUT
+          echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> $GITHUB_OUTPUT
+          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> $GITHUB_OUTPUT
+          
+          # Set a static/default SUSFS Version for title (since dynamic sensing is removed)
+          echo "susfs_base_version=v2.1.0" >> $GITHUB_OUTPUT
           echo "count=$(echo "$merged" | jq 'length')" >> $GITHUB_OUTPUT
           echo "::endgroup::"
 
