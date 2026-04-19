@@ -122,27 +122,6 @@ on:
         description: 'Custom kernel build timestamp for uname -a'
         type: string
         default: ''
-      # Legacy inputs preserved as optional overrides
-      android12-5_10_susfs_branch_or_commit:
-        description: 'Override SusFS for android12-5.10'
-        type: string
-        default: '674f72b6f683e837d7f557704cabe00a83eeb0b4'
-      android13-5_15_susfs_branch_or_commit:
-        description: 'Override SusFS for android13-5.15'
-        type: string
-        default: 'eaa5d299dd85a4230f936b94dc5dd8303f27130a'
-      android14-6_1_susfs_branch_or_commit:
-        description: 'Override SusFS for android14-6.1'
-        type: string
-        default: '971cc4e770b7f344a4df35ce92d7a859e6a1e0fd'
-      android15-6_6_susfs_branch_or_commit:
-        description: 'Override SusFS for android15-6.6'
-        type: string
-        default: '85bcfac5edc8ba7808581e8d0a3ca9c7deca78e4'
-      android16-6_12_susfs_branch_or_commit:
-        description: 'Override SusFS for android16-6.12'
-        type: string
-        default: '5fbf04e8c6c08b8ca759e0ac81bed7d2dc96f7f8'
 
 jobs:
   set-op-model:
