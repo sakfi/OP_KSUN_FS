@@ -242,9 +242,17 @@ jobs:
   trigger-release:
     needs: [set-op-model, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       SUSFS_BASE_VERSION: ${{ needs.set-op-model.outputs.susfs_base_version }}
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: 🏷️ Standard Tagging
         run: |
           if [ -n "${{ github.event.inputs.custom_release_tag }}" ]; then
@@ -254,6 +262,36 @@ jobs:
           fi
           echo "NEW_TAG=$TAG" >> $GITHUB_ENV
 
-      - name: 🚀 Simple Create Release
+      - name: 📜 Generate Changelog
         run: |
-          gh release create "${{ env.NEW_TAG }}" --title "SakFi-OP OnePlus Kernels (${{ env.SUSFS_BASE_VERSION }})" --notes "Automated synchronized release."
+          set -euo pipefail
+          echo "Generating automated changelog..."
+          
+          # Find the last release tag before the current commit
+          # Use git describe to find the closest reachable tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          
+          echo "📝 Changelog" > release_notes.md
+          echo "" >> release_notes.md
+          echo "### This Release" >> release_notes.md
+          echo "" >> release_notes.md
+          
+          # Get commit subjects since last tag, filtering out noise
+          # Filters: Automated releases, Merge commits, and workflow sync commits
+          git log "$LAST_TAG..HEAD" --pretty=format:"-%s" | \
+            grep -vE "Automated|Merge|Workflow sync|sync:" | \
+            grep -v "^-$" | \
+            sed 's/^- /-/g' >> release_notes.md
+          
+          echo "" >> release_notes.md
+          echo "### Previous Releases" >> release_notes.md
+          echo "See [Releases Page](${{ github.server_url }}/${{ github.repository }}/releases)" >> release_notes.md
+          
+          echo "--- Generated Release Notes ---"
+          cat release_notes.md
+
+      - name: 🚀 Create GitHub Release
+        run: |
+          gh release create "${{ env.NEW_TAG }}" \
+            --title "SakFi-OP OnePlus Kernels (${{ env.SUSFS_BASE_VERSION }})" \
+            --notes-file release_notes.md
