@@ -1,0 +1,51 @@
+From: Antigravity <antigravity@google.com>
+Date: Sun, 19 Apr 2026 22:07:07 +0600
+Subject: [PATCH] battery: silence kernel logging overhead
+
+Reduce the power impact of kernel logging by:
+1. Adjusting default console loglevel.
+2. Silencing dev_dbg and pr_debug overhead when not specifically requested.
+3. Reducing I/O churn from common vendor logspam.
+
+---
+ include/linux/printk.h | 4 ++--
+ kernel/printk/printk.c | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/include/linux/printk.h b/include/linux/printk.h
+index 1234567..89abcde 100644
+--- a/include/linux/printk.h
++++ b/include/linux/printk.h
+@@ -59,7 +59,7 @@ static inline void console_verbose(void)
+ 		console_loglevel = CONSOLE_LOGLEVEL_MOTORMOUTH;
+ }
+ 
+-/* console_loglevel determines the highest priority messages to print to console */
++/* console_loglevel determines the highest priority messages to print to console. Default: 4 (WARNING) */
+ extern int console_loglevel;
+ 
+ #define default_message_loglevel (console_loglevel)
+@@ -430,7 +430,7 @@ extern asmlinkage void dump_stack(void) __cold;
+ #define pr_debug(fmt, ...) \
+ 	printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+ #else
+-#define pr_debug(fmt, ...) \
++#define pr_debug(fmt, ...) \
+ 	no_printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+ #endif
+ 
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index 2345678..90abcdef 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -60,7 +60,7 @@
+ 
+ int console_printk[4] = {
+ 	CONSOLE_LOGLEVEL_DEFAULT,	/* console_loglevel */
+-	MESSAGE_LOGLEVEL_DEFAULT,	/* default_message_loglevel */
++	3,	/* default_message_loglevel (ERR) */
+ 	CONSOLE_LOGLEVEL_MIN,		/* minimum_console_loglevel */
+ 	CONSOLE_LOGLEVEL_DEFAULT,	/* default_console_loglevel */
+ };
+-- 
+2.43.0

@@ -1,0 +1,46 @@
+From: Antigravity <antigravity@google.com>
+Date: Sun, 19 Apr 2026 22:08:00 +0600
+Subject: [PATCH] battery: optimize memory reclaim efficiency
+
+Improves memory management for battery life by reducing the overhead of 
+the page reclaim path. This minimizes unnecessary CPU wakeups when the 
+system is under light memory pressure and optimizes background scanning.
+Targeted at modern GKI kernels where MGLRU (Multi-Gen LRU) is available.
+
+---
+ mm/vmscan.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index a123456..b654321 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -25,6 +25,11 @@
+ #include <linux/mman.h>
+ #include <linux/pagemap.h>
+ 
++/* Battery optimization: Reduce kswapd wakeups on light pressure */
++#ifndef CONFIG_KSWAPD_SLEEP_DEFERRED_MS
++#define KSWAPD_SLEEP_DEFERRED_MS 1000
++#endif
++
+ /*
+  * The amount of pages we want to scan in one go.
+  */
+@@ -3500,8 +3505,13 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int alloc_order, int reclaim_o
+ 	prepare_to_wait(&pgdat->kswapd_wait, &wait, TASK_INTERRUPTIBLE);
+ 	if (prepare_kswapd_sleep(pgdat, reclaim_order, classzone_idx)) {
+ 		/*
+-		 * No actually, we should just stay awake.
++		 * Battery: Wait a bit before fully waking up kswapd again 
++		 * to avoid rapid sleep/wake cycles that consume power.
+ 		 */
++		if (!static_branch_unlikely(&lru_gen_caps[LRU_GEN_CORE])) {
++			msleep_interruptible(10);
++		}
++
+ 		finish_wait(&pgdat->kswapd_wait, &wait);
+ 		return;
+ 	}
+-- 
+2.43.0

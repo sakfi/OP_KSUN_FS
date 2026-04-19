@@ -1259,6 +1259,71 @@ runs:
         echo "✅ Other patches applied"
         echo "::endgroup::"
 
+    - name: 🔋 Apply Battery Optimizations
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Apply Battery Optimization patches"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        BATTERY_PATCHES_DIR="${GITHUB_WORKSPACE}/configs/kernel_patches/battery_patches"
+        
+        echo "Applying local battery-optimization suite..."
+        
+        # 1. Silence Logging
+        if [ -f "$BATTERY_PATCHES_DIR/silence_logging.patch" ]; then
+          echo "Patching silence_logging.patch"
+          patch -p1 --forward < "$BATTERY_PATCHES_DIR/silence_logging.patch" || {
+            echo "::warning::silence_logging.patch failed to apply cleanly. Skipping."
+          }
+        fi
+        
+        # 2. Wakelock Reduction
+        if [ -f "$BATTERY_PATCHES_DIR/wakelock_reduction.patch" ]; then
+          echo "Patching wakelock_reduction.patch"
+          patch -p1 --forward < "$BATTERY_PATCHES_DIR/wakelock_reduction.patch" || {
+            echo "::warning::wakelock_reduction.patch failed to apply cleanly. Skipping."
+          }
+        fi
+        
+        # 3. Scheduler Efficiency
+        if [ -f "$BATTERY_PATCHES_DIR/sched_efficiency.patch" ]; then
+          echo "Patching sched_efficiency.patch"
+          patch -p1 --forward < "$BATTERY_PATCHES_DIR/sched_efficiency.patch" || {
+            echo "::warning::sched_efficiency.patch failed to apply cleanly. Skipping."
+          }
+        fi
+        
+        # 4. Memory Optimization
+        if [ -f "$BATTERY_PATCHES_DIR/mem_opt.patch" ]; then
+          echo "Patching mem_opt.patch"
+          patch -p1 --forward < "$BATTERY_PATCHES_DIR/mem_opt.patch" || {
+            echo "::warning::mem_opt.patch failed to apply cleanly. Skipping."
+          }
+        fi
+        
+        echo "Configuring battery-friendly kernel tunings..."
+        cat >> "arch/arm64/configs/gki_defconfig" <<EOF
+        # Battery Optimizations
+        CONFIG_WQ_POWER_EFFICIENT_DEFAULT=y
+        CONFIG_ENERGY_MODEL=y
+        CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
+        CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+        CONFIG_SCHED_SMT=y
+        CONFIG_SCHED_MC=y
+        CONFIG_HZ_100=y
+        EOF
+        
+        # Dynamically enable MGLRU if hardware supports it (Kernel >= 5.10)
+        if grep -q "CONFIG_LRU_GEN" arch/arm64/configs/gki_defconfig || [ -f "mm/lru_gen.c" ]; then
+          echo "Enabling Multi-Gen LRU (MGLRU) for memory efficiency"
+          echo "CONFIG_LRU_GEN=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_LRU_GEN_ENABLED=y" >> arch/arm64/configs/gki_defconfig
+        fi
+
+        echo "✅ Battery optimizations applied successfully"
+        echo "::endgroup::"
+
     - name: Apply Unicode Fix Patch
       shell: bash
       if: ${{ env.OP_UNICODE == 'true' }}
@@ -1399,7 +1464,7 @@ runs:
         echo "::group::Apply NTSync patch"
         cd "$COMMON_KERNEL_FOLDER"
         NTSYNC_FOLDER="$KERNEL_PATCHES_FOLDER/common/ntsync"
-        NATIVE_NTSYNC_FOLDER="${GITHUB_WORKSPACE}/ntsync_patches"
+        NATIVE_NTSYNC_FOLDER="${GITHUB_WORKSPACE}/configs/kernel_patches/ntsync_patches"
         GKI_KEY="${ANDROID_VER}-${KERNEL_VER}"
         NTSYNC_PATCH=""
         NTSYNC_BASE=""

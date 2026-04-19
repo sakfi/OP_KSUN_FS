@@ -1,0 +1,60 @@
+From: Antigravity <antigravity@google.com>
+Date: Sun, 19 Apr 2026 22:07:30 +0600
+Subject: [PATCH] battery: implement wakelock duration hard-cap
+
+This patch applies a safety timeout to kernel-level wakelocks that are
+known to stay active longer than necessary for system stability.
+Specifically targets networking and USB wake sources that often prevent
+deep sleep entry on OnePlus/Snapdragon hardware.
+
+---
+ kernel/power/wakelock.c | 25 ++++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/kernel/power/wakelock.c b/kernel/power/wakelock.c
+index 5678901..bcdef01 100644
+--- a/kernel/power/wakelock.c
++++ b/kernel/power/wakelock.c
+@@ -10,6 +10,14 @@
+ #include <linux/slab.h>
+ #include <linux/wakelock.h>
+ 
++/* Battery optimization: Hard-cap for specific aggressive wakelocks */
++#define WAKELOCK_HARD_CAP_MS 10000 /* 10 seconds */
++
++static const char *const blocked_wakelocks[] = {
++	"wlan_pno_wl",
++	"wlan_wow_wl",
++	"IPA_WS",
++};
++
+ struct wake_lock {
+ #ifdef CONFIG_WAKELOCK_STAT
+ 	struct list_head    link;
+@@ -62,7 +70,22 @@ void wake_lock_init(struct wake_lock *lock, int type, const char *name)
+ 
+ void wake_lock(struct wake_lock *lock)
+ {
+-	__pm_stay_awake(&lock->wakeup_source);
++	bool should_cap = false;
++	int i;
++
++	/* Check if this wakelock is in our mitigation list */
++	if (lock->wakeup_source.name) {
++		for (i = 0; i < ARRAY_SIZE(blocked_wakelocks); i++) {
++			if (!strcmp(lock->wakeup_source.name, blocked_wakelocks[i])) {
++				should_cap = true;
++				break;
++			}
++		}
++	}
++
++	if (should_cap)
++		__pm_wakeup_event(&lock->wakeup_source, WAKELOCK_HARD_CAP_MS);
++	else
++		__pm_stay_awake(&lock->wakeup_source);
+ }
+ EXPORT_SYMBOL(wake_lock);
+ 
+-- 
+2.43.0
