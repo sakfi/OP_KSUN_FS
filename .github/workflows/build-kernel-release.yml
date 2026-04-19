@@ -39,6 +39,15 @@ on:
           - OP-NORD-CE-5
           - OP-NORD-CE4-LITE
           - OP-OPEN
+          - OP-PAD-2-MT6991
+          - OP-PAD-2-PRO
+          - OP-PAD-2-SM8650
+          - OP-PAD-3-MT6897
+          - OP-PAD-3-SM8750
+          - OP-PAD-GO-2
+          - OP-PAD-LITE
+          - OP-PAD-MT6983
+          - OP-PAD-PRO
           - OP10pro
           - OP10r
           - OP10t
@@ -98,6 +107,10 @@ on:
         description: 'Clean build (no ccache)'
         type: boolean
         default: false
+      enable_ntsync:
+        description: 'Install NTSync (For Linux 6.1+)'
+        type: boolean
+        default: false
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
@@ -130,6 +143,13 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       device_count: ${{ steps.set-matrix.outputs.count }}
       active_gki_keys: ${{ steps.set-matrix.outputs.active_gki_keys }}
+      susfs_hash_android12_5_10: ${{ steps.set-matrix.outputs.susfs_hash_android12_5_10 }}
+      susfs_hash_android13_5_15: ${{ steps.set-matrix.outputs.susfs_hash_android13_5_15 }}
+      susfs_hash_android14_6_1:  ${{ steps.set-matrix.outputs.susfs_hash_android14_6_1 }}
+      susfs_hash_android15_6_6:  ${{ steps.set-matrix.outputs.susfs_hash_android15_6_6 }}
+      susfs_hash_android16_6_12: ${{ steps.set-matrix.outputs.susfs_hash_android16_6_12 }}
+      ksu_resolved_hash:    ${{ steps.set-matrix.outputs.ksu_resolved_hash }}
+      ksu_options_normalized: ${{ steps.set-matrix.outputs.ksu_options_normalized }}
       susfs_base_version: ${{ steps.set-matrix.outputs.susfs_base_version }}
     env:
       GH_TOKEN: ${{ github.token }}
@@ -141,43 +161,63 @@ jobs:
           sparse-checkout: configs/
           sparse-checkout-cone-mode: false
 
-      - name: 🔍 Generate build matrix (Dynamic Sync)
+      - name: 🔍 Generate build matrix
         id: set-matrix
         shell: bash
         run: |
           set -euo pipefail
           echo "::group::Matrix generation"
           
-          # Matrix Filters
           input="${{ github.event.inputs.op_model }}"
           ksu_options_raw='${{ github.event.inputs.ksu_options }}'
-          ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "KSUN" then .hash = "dev" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)')
+          if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "KSUN" then .hash = "dev" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)' 2>&1); then
+            echo "::error::ksu_options validation failed: $ksu_options_normalized"
+            exit 1
+          fi
+          
+          echo "ksu_options_normalized=$ksu_options_normalized" >> $GITHUB_OUTPUT
           
           echo "[" > matrix.json
           mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
           for i in "${!all_json_files[@]}"; do
             file="${all_json_files[$i]}"
-            jq -r '.' "$file" >> matrix.json
-            if [ $((i+1)) -lt ${#all_json_files[@]} ]; then echo "," >> matrix.json; fi
+            if [ -f "$file" ]; then
+              jq -r '.' "$file" >> matrix.json
+              if [ $((i+1)) -lt ${#all_json_files[@]} ]; then
+                echo "," >> matrix.json
+              fi
+            fi
           done
           echo "]" >> matrix.json
           
-          jq_f="."
-          case "$input" in All) ;; *) jq_f="map(select(.model == \"$input\"))" ;; esac
+          jq_filter="."
+          case "$input" in All) ;; *) jq_filter="map(select(.model == \"$input\"))" ;; esac
           
-          case "${{ github.event.inputs.android_version_filter }}" in
-            oos14) jq_f+=" | map(select(.os_version == \"OOS14\"))" ;;
-            oos15) jq_f+=" | map(select(.os_version == \"OOS15\"))" ;;
-            oos16) jq_f+=" | map(select(.os_version == \"OOS16\"))" ;;
+          android_input="${{ github.event.inputs.android_version_filter }}"
+          case "$android_input" in
+            "oos14") jq_filter+=" | map(select(.os_version == \"OOS14\"))" ;;
+            "oos15") jq_filter+=" | map(select(.os_version == \"OOS15\"))" ;;
+            "oos16") jq_filter+=" | map(select(.os_version == \"OOS16\"))" ;;
+            "oos14+oos15" | "oos15+oos14") jq_filter+=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))" ;;
+            "oos15+oos16" | "oos16+oos15") jq_filter+=" | map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))" ;;
+            "oos14+oos16" | "oos16+oos14") jq_filter+=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS16\"))" ;;
           esac
 
           if [[ "${{ github.event.inputs.kernel_version_filter }}" != "All" ]]; then
             IFS='-' read -r ak_android ak_kernel <<< "${{ github.event.inputs.kernel_version_filter }}"
-            jq_f+=" | map(select(.android_version == \"$ak_android\" and .kernel_version == \"$ak_kernel\"))"
+            jq_filter+=" | map(select(.android_version == \"$ak_android\" and .kernel_version == \"$ak_kernel\"))"
           fi
 
-          filtered=$(jq -c "$jq_f" matrix.json)
-          
+          filtered=$(jq -c "$jq_filter" matrix.json)
+          count=$(jq 'length' <<<"$filtered")
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No configs found for filter: $jq_filter"
+            exit 1
+          fi
+
+          # Merge with KSU options
+          merged=$(jq -n --argjson d "$filtered" --argjson list "$ksu_options_normalized" '[ $d[] as $dev | $list[] as $ksu | ($dev + {ksu_type: $ksu.type, ksu_hash: $ksu.hash}) ]')
+
           # Resolve KSU via GraphQL
           ksu_type=$(echo "$ksu_options_normalized" | jq -r '.[0].type')
           ksu_ref=$(echo "$ksu_options_normalized" | jq -r '.[0].hash')
@@ -188,67 +228,29 @@ jobs:
           [ -z "$K_HASH" ] && { echo "::error::KSU unresolved"; exit 1; }
           echo "ksu_resolved_hash=$K_HASH" >> $GITHUB_OUTPUT
           
-          # Resolve SUSFS via API (Main Branch Logic)
+          # Resolve SUSFS via API (Stable Beta Logic)
           PROJECT_ID="simonpunk%2fsusfs4ksu"
+          declare -A default_branches=( ["android12-5.10"]="gki-android12-5.10" ["android13-5.15"]="gki-android13-5.15" ["android14-6.1"]="gki-android14-6.1" ["android15-6.6"]="gki-android15-6.6" ["android16-6.12"]="gki-android16-6.12" )
+          declare -A user_inputs=( ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}" ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}" ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}" ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}" ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}" )
           
-          declare -A default_branches=(
-            ["android12-5.10"]="gki-android12-5.10"
-            ["android13-5.15"]="gki-android13-5.15"
-            ["android14-6.1"]="gki-android14-6.1"
-            ["android15-6.6"]="gki-android15-6.6"
-            ["android16-6.12"]="gki-android16-6.12"
-          )
-          
-          declare -A user_inputs=(
-            ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
-            ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
-            ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
-            ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
-            ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
-          )
-          
-          mapfile -t active_keys < <(
-            echo "$merged" \
-              | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' \
-              | sort -u
-          )
-          
-          echo "🔍 Resolving SUSFS hashes for: ${active_keys[*]:-none}"
+          mapfile -t active_keys < <(echo "$merged" | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' | sort -u)
           
           declare -A susfs_hashes
           for key in "${active_keys[@]}"; do
-            default_val="${default_branches[$key]}"
-            user_val="${user_inputs[$key]:-$default_val}"
-            
-            # Use GitLab API to resolve Branch/Tag/SHA to a full OID
+            user_val="${user_inputs[$key]:-${default_branches[$key]}}"
             RESULT=$(curl -sf "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${user_val}" || echo "{}")
             resolved=$(echo "$RESULT" | jq -r '.id // empty')
-            
-            if [ -z "$resolved" ]; then
-               echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
-               exit 1
-            fi
-            
+            [ -z "$resolved" ] && { echo "::error::Could not resolve SUSFS $user_val for $key"; exit 1; }
             susfs_hashes["$key"]="$resolved"
-            echo "  ✅ Resolved: $key -> $resolved"
+            echo "susfs_hash_${key//./_}=$resolved" >> $GITHUB_OUTPUT
           done
           
-          # Inject susfs_resolved_hash into the matrix
-          merged=$(echo "$merged" | jq -c --argjson hashes "$(jq -n --argjson h "$(declare -p susfs_hashes | sed 's/declare -A susfs_hashes=//' | tr -d '()')" '$h')" '
-            map(if .susfs == true then . + {susfs_resolved_hash: $hashes["\(.android_version)-\(.kernel_version)"]} else . end)')
-
           # Final Matrix Assembly
+          merged=$(echo "$merged" | jq -c --argjson hashes "$(jq -n --argjson h "$(declare -p susfs_hashes | sed 's/declare -A susfs_hashes=//' | tr -d '()')" '$h')" '
+            map(if .susfs == true then . + {susfs_resolved_hash: $hashes["\(.android_version)-\(.kernel_version)"], ksu_resolved_hash: "'$K_HASH'"} else . + {ksu_resolved_hash: "'$K_HASH'"} end)')
+
           echo "matrix=$(jq -nc --argjson items "$merged" "{include: \$items}")" >> $GITHUB_OUTPUT
           echo "active_gki_keys=$(echo "${active_keys[*]:-}" | jq -Rc 'split(" ") | select(. != [""])')" >> $GITHUB_OUTPUT
-          
-          # Outputs for individual versions (backwards compatibility)
-          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> $GITHUB_OUTPUT
-          echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> $GITHUB_OUTPUT
-          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> $GITHUB_OUTPUT
-          
-          # Set a static/default SUSFS Version for title (since dynamic sensing is removed)
           echo "susfs_base_version=v2.1.0" >> $GITHUB_OUTPUT
           echo "count=$(echo "$merged" | jq 'length')" >> $GITHUB_OUTPUT
           echo "::endgroup::"
@@ -260,21 +262,92 @@ jobs:
           path: matrix.json
 
   build:
+    name: build (${{ matrix.model }}, ${{ matrix.soc }}, ${{ matrix.branch }}, ${{ matrix.manifest }}, ${{ matrix.android_version }}, ${{ matrix.kernel_version }}, ${{ matrix.os_version }}, ${{ matrix.ksu_type }})
     needs: set-op-model
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.set-op-model.outputs.matrix) }}
-    runs-on: ubuntu-latest
+    outputs:
+      ksun_ver: ${{ steps.build-stat.outputs.ksu_version }}
+      ksu_ver: ${{ steps.build-stat.outputs.ksu_version }}
     steps:
-      - name: 🏗️ Execute Action
+      - name: 🧹 Emergency Disk Cleanup
+        if: ${{ matrix.disk_cleanup }}
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          if command -v docker >/dev/null 2>&1; then
+            docker rmi $(docker images -q) 2>/dev/null || true
+          fi
+
+      - name: Download Apache Arrow's util_free_space.sh
+        if: ${{ matrix.disk_cleanup }}
+        run: |
+          curl -L -o util_free_space.sh https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh
+          chmod +x util_free_space.sh
+          ./util_free_space.sh
+
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install Minimal Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends git curl build-essential clang lld flex bison libelf-dev libssl-dev libncurses-dev zlib1g-dev liblz4-tool libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils
+
+      - name: 📦 Disk usage (pre-build)
+        run: df -h /
+
+      - name: ♻️ Configure ccache
+        if: ${{ inputs.clean_build != true }}
+        run: |
+          ccache -o max_size=1.0G
+          ccache -o compression=true
+          ccache -s
+
+      - name: 🧹 Prepare op_config_json
+        id: prepare_config
+        run: |
+          echo "config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' --argjson ntsync ${{ inputs.enable_ntsync }} '$m | del(.ksu_type, .ksu_hash, .ksu_resolved_hash) | .ntsync = $ntsync')" >> "$GITHUB_OUTPUT"
+
+      - name: 🔨 Build Kernel
+        id: build
         uses: ./.github/actions
         with:
-          op_config_json: ${{ toJSON(matrix) }}
+          op_config_json: ${{ steps.prepare_config.outputs.config_json }}
           ksu_type: ${{ matrix.ksu_type }}
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
           clean: ${{ inputs.clean_build }}
+          build_timestamp: ${{ inputs.build_timestamp }}
+
+      - name: 📊 Build statistics
+        id: build-stat
+        if: always()
+        run: |
+          echo "Device: ${{ matrix.model }} - Status: ${{ job.status }}"
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
+            echo "ksu_version=${{ steps.build.outputs.ksu_version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 📝 Job summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ### ${{ matrix.model }} (${{ matrix.os_version }}) - ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }}
+          **Kernel:** ${{ matrix.android_version }}-${{ matrix.kernel_version }}
+          **SUSFS Hash:** \`${{ matrix.susfs_resolved_hash }}\`
+          EOF
+
+      - name: 🧹 Final cleanup
+        if: always()
+        run: |
+          sudo rm -rf "$GITHUB_WORKSPACE/out" "$GITHUB_WORKSPACE/build" /tmp/* || true
+          df -h /
 
   trigger-release:
     needs: [set-op-model, build]
@@ -284,13 +357,14 @@ jobs:
     env:
       SUSFS_BASE_VERSION: ${{ needs.set-op-model.outputs.susfs_base_version }}
       GH_TOKEN: ${{ github.token }}
+      RELEASE_NAME: 'OnePlus Kernels With KSUN & SUSFS integrated — SakFi'
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: 🏷️ Standard Tagging
+      - name: 🏷️ Generate Tag
         run: |
           if [ -n "${{ github.event.inputs.custom_release_tag }}" ]; then
             TAG="${{ github.event.inputs.custom_release_tag }}"
@@ -301,47 +375,34 @@ jobs:
 
       - name: 📜 Generate Changelog
         run: |
-          set -euo pipefail
-          echo "Generating automated changelog..."
-          
-          # Find the last release tag before the current commit
-          # Use git describe to find the closest reachable tag
           LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
-          
-          echo "📝 Changelog" > release_notes.md
-          echo "" >> release_notes.md
-          echo "### This Release" >> release_notes.md
-          echo "" >> release_notes.md
-          
-          # Get commit subjects since last tag, filtering out noise
-          # Filters: Automated releases, Merge commits, and workflow sync commits
-          git log "$LAST_TAG..HEAD" --pretty=format:"-%s" | \
-            grep -vE "Automated|Merge|Workflow sync|sync:" | \
-            grep -v "^-$" | \
-            sed 's/^- /-/g' >> release_notes.md
-          
-          echo "" >> release_notes.md
-          echo "### Previous Releases" >> release_notes.md
-          echo "See [Releases Page](${{ github.server_url }}/${{ github.repository }}/releases)" >> release_notes.md
-          
-          echo "--- Generated Release Notes ---"
-          cat release_notes.md
+          echo "### This Release" > release_notes.md
+          git log "$LAST_TAG..HEAD" --pretty=format:"- %s" --no-merges >> release_notes.md
 
-      - name: 📥 Download Build Artifacts
+      - name: 📥 Download Artifacts
         uses: actions/download-artifact@v7
         with:
           path: ./all-artifacts/
 
-      - name: 📂 Flatten and Verify ZIPs
+      - name: 📂 Organize Assets
         run: |
           mkdir -p ./release-assets
-          find ./all-artifacts/ -maxdepth 2 -name "*.zip" -exec mv {} ./release-assets/ \;
-          echo "Files to be uploaded:"
-          ls -R ./release-assets/
+          find ./all-artifacts/ -name "*.zip" -exec mv {} ./release-assets/ \;
 
-      - name: 🚀 Create GitHub Release
+      - name: 🚀 Create Release
         run: |
           gh release create "${{ env.NEW_TAG }}" \
-            --title "OnePlus Kernels With KSUN & SUSFS integrated — SakFi (${{ env.SUSFS_BASE_VERSION }})" \
+            --title "${{ env.RELEASE_NAME }} (${{ env.NEW_TAG }})" \
             --notes-file release_notes.md \
             ./release-assets/*.zip
+
+      - name: 📣 Telegram Notification
+        if: success()
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GROUP_ID: ${{ secrets.TELEGRAM_GROUP }}
+          CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL }}
+        run: |
+          MESSAGE="<b>🚀 New Release: ${{ env.NEW_TAG }}</b>%0A%0A<b>Link:</b> ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }}"
+          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" -d "chat_id=$GROUP_ID" -d "text=$MESSAGE" -d "parse_mode=HTML"
+          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" -d "chat_id=$CHANNEL_ID" -d "text=$MESSAGE" -d "parse_mode=HTML"
