@@ -63,7 +63,7 @@ This repository provides a fully automated GitHub Actions workflow that:
 | 🏷️ Feature | 📝 Description |
 |:---|:---|
 | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
-| 🥷 **SUSFS v2.0.0** | Advanced root hiding with Magic Mount support |
+| 🕶️ **SUSFS v2.1.0** | Advanced root hiding with Magic Mount support |
 | 🛠️ **Manual Hooks** | `scope_min_manual_hooks_v1.4` for better app compatibility |
 | 🖧 **BBR** | Improved TCP congestion control |
 | 🛡️ **BBG** | LSM-based Baseband Guard security |
@@ -75,9 +75,9 @@ This repository provides a fully automated GitHub Actions workflow that:
 | ✅ **LTO** | Link Time Optimization (thin/full/none configurable) |
 | ⚡️ **TMPFS XATTR / POSIX ACL** | Extended attributes for Mountify support |
 | 🚀 **Optimization patches** | Memory, I/O, CPU scheduler, network tuning |
-| ⚡️ **TMPFS XATTR / POSIX ACL**: Extended TMPFS support for meta modules and Mountify |
-| </> **Unicode Bypass Fix**: Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental] |
-| 🖥️ **Droidspaces Support**: Support Portable Linux containers to run full Linux environments. |
+| ⚡️ **TMPFS XATTR / POSIX ACL** | Extended TMPFS support for meta modules and Mountify |
+| </> **Unicode Bypass Fix** | Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental] |
+| 🖥️ **Droidspaces Support** | Support Portable Linux containers to run full Linux environments. |
 
 <details>
 <summary><b>👀 View SUSFS Hide Capabilities</b></summary>
@@ -133,14 +133,10 @@ These amazing people help make this project possible! ❤️
 | 🔧 Project/Role | 👨‍💻 Developer | 🔗 Link |
 |:---:|:---:|:---:|
 | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
-| **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
 | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
-| **Magic-KSU** | 5ec1cff | [![GitHub](https://img.shields.io/badge/GitHub-5ec1cff-blue?style=flat-square&logo=github)](https://github.com/5ec1cff/KernelSU) |
 | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
 | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
 | **Droidspaces** | ravindu644 | [![GitHub](https://img.shields.io/badge/GitHub-ravindu644-blue?style=flat-square&logo=github)](https://github.com/ravindu644/Droidspaces-OSS.git) |
-| **Helped with patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
-| **Helped with patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
 
 </div>
 
