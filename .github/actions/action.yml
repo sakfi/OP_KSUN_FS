@@ -1396,20 +1396,22 @@ runs:
         cd "$COMMON_KERNEL_FOLDER"
         NTSYNC_FOLDER="$KERNEL_PATCHES_FOLDER/common/ntsync"
         GKI_KEY="${ANDROID_VER}-${KERNEL_VER}"
+        NTSYNC_PATCH=""
         
         if [[ "$OP_MODEL" == "OP10r" || "$OP_MODEL" == "OP-ACE-RACE" ]] && [[ "$OP_OS_VERSION" == "OOS15" ]]; then
-          NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch"
-          if [ ! -f "$NTSYNC_PATCH" ]; then
-            echo "::error::NTSync compat patch not found for ${OP_MODEL}: $(basename $NTSYNC_PATCH)"
-            exit 1
+          if [ -f "$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch" ]; then
+            NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch"
           fi
         elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch" ]; then
           NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch"
         elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch" ]; then
           NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch"
-        else
-          echo "::error::NTSync patch not found for ${GKI_KEY} (Model: ${OP_MODEL}, OOS: ${OP_OS_VERSION})"
-          exit 1
+        fi
+        
+        if [ -z "$NTSYNC_PATCH" ]; then
+          echo "::warning::NTSync patch not found for ${GKI_KEY} (Model: ${OP_MODEL}, OOS: ${OP_OS_VERSION}). Skipping NTSync."
+          echo "::endgroup::"
+          exit 0
         fi
         
         echo "Using patch: $(basename $NTSYNC_PATCH)"
@@ -1420,9 +1422,13 @@ runs:
         fi
         
         echo "Patching $(basename $NTSYNC_PATCH)!"
-        patch -p1 --forward < "$NTSYNC_PATCH"
-        echo "Patching ntsync_base!"
-        patch -p1 --forward < "$NTSYNC_FOLDER/ntsync_base.patch"
+        patch -p1 --forward < "$NTSYNC_PATCH" || true
+        
+        if [ -f "$NTSYNC_FOLDER/ntsync_base.patch" ]; then
+          echo "Patching ntsync_base!"
+          patch -p1 --forward < "$NTSYNC_FOLDER/ntsync_base.patch" || true
+        fi
+        
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_NTSYNC=y
         EOF
