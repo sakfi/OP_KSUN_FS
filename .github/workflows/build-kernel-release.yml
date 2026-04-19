@@ -324,7 +324,7 @@ jobs:
           # Inject ksu_resolved_hash into each device in the matrix
           merged_matrix=$(echo "$merged_matrix" | jq  --arg resolved_sha "$resolved_sha" 'map(.ksu_resolved_hash = $resolved_sha)')
           
-          # SUSFS hash fetch (Beta Stable Logic)
+          # SUSFS hash resolution (Stable Beta Logic)
           PROJECT_ID="simonpunk%2fsusfs4ksu"
           declare -A default_branches=(
             ["android12-5.10"]="gki-android12-5.10"
@@ -355,7 +355,7 @@ jobs:
             echo "✅ Resolved: $key -> $resolved"
           done
           
-          # Write hash to GITHUB_OUTPUT
+          # Write outputs for workflow synchronization
           echo "active_gki_keys=$(IFS=','; echo "${active_keys[*]:-}")" >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
@@ -363,6 +363,17 @@ jobs:
           echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
           echo "susfs_base_version=v2.1.0" >> "$GITHUB_OUTPUT"
+          
+          # Write CSV list of active GKI versions
+          active_gki_keys_csv=$(IFS=','; echo "${active_keys[*]:-}")
+          echo "active_gki_keys=$active_gki_keys_csv" >> "$GITHUB_OUTPUT"
+          
+          # Write hash to GITHUB_OUTPUT
+          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
           
           # Inject susfs_resolved_hash into each device in the matrix
           susfs_hashes_json=$(jq -n \
