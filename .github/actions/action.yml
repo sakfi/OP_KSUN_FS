@@ -1395,42 +1395,26 @@ runs:
         echo "::group::Apply NTSync patch"
         cd "$COMMON_KERNEL_FOLDER"
         NTSYNC_FOLDER="$KERNEL_PATCHES_FOLDER/common/ntsync"
-        NATIVE_NTSYNC_FOLDER="${GITHUB_WORKSPACE}/ntsync_patches"
         GKI_KEY="${ANDROID_VER}-${KERNEL_VER}"
         NTSYNC_PATCH=""
-        NTSYNC_BASE=""
-        
-        if [ -f "$NATIVE_NTSYNC_FOLDER/ntsync_base.patch" ]; then
-          NTSYNC_BASE="$NATIVE_NTSYNC_FOLDER/ntsync_base.patch"
-        elif [ -f "$NTSYNC_FOLDER/ntsync_base.patch" ]; then
-          NTSYNC_BASE="$NTSYNC_FOLDER/ntsync_base.patch"
-        fi
         
         if [[ "$OP_MODEL" == "OP10r" || "$OP_MODEL" == "OP-ACE-RACE" ]] && [[ "$OP_OS_VERSION" == "OOS15" ]]; then
-          if [ -f "$NATIVE_NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch" ]; then
-            NTSYNC_PATCH="$NATIVE_NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch"
-          elif [ -f "$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch" ]; then
+          if [ -f "$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch" ]; then
             NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch"
           fi
-        else
-          if [ -f "$NATIVE_NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch" ]; then
-            NTSYNC_PATCH="$NATIVE_NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch"
-          elif [ -f "$NATIVE_NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch" ]; then
-            NTSYNC_PATCH="$NATIVE_NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch"
-          elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch" ]; then
-            NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch"
-          elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch" ]; then
-            NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch"
-          fi
+        elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch" ]; then
+          NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch"
+        elif [ -f "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch" ]; then
+          NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch"
         fi
         
         if [ -z "$NTSYNC_PATCH" ]; then
-          echo "::warning::NTSync patch not found for ${GKI_KEY}. Skipping NTSync."
+          echo "::warning::NTSync patch not found for ${GKI_KEY} (Model: ${OP_MODEL}, OOS: ${OP_OS_VERSION}). Skipping NTSync."
           echo "::endgroup::"
           exit 0
         fi
         
-        echo "Using patch: $(basename $NTSYNC_PATCH) from $(dirname $NTSYNC_PATCH)"
+        echo "Using patch: $(basename $NTSYNC_PATCH)"
         if [ "$ANDROID_VER" = "android16" ] && [ "$KERNEL_VER" = "6.12" ]; then
           echo "Removing pre-existing ntsync files for android16-6.12"
           rm -f include/uapi/linux/ntsync.h
@@ -1440,9 +1424,9 @@ runs:
         echo "Patching $(basename $NTSYNC_PATCH)!"
         patch -p1 --forward < "$NTSYNC_PATCH" || true
         
-        if [ -n "$NTSYNC_BASE" ]; then
+        if [ -f "$NTSYNC_FOLDER/ntsync_base.patch" ]; then
           echo "Patching ntsync_base!"
-          patch -p1 --forward < "$NTSYNC_BASE" || true
+          patch -p1 --forward < "$NTSYNC_FOLDER/ntsync_base.patch" || true
         fi
         
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
