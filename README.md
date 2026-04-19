@@ -50,8 +50,8 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 
 This repository provides a fully automated GitHub Actions workflow that:
 - 📥 Clones the OnePlus GKI kernel source via `repo sync`
-- 🛡️ Integrates **KernelSU-Next (KSUN)** or **KernelSU (KSU)**
-- 🥷 Applies **SUSFS** patches (Dynamically updated via GitLab API)
+- 🛡️ Integrates **KernelSU-Next (KSUN)**
+- 🛡️ Applies **SUSFS** patches (Dynamically updated via GitLab API)
 - 🔋 Integrates a comprehensive **Battery Optimization Suite**
 - 🚀 Applies a curated set of performance & optimization patches
 - 📦 Builds and packages a flashable **AnyKernel3 ZIP**
@@ -102,9 +102,9 @@ Device configs are located in [`configs/`](./configs/). Internal patches are cen
 
 ### 🛠️ Internal Patches
 All local kernel enhancements are organized under one roof for easier maintenance:
-- **`battery_patches`**: The core battery optimization suite.
-- **`ntsync_patches`**: Emulation synchronization backports for 6.1/6.6/6.12.
-- **`wireguard_patches`**: Secure kernel-level VPN implementation.
+- **`Battery patches`**: The core battery optimization suite.
+- **`NTSync patches`**: Emulation synchronization backports for 6.1/6.6/6.12.
+- **`WireGuard patches`**: Secure kernel-level VPN implementation.
 
 ---
 
@@ -154,8 +154,6 @@ These amazing people help make this project possible! ❤️
 | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
 | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
 | **Droidspaces** | ravindu644 | [![GitHub](https://img.shields.io/badge/GitHub-ravindu644-blue?style=flat-square&logo=github)](https://github.com/ravindu644/Droidspaces-OSS.git) |
-| **Helped with patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
-| **Helped with patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
 
 </div>
 
