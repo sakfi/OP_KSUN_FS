@@ -290,8 +290,21 @@ jobs:
           echo "--- Generated Release Notes ---"
           cat release_notes.md
 
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: ./all-artifacts/
+
+      - name: 📂 Flatten and Verify ZIPs
+        run: |
+          mkdir -p ./release-assets
+          find ./all-artifacts/ -maxdepth 2 -name "*.zip" -exec mv {} ./release-assets/ \;
+          echo "Files to be uploaded:"
+          ls -R ./release-assets/
+
       - name: 🚀 Create GitHub Release
         run: |
           gh release create "${{ env.NEW_TAG }}" \
-            --title "SakFi-OP OnePlus Kernels (${{ env.SUSFS_BASE_VERSION }})" \
-            --notes-file release_notes.md
+            --title "OnePlus Kernels With KSUN & SUSFS integrated — SakFi (${{ env.SUSFS_BASE_VERSION }})" \
+            --notes-file release_notes.md \
+            ./release-assets/*.zip
