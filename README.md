@@ -11,7 +11,7 @@
 </a>
 
 [![KernelSU-Next](https://img.shields.io/badge/KernelSU_Next-Supported-green)](https://kernelsu-next.github.io/webpage/)
-[![Wild KSU](https://img.shields.io/badge/Wild_KSU-Temporary%20Not%20Supported-cb2431)](https://github.com/WildKernels/Wild_KSU/)
+[![Wild KSU](https://img.shields.io/badge/Wild_KSU-Not%20Supported-cb2431)](https://github.com/WildKernels/Wild_KSU/)
 [![KernelSU](https://img.shields.io/badge/KernelSU-Not%20Supported-cb2431)](https://kernelsu.org/)
 [![SUSFS](https://img.shields.io/badge/SUSFS-Integrated-orange?logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu)
 
@@ -58,6 +58,8 @@ This repository provides a fully automated GitHub Actions workflow that:
 - 📱 Supports all major OnePlus OxygenOS versions (OOS14, OOS15, OOS16)
 - 🔄 **Fully Synchronized Workflow**: Automatic dependency resolution via GitHub GraphQL and GitLab APIs.
 
+<br>
+
 ---
 
 ## ✨ Features
@@ -81,6 +83,10 @@ This repository provides a fully automated GitHub Actions workflow that:
 | </> **Unicode Bypass Fix** | Prevent path traversal using non-printable Unicode codepoints |
 | 🖥️ **Droidspaces Support** | Support for Portable Linux containers |
 
+<br>
+
+---
+
 <details>
 <summary><b>👀 View SUSFS Hide Capabilities</b></summary>
 
@@ -102,9 +108,11 @@ Device configs are located in [`configs/`](./configs/). Internal patches are cen
 
 ### 🛠️ Internal Patches
 All local kernel enhancements are organized under one roof for easier maintenance:
-- **`battery_patches`**: The core battery optimization suite.
-- **`ntsync_patches`**: Emulation synchronization backports for 6.1/6.6/6.12.
-- **`wireguard_patches`**: Secure kernel-level VPN implementation.
+- **`Battery patches`**: The core battery optimization suite.
+- **`NTSync patches`**: Emulation synchronization backports for 6.1/6.6/6.12.
+- **`WireGuard patches`**: Secure kernel-level VPN implementation.
+
+<br>
 
 ---
 
@@ -114,6 +122,8 @@ Our unique battery suite targets three critical areas to maximize OnePlus perfor
 2. **Scheduling Efficiency**: Tuned `schedutil` damping and EAS bias toward "Little" cores (80% util).
 3. **Memory Optimization**: Strategic kswapd dampening and dynamic **MGLRU** enablement.
 4. **Log Silencing**: Compile-level silencing of debug noise to reduce CPU/IO churn.
+
+<br>
 
 ---
 
@@ -137,6 +147,8 @@ Our unique battery suite targets three critical areas to maximize OnePlus perfor
 
 > 📖 **For GKI installation details:** [kernelsu.org/guide/installation](https://kernelsu.org/guide/installation.html)
 
+<br>
+
 ---
 
 ## 🌟 Special Thanks
@@ -154,12 +166,12 @@ These amazing people help make this project possible! ❤️
 | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
 | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
 | **Droidspaces** | ravindu644 | [![GitHub](https://img.shields.io/badge/GitHub-ravindu644-blue?style=flat-square&logo=github)](https://github.com/ravindu644/Droidspaces-OSS.git) |
-| **Helped with patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
-| **Helped with patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
 
 </div>
 
 *If you have contributed and are not listed here, please remind me!* 🙏
+
+<br>
 
 ---
 
@@ -172,9 +184,13 @@ If you encounter any issues or need help, feel free to:
 - 🐛 Open an issue in this repository
 - 💬 Reach out to me directly
 
+<br>
+
 ---
 
 ## 📱 Connect With Me
+
+<br>
 
 <div align="center">
 
