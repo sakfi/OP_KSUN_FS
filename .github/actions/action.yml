@@ -81,6 +81,14 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        
+        # Set default values for features before parsing JSON
+        echo "OP_WIREGUARD=true" >> "$GITHUB_ENV"
+        echo "OP_NTSYNC=true" >> "$GITHUB_ENV"
+        echo "OP_BATTERY_OPT=true" >> "$GITHUB_ENV"
+        echo "OP_HMBIRD=false" >> "$GITHUB_ENV"
+        echo "OP_DS=false" >> "$GITHUB_ENV"
+        
         echo '${{ inputs.op_config_json }}' > /tmp/config.json
         jq -r 'to_entries[] | "OP_\(.key | ascii_upcase)=\(.value)"' /tmp/config.json >> "$GITHUB_ENV"
         echo "Parsed config:"

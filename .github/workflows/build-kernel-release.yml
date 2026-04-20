@@ -922,15 +922,15 @@ jobs:
               [[ "$unicode" == "true" ]] && features+=("🔧 Unicode Fix")
               [[ "$ds" == "true" ]] && features+=("💻 Droidspaces")
               [[ "$ntsync" == "true" ]] && features+=("🕹️ NTSync")
-              [[ "$battery_opt" == "true" ]] && features+=("🔋 Battery Optimization")
-              [[ "$wireguard" == "true" ]] && features+=("🛂 WireGuard")
+              [[ "$battery_opt" == "true" ]] && features+=("🔋 Battery Opt")
+              [[ "$wireguard" == "true" ]] && features+=("🛜 WireGuard")
               
               if [ ${#features[@]} -eq 0 ]; then
                 features_str="N/A"
               else
-                features_str=$(printf '%s ' "${features[@]}")
-                features_str=${features_str%" "}
-                features_str=$(echo "$features_str" | awk '
+                features_str=$(printf '%s|' "${features[@]}")
+                features_str=${features_str%|}
+                features_str=$(echo "$features_str" | awk -F'|' '
                   {
                     for(i=1; i<=NF; i++) {
                       printf "%s", $i

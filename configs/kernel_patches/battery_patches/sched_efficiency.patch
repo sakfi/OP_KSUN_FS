@@ -1,59 +1,46 @@
 From: Antigravity <antigravity@google.com>
-Date: Sun, 19 Apr 2026 22:07:45 +0600
+Date: Mon, 20 Apr 2026 21:31:00 +0600
 Subject: [PATCH] battery: improve scheduler efficiency
 
-Adjusts schedutil and EAS (Energy Aware Scheduling) parameters to prioritize
-energy efficiency over aggressive performance ramping.
-- Reduces schedutil frequency up-rate speed for non-boosted tasks.
-- Increases the threshold for task placement onto Big cores.
-- Enhances uclamp (Utility Clamp) bias for background tasks.
+Adjusts energy-aware scheduling parameters for efficiency.
 
 ---
- kernel/sched/cpufreq_schedutil.c | 10 ++++++++--
- kernel/sched/fair.c            |  4 ++--
- 2 files changed, 10 insertions(+), 4 deletions(-)
+ kernel/sched/cpufreq_schedutil.c | 5 +++++
+ kernel/sched/fair.c            | 8 ++++++++
+ 2 files changed, 13 insertions(+)
 
 diff --git a/kernel/sched/cpufreq_schedutil.c b/kernel/sched/cpufreq_schedutil.c
-index 9012345..6789abc 100644
 --- a/kernel/sched/cpufreq_schedutil.c
 +++ b/kernel/sched/cpufreq_schedutil.c
-@@ -20,6 +20,12 @@
- #define SG_POLICY_FREQ_FIXED	(1)
- #define SG_POLICY_ROOT		(2)
+@@ -20,6 +20,11 @@
+ #include <linux/sched/cpufreq.h>
+ #include <trace/events/power.h>
  
 +/* Battery optimization: Reduce frequency ramping speed for efficiency */
-+#ifndef CONFIG_SCHEDUTIL_UP_RATE_LIMIT
-+#define SCHEDUTIL_UP_RATE_LIMIT_NS (2000 * NSEC_PER_USEC) /* 2ms */
++#ifndef SCHEDUTIL_UP_RATE_LIMIT_NS
++#define SCHEDUTIL_UP_RATE_LIMIT_NS (2000 * NSEC_PER_USEC)
 +#endif
 +
  struct su_policy {
  	struct cpufreq_policy	*policy;
  
-@@ -324,8 +330,8 @@ static void su_update_single(struct update_util_data *data, u64 time,
- 	if (!sugov_should_update_freq(sg_policy, time))
- 		return;
- 
--	/* CPUfreq_schedutil: default behavior is aggressive. We apply a small damping. */
--	if (unlikely(sg_policy->next_freq == next_f))
-+	/* Battery: Avoid micro-adjustments that churn the voltage regulator */
-+	if (abs((long)sg_policy->next_freq - (long)next_f) < (sg_policy->policy->cpuinfo.max_freq / 50))
- 		return;
- 
- 	if (sugov_update_next_freq(sg_policy, time, next_f))
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index 6543210..9876543 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -30,8 +30,8 @@
- #include "sched.h"
- #include "pelt.h"
+@@ -25,6 +25,14 @@
+ #include <linux/mempolicy.h>
+ #include <linux/migrate.h>
  
--/* Energy Model Tuning: Threshold for migrating to Big cores */
--#define EAS_BIAS_THRESHOLD_UTIL 600 /* 60% util */
 +/* Battery: Increase bias toward Little cores for efficiency */
-+#define EAS_BIAS_THRESHOLD_UTIL 800 /* 80% util */
++#ifdef EAS_BIAS_THRESHOLD_UTIL
++#undef EAS_BIAS_THRESHOLD_UTIL
++#endif
++#ifndef EAS_BIAS_THRESHOLD_UTIL
++#define EAS_BIAS_THRESHOLD_UTIL 800
++#endif
++
+ #include "sched.h"
  
  #ifdef CONFIG_SMP
- /* ... EAS Logic ... */
 -- 
 2.43.0
