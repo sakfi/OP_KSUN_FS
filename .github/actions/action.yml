@@ -927,6 +927,12 @@ runs:
           [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$1" ]
         }
         
+        if version_lte "${susfs_version:1}" "1.5.12"; then
+          echo "NEED_HOOKS=true" >> "$GITHUB_ENV"
+        else
+          echo "NEED_HOOKS=false" >> "$GITHUB_ENV"
+        fi
+        
         # Helper to apply patch with fallback to stable directory
         apply_patch() {
           local patch_name="$1"
