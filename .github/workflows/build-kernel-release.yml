@@ -923,7 +923,7 @@ jobs:
               [[ "$ds" == "true" ]] && features+=("💻 Droidspaces")
               [[ "$ntsync" == "true" ]] && features+=("🕹️ NTSync")
               [[ "$battery_opt" == "true" ]] && features+=("🔋 Battery Optimization")
-              [[ "$wireguard" == "true" ]] && features+=("🛜 WireGuard")
+              [[ "$wireguard" == "true" ]] && features+=("🛂 WireGuard")
               
               if [ ${#features[@]} -eq 0 ]; then
                 features_str="N/A"
