@@ -937,16 +937,20 @@ runs:
         apply_patch() {
           local patch_name="$1"
           local version="$2"
-          local root="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches"
+          local upstream_root="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches"
+          local local_root="$GITHUB_WORKSPACE/configs/kernel_patches/ksun"
           
-          if [ -f "$root/$version/$patch_name" ]; then
-            echo "✅ Applying patch: $patch_name from $version"
-            patch -p1 --forward < "$root/$version/$patch_name"
-          elif [ -f "$root/stable/$version/$patch_name" ]; then
-            echo "✅ Applying patch: $patch_name from stable/$version"
-            patch -p1 --forward < "$root/stable/$version/$patch_name"
+          if [ -f "$local_root/$patch_name" ]; then
+            echo "✅ Applying LOCAL high-precision fix: $patch_name"
+            patch -p1 --forward < "$local_root/$patch_name"
+          elif [ -f "$upstream_root/$version/$patch_name" ]; then
+            echo "✅ Applying upstream patch: $patch_name from $version"
+            patch -p1 --forward < "$upstream_root/$version/$patch_name"
+          elif [ -f "$upstream_root/stable/$version/$patch_name" ]; then
+            echo "✅ Applying upstream patch: $patch_name from stable/$version"
+            patch -p1 --forward < "$upstream_root/stable/$version/$patch_name"
           else
-            echo "::error::Critical patch $patch_name NOT FOUND in $version or stable/$version"
+            echo "::error::Critical patch $patch_name NOT FOUND locally or in upstream $version/stable"
             echo "❌ This is a basic patch and cannot be skipped. Crashing build."
             exit 1
           fi

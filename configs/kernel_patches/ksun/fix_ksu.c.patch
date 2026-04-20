@@ -1,0 +1,22 @@
+--- a/kernel/ksu.c
++++ b/kernel/ksu.c
+@@ -19,6 +19,9 @@
+ #include "ksu.h"
+ #include "file_wrapper.h"
+ #include "selinux/selinux.h"
++#ifdef CONFIG_KSU_SUSFS
++#include <linux/susfs.h>
++#endif
+ 
+ static bool ksu_late_loaded = false;
+ 
+@@ -112,6 +116,9 @@ void kernelsu_init(void)
+ 	if (ksu_late_loaded) {
+ 		pr_info("late load mode, skipping kprobe hooks\n");
+ 		apply_kernelsu_rules();
++#ifdef CONFIG_KSU_SUSFS
++		susfs_init();
++#endif
+ 		cache_sid();
+ 		setup_ksu_cred();
+ 	} else {
