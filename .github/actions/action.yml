@@ -927,8 +927,6 @@ runs:
           [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$1" ]
         }
         
-        fi
-        
         # Helper to apply patch with fallback to stable directory
         apply_patch() {
           local patch_name="$1"
