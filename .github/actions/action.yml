@@ -937,12 +937,14 @@ runs:
           
           if [ -f "$root/$version/$patch_name" ]; then
             echo "✅ Applying patch: $patch_name from $version"
-            patch -p1 --forward < "$root/$version/$patch_name" || true
+            patch -p1 --forward < "$root/$version/$patch_name"
           elif [ -f "$root/stable/$version/$patch_name" ]; then
             echo "✅ Applying patch: $patch_name from stable/$version"
-            patch -p1 --forward < "$root/stable/$version/$patch_name" || true
+            patch -p1 --forward < "$root/stable/$version/$patch_name"
           else
-            echo "⚠️ Skipping patch: $patch_name not found in $version or stable/$version"
+            echo "::error::Critical patch $patch_name NOT FOUND in $version or stable/$version"
+            echo "❌ This is a basic patch and cannot be skipped. Crashing build."
+            exit 1
           fi
         }
         
