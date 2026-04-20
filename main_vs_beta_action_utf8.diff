@@ -1,0 +1,393 @@
+﻿diff --git a/.github/actions/action.yml b/.github/actions/action.yml
+index 198202b..a58830d 100644
+--- a/.github/actions/action.yml
++++ b/.github/actions/action.yml
+@@ -103,11 +103,16 @@ runs:
+         unicode="$OP_UNICODE"
+         c_compiler="$OP_C_COMPILER"
+         rust_compiler="$OP_RUST_COMPILER"
++        ds="${OP_DS:-false}"
+         zyc_compiler="$OP_ZYC_COMPILER"
+         optimize='${{ inputs.optimize_level }}'
+         
+         errors=()
+         
++        if [[ -n "$ds" && "$ds" != "true" && "$ds" != "false" ]]; then
++          errors+=("Input 'ds' must be 'true' or 'false'. Got: '$ds'")
++        fi
++        
+         if [[ -z "$model" ]]; then
+           errors+=("Input 'model' cannot be empty")
+         elif [[ ! "$model" =~ ^OP ]]; then
+@@ -337,7 +342,7 @@ runs:
+         COMMON_KERNEL_DIR="$KERNEL_PLATFORM_DIR/common"
+         MSM_KERNEL_DIR="$KERNEL_PLATFORM_DIR/msm-kernel"
+         AK3_DIR="$GITHUB_WORKSPACE/AnyKernel3"
+-        KERNEL_PATCHES_DIR="$GITHUB_WORKSPACE/kernel_patches"
++        KERNEL_PATCHES_DIR="/home/runner/kernel_patches"
+         SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
+         KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
+         KSUN_DIR="$KERNEL_PLATFORM_DIR/KernelSU-Next"
+@@ -729,7 +734,7 @@ runs:
+           local url="$1"
+           local branch="${2:-main}"
+           local depth="${3:-1}"
+-          local dir="$(basename "$url" .git)"
++          local dir="${4:-$(basename "$url" .git)}"
+           local max_attempts=3
+           local attempt=1
+           
+@@ -757,8 +762,8 @@ runs:
+           return 1
+         }
+         
+-        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH"
+-        retry_clone "https://github.com/TheWildJames/kernel_patches.git"
++        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH" 1 "$AK3_FOLDER"
++        retry_clone "https://github.com/TheWildJames/kernel_patches.git" "main" 1 "$KERNEL_PATCHES_FOLDER"
+         
+         if [ "${{ env.OP_SUSFS }}" = true ]; then
+           retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
+@@ -923,19 +928,42 @@ runs:
+         }
+         
+         if version_lte "${susfs_version:1}" "1.5.12"; then
+-          echo "NEED_HOOKS=true" >> $GITHUB_ENV
++          echo "NEED_HOOKS=true" >> "$GITHUB_ENV"
+         else
+-          echo "NEED_HOOKS=false" >> $GITHUB_ENV
++          echo "NEED_HOOKS=false" >> "$GITHUB_ENV"
+         fi
+         
++        # Helper to apply patch with fallback to stable directory
++        apply_patch() {
++          local patch_name="$1"
++          local version="$2"
++          local upstream_root="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches"
++          local local_root="$GITHUB_WORKSPACE/configs/kernel_patches/ksun"
++          
++          if [ -f "$local_root/$patch_name" ]; then
++            echo "Γ£à Applying LOCAL high-precision fix: $patch_name"
++            patch -p1 --forward < "$local_root/$patch_name"
++          elif [ -f "$upstream_root/$version/$patch_name" ]; then
++            echo "Γ£à Applying upstream patch: $patch_name from $version"
++            patch -p1 --forward < "$upstream_root/$version/$patch_name"
++          elif [ -f "$upstream_root/stable/$version/$patch_name" ]; then
++            echo "Γ£à Applying upstream patch: $patch_name from stable/$version"
++            patch -p1 --forward < "$upstream_root/stable/$version/$patch_name"
++          else
++            echo "::error::Critical patch $patch_name NOT FOUND locally or in upstream $version/stable"
++            echo "Γ¥î This is a basic patch and cannot be skipped. Crashing build."
++            exit 1
++          fi
++        }
++        
+         case "$susfs_version" in
+           "v1.5.8")
+             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+               patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_apk_sign.c.patch"
+-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_core_hook.c.patch"
+-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_selinux.c.patch"
+-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_ksud.c.patch"
++              apply_patch "fix_apk_sign.c.patch" "$susfs_version"
++              apply_patch "fix_core_hook.c.patch" "$susfs_version"
++              apply_patch "fix_selinux.c.patch" "$susfs_version"
++              apply_patch "fix_ksud.c.patch" "$susfs_version"
+             else
+               cd "$KSU_FOLDER"
+               patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+@@ -946,10 +974,9 @@ runs:
+               cd "$KSUN_FOLDER"
+               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1); do
+-                echo "Patching file: $file.c with fix_$file.c.patch"
+-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
++                apply_patch "fix_$file.c.patch" "$susfs_version"
+               done
+-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
++              apply_patch "fix_kernel_compat.c.patch" "$susfs_version"
+             else
+               cd "$KSU_FOLDER"
+               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+@@ -960,18 +987,13 @@ runs:
+               cd "$KSUN_FOLDER"
+               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
+-                echo "Patching file: $file with fix_$file.patch"
+-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
++                apply_patch "fix_$file.patch" "$susfs_version"
+               done
+-              echo "Patching Hook Mode!"
+-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+-              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
+-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+-              echo "Patching Multi-manager Support for SusFS kernel!"
+-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
++              apply_patch "overwrite_hook_mode.patch" "$susfs_version"
++              apply_patch "ksu_toolkit.patch" "$susfs_version"
++              apply_patch "multi_manager.patch" "$susfs_version"
+               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
+-                echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
+-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
++                apply_patch "multi_sepolicy_fix.patch" "$susfs_version"
+               fi
+             else
+               cd "$KSU_FOLDER"
+@@ -983,18 +1005,13 @@ runs:
+               cd "$KSUN_FOLDER"
+               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
+-                echo "Patching file: $file with fix_$file.patch"
+-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
++                apply_patch "fix_$file.patch" "$susfs_version"
+               done
+-              echo "Patching Hook Mode!"
+-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+-              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
+-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+-              echo "Patching Multi-manager Support for SusFS kernel!"
+-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
++              apply_patch "overwrite_hook_mode.patch" "$susfs_version"
++              apply_patch "ksu_toolkit.patch" "$susfs_version"
++              apply_patch "multi_manager.patch" "$susfs_version"
+               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
+-                echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
+-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
++                apply_patch "multi_sepolicy_fix.patch" "$susfs_version"
+               fi
+             else
+               cd "$KSU_FOLDER"
+@@ -1230,6 +1247,33 @@ runs:
+         echo "Γ£à Other patches applied"
+         echo "::endgroup::"
+ 
++    - name: Apply Battery Optimization Suite
++      shell: bash
++      run: |
++        set -euo pipefail
++        echo "::group::Apply Battery Optimization Suite"
++        cd "$COMMON_KERNEL_FOLDER"
++        
++        BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
++        
++        if [ -d "$BATTERY_PATCH_DIR" ]; then
++          echo "?? Applying 4-patch Battery Optimization Suite..."
++          # Explicitly apply the 4 patches as requested
++          for patch_name in "mem_opt.patch" "sched_efficiency.patch" "silence_logging.patch" "wakelock_reduction.patch"; do
++            patch_file="$BATTERY_PATCH_DIR/$patch_name"
++            if [ -f "$patch_file" ]; then
++              echo "Applying: $patch_name"
++              patch -p1 --forward < "$patch_file" || true
++            else
++              echo "::warning::Battery patch $patch_name missing from suite folder."
++            fi
++          done
++          echo "Γ£à Battery optimization suite applied"
++        else
++          echo "::warning::Battery optimization suite folder missing. Skipping."
++        fi
++        echo "::endgroup::"
++
+     - name: Apply Unicode Fix Patch
+       shell: bash
+       if: ${{ env.OP_UNICODE == 'true' }}
+@@ -1263,13 +1307,25 @@ runs:
+       shell: bash
+       run: |
+         set -euo pipefail
+-        echo "Add BBR"
++        echo "::group::Add BBR"
++        cd "$COMMON_KERNEL_FOLDER"
++        
++        # Sourcing: Strictly Upstream
++        BBR_PATCH="$KERNEL_PATCHES_FOLDER/common/bbr.patch"
++        if [ -f "$BBR_PATCH" ]; then
++          echo "Applying Upstream BBR patch..."
++          patch -p1 --forward < "$BBR_PATCH" || true
++        fi
++        
++        echo "Configuring BBR in gki_defconfig..."
+         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+         CONFIG_TCP_CONG_ADVANCED=y
+         CONFIG_TCP_CONG_BBR=y
+         CONFIG_NET_SCH_FQ=y
+         CONFIG_NET_SCH_FQ_CODEL=y
+         EOF
++        echo "Γ£à BBR configured"
++        echo "::endgroup::"
+ 
+     - name: Add NTSync
+       if: ${{ env.OP_NTSYNC == 'true' }}
+@@ -1280,9 +1336,21 @@ runs:
+         cd "$COMMON_KERNEL_FOLDER"
+         KERNEL_VERSION="${{ env.KERNEL_VER }}"
+         
+-        NTSYNC_PATCH_DIR="$GITHUB_WORKSPACE/ntsync_patches/$KERNEL_VERSION"
++        # Sourcing Priority: Upstream -> Local Repo -> Skip
++        NTSYNC_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ntsync/$KERNEL_VERSION"
++        NTSYNC_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/ntsync_patches/$KERNEL_VERSION"
+         
+-        if [ -d "$NTSYNC_PATCH_DIR" ]; then
++        if [ -d "$NTSYNC_UPSTREAM" ]; then
++          NTSYNC_PATCH_DIR="$NTSYNC_UPSTREAM"
++          echo "?? Using Upstream NTSync patches for $KERNEL_VERSION"
++        elif [ -d "$NTSYNC_REPO" ]; then
++          NTSYNC_PATCH_DIR="$NTSYNC_REPO"
++          echo "?? Using Local Repo NTSync patches for $KERNEL_VERSION"
++        else
++          NTSYNC_PATCH_DIR=""
++        fi
++        
++        if [ -n "$NTSYNC_PATCH_DIR" ]; then
+           for patch_file in "$NTSYNC_PATCH_DIR"/*.patch; do
+              if [ -f "$patch_file" ]; then
+                echo "Applying NTSync patch: $(basename "$patch_file")"
+@@ -1293,9 +1361,48 @@ runs:
+           cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+         CONFIG_NTSYNC=y
+         EOF
++          echo "OP_NTSYNC_STATUS=Applied" >> "$GITHUB_ENV"
+           echo "Γ£à NTSync configured for $KERNEL_VERSION"
+         else
+-          echo "::warning::NTSync patches not found for kernel $KERNEL_VERSION. Skipping."
++          echo "OP_NTSYNC_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
++          echo "::warning::NTSync patches not found in Upstream or Repo for $KERNEL_VERSION. Skipping."
++        fi
++        echo "::endgroup::"
++
++    - name: Add Droidspaces
++      if: ${{ env.OP_DS == 'true' }}
++      shell: bash
++      run: |
++        set -euo pipefail
++        echo "::group::Add Droidspaces Support"
++        cd "$COMMON_KERNEL_FOLDER"
++        
++        # Sourcing Priority: Upstream -> Local Repo -> Skip
++        DS_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ds"
++        DS_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/droidspaces_patches"
++        
++        if [ -d "$DS_UPSTREAM" ]; then
++          DS_PATCH_DIR="$DS_UPSTREAM"
++          echo "?? Using Upstream Droidspaces patches"
++        elif [ -d "$DS_REPO" ]; then
++          DS_PATCH_DIR="$DS_REPO"
++          echo "?? Using Local Repo Droidspaces patches"
++        else
++          DS_PATCH_DIR=""
++        fi
++        
++        if [ -n "$DS_PATCH_DIR" ]; then
++          for patch_file in "$DS_PATCH_DIR"/*.patch; do
++             if [ -f "$patch_file" ]; then
++               echo "Applying Droidspaces patch: $(basename "$patch_file")"
++               patch -p1 --forward < "$patch_file" || true
++             fi
++          done
++          echo "OP_DS_STATUS=Applied" >> "$GITHUB_ENV"
++          echo "Γ£à Droidspaces configured"
++        else
++          echo "OP_DS_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
++          echo "::warning::Droidspaces patches not found in Upstream or Repo. Skipping."
+         fi
+         echo "::endgroup::"
+ 
+@@ -1304,22 +1411,48 @@ runs:
+       shell: bash
+       run: |
+         set -euo pipefail
+-        echo "Add TTL Target Support"
++        echo "::group::Add TTL Target Support"
++        cd "$COMMON_KERNEL_FOLDER"
++        
++        # Sourcing: Strictly Upstream
++        TTL_PATCH="$KERNEL_PATCHES_FOLDER/common/ttl_target.patch"
++        if [ -f "$TTL_PATCH" ]; then
++          echo "Applying Upstream TTL patch..."
++          patch -p1 --forward < "$TTL_PATCH" || true
++        fi
++        
++        echo "Configuring TTL in gki_defconfig..."
+         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+         CONFIG_IP_NF_TARGET_TTL=y
+         CONFIG_IP6_NF_TARGET_HL=y
+         CONFIG_IP6_NF_MATCH_HL=y
+         EOF
++        echo "Γ£à TTL configured"
++        echo "::endgroup::"
+ 
+     - name: Add IP SET & IPv6_NAT Support
+       if: ${{ env.OP_IP_SET == 'true' }}
+       shell: bash
+       run: |
+         set -euo pipefail
+-        echo "Add IP SET & IPv6_NAT Support"
++        echo "::group::Add IP SET & IPv6_NAT Support"
+         cd "$COMMON_KERNEL_FOLDER"
+         KERNEL_VERSION="${{ env.KERNEL_VER }}"
+         
++        # Sourcing Priority: Strictly Upstream
++        IPSET_PATCH="$KERNEL_PATCHES_FOLDER/common/ip_set.patch"
++        IPV6_NAT_PATCH="$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
++        
++        if [ -f "$IPSET_PATCH" ]; then
++          echo "Applying Upstream IP_SET patch..."
++          patch -p1 --forward < "$IPSET_PATCH" || true
++        fi
++        
++        if [ -f "$IPV6_NAT_PATCH" ]; then
++          echo "Applying Upstream IPv6_NAT_FIX patch..."
++          patch -p1 -F 3 < "$IPV6_NAT_PATCH" || true
++        fi
++        
+         if [[ "$KERNEL_VERSION" == "6.12" ]] || [[ "$OP_BRANCH" == wild/mt* ]]; then
+             echo "::debug::Skipping CONFIG_BPF_STREAM_PARSER for $KERNEL_VERSION / $OP_BRANCH"
+         else
+@@ -1350,8 +1483,8 @@ runs:
+         CONFIG_IP6_NF_NAT=y
+         CONFIG_IP6_NF_TARGET_MASQUERADE=y
+         EOF
+-        
+-        patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
++        echo "Γ£à IP SET & IPv6_NAT configured"
++        echo "::endgroup::"
+ 
+     - name: Add WireGuard Support
+       shell: bash
+@@ -1370,7 +1503,7 @@ runs:
+         EOF
+         
+         # 2. Apply Patches
+-        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/wireguard_patches"
++        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
+         if [ -d "$WIREGUARD_PATCH_DIR" ]; then
+           for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
+             if [ -f "$patch_file" ]; then
+@@ -1378,6 +1511,8 @@ runs:
+               patch -p1 --forward < "$patch_file" || true
+             fi
+           done
++        else
++          echo "::warning::WireGuard patches not found in Repos. Skipping."
+         fi
+         
+         echo "Γ£à WireGuard integrated and optimized"
+@@ -1891,6 +2026,8 @@ runs:
+           echo "TTL: ${{ env.OP_TTL }}"
+           echo "IP_SET & IPv6 NAT: ${{ env.OP_IP_SET }}"
+           echo "Unicode Fix: ${{ env.OP_UNICODE }}"
++          echo "NTSync: ${OP_NTSYNC_STATUS:-Disabled}"
++          echo "Droidspaces: ${OP_DS_STATUS:-Disabled}"
+           echo ""
+           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
+           echo "Compiler: ${CLANG_VERSION:-unknown}"
+@@ -1954,6 +2091,8 @@ runs:
+           echo "| **TTL** | ${{ env.OP_TTL }} |"
+           echo "| **IP_SET & IPv6 NAT** | ${{ env.OP_IP_SET }} |"
+           echo "| **Unicode Fix** | ${{ env.OP_UNICODE }} |"
++          echo "| **NTSync** | ${OP_NTSYNC_STATUS:-Disabled} |"
++          echo "| **Droidspaces** | ${OP_DS_STATUS:-Disabled} |"
+           
+           echo ""
+           echo "### ≡ƒôè Build Metrics"
