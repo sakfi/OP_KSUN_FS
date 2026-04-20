@@ -914,15 +914,16 @@ jobs:
               
               # Build features string based on boolean values
               [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
-              [[ "$susfs" == "true" ]] && features+=("ඞ SusFS")
+              [[ "$susfs" == "true" ]] && features+=("🛡️ SusFS")
               [[ "$bbr" == "true" ]] && features+=("🚀 BBR")
-              [[ "$bbg" == "true" ]] && features+=("🛡️ BBG")
+              [[ "$bbg" == "true" ]] && features+=("🧱 BBG")
               [[ "$ttl" == "true" ]] && features+=("🌐 TTL")
-              [[ "$ip_set" == "true" ]] && features+=("🧱 IP_SET & IPv6 NAT")
+              [[ "$ip_set" == "true" ]] && features+=("📡 IP_SET & IPv6 NAT")
               [[ "$unicode" == "true" ]] && features+=("🔧 Unicode Fix")
               [[ "$ds" == "true" ]] && features+=("💻 Droidspaces")
-              [[ "$ntsync" == "true" ]] && features+=("🔃 NTSync")
+              [[ "$ntsync" == "true" ]] && features+=("🕹️ NTSync")
               [[ "$battery_opt" == "true" ]] && features+=("🔋 Battery Opt")
+              features+=("🛂 WireGuard")
               
               if [ ${#features[@]} -eq 0 ]; then
                 features_str="N/A"
@@ -1030,6 +1031,7 @@ jobs:
           | ⚡️ **TMPFS XATTR** | Extended attributes for Mountify support |
           | 🚀 **Optimization** | Memory, I/O, CPU scheduler, network tuning patches |
           | 🔋 **Battery** | Multi-patch suite for power efficiency and wakelock reduction |
+          | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
           
           <br>
           
