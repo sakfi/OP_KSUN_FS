@@ -1,0 +1,1986 @@
+﻿name: 'Build OnePlus Kernel with KernelSU Next'
+description: 'Builds OnePlus kernel with KSU and SUSFS'
+
+inputs:
+  op_config_json:
+    description: 'JSON string containing full device config'
+    required: true
+    type: string
+  ksu_type:
+    description: 'Select KSU Type'
+    required: true
+    type: choice
+    options:
+      - KSUN
+      - KSU
+  ksu_branch_or_hash:
+    description: 'KSU branch or commit hash (empty = auto-detect by ksu_type)'
+    required: false
+    type: string
+    default: ""
+  susfs_commit_hash_or_branch:
+    description: 'SUSFS branch or commit hash (empty = auto-detect by kernel version)'
+    required: false
+    type: string
+    default: ""
+  optimize_level:
+    description: 'Compiler optimization level (O2 or O3)'
+    required: false
+    type: string
+    default: O2
+  clean:
+    description: 'Force clean build without ccache acceleration'
+    required: false
+    type: string
+    default: 'false'
+
+outputs:
+  kernel_version:
+    description: 'Full kernel version string'
+    value: ${{ steps.save_metadata.outputs.kernel_version }}
+  ksu_version:
+    description: 'KernelSU version number'
+    value: ${{ steps.save_metadata.outputs.ksu_version }}
+  ksu_type:
+    description: 'KernelSU Variant'
+    value: ${{ steps.save_metadata.outputs.ksu_type }}
+  susfs_version:
+    description: 'SUSFS version string'
+    value: ${{ steps.save_metadata.outputs.susfs_version }}
+  image_sha256:
+    description: 'SHA256 hash of kernel Image'
+    value: ${{ steps.collect_stats.outputs.image_sha256 }}
+  warnings:
+    description: 'Number of compiler warnings'
+    value: ${{ steps.collect_stats.outputs.warnings_count }}
+  build_time:
+    description: 'Total build time in seconds'
+    value: ${{ steps.collect_stats.outputs.build_time }}
+  ccache_hit_rate:
+    description: 'ccache hit rate percentage'
+    value: ${{ steps.ccache_stats.outputs.hit_rate }}
+  ccache_direct_rate:
+    description: 'ccache direct hit rate percentage'
+    value: ${{ steps.ccache_stats.outputs.direct_rate }}
+  zip_name:
+    description: 'Name of the generated flashable ZIP'
+    value: ${{ steps.create_zip.outputs.zip_name }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Parse op_config_json
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo '${{ inputs.op_config_json }}' > /tmp/config.json
+        jq -r 'to_entries[] | "OP_\(.key | ascii_upcase)=\(.value)"' /tmp/config.json >> "$GITHUB_ENV"
+        echo "Parsed config:"
+        jq '.' /tmp/config.json
+
+    - name: Validate Inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Validate inputs"
+        model="$OP_MODEL"
+        soc="$OP_SOC"
+        branch="$OP_BRANCH"
+        manifest="$OP_MANIFEST"
+        android_version="$OP_ANDROID_VERSION"
+        kernel_version="$OP_KERNEL_VERSION"
+        os_version="$OP_OS_VERSION"
+        hmbird="$OP_HMBIRD"
+        susfs="$OP_SUSFS"
+        bbg="$OP_BBG"
+        bbr="$OP_BBR"
+        ttl="$OP_TTL"
+        ip_set="$OP_IP_SET"
+        ntsync="$OP_NTSYNC"
+        rust_build="$OP_RUST_BUILD"
+        lto="$OP_LTO"
+        uname="$OP_UNAME"
+        unicode="$OP_UNICODE"
+        c_compiler="$OP_C_COMPILER"
+        rust_compiler="$OP_RUST_COMPILER"
+        zyc_compiler="$OP_ZYC_COMPILER"
+        optimize='${{ inputs.optimize_level }}'
+        
+        errors=()
+        
+        if [[ -z "$model" ]]; then
+          errors+=("Input 'model' cannot be empty")
+        elif [[ ! "$model" =~ ^OP ]]; then
+          errors+=("Input 'model' does not start with 'OP'. Got: '$model'")
+        fi
+        
+        if [[ -z "$soc" ]]; then
+          errors+=("Input 'soc' cannot be empty")
+        elif [[ ! "$soc" =~ ^[A-Za-z0-9_-]+$ ]]; then
+          errors+=("Input 'soc' contains invalid characters. Allowed: letters, digits, underscore, dash. Got: '$soc'")
+        fi
+        
+        if [[ -z "$branch" ]]; then
+          errors+=("Input 'branch' cannot be empty")
+        elif [[ ! "$branch" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+          errors+=("Input 'branch' contains invalid characters. Allowed: letters, digits, ., _, -, /. Got: '$branch'")
+        fi
+        
+        if [[ -z "$manifest" ]]; then
+          errors+=("Input 'manifest' cannot be empty")
+        elif [[ "$manifest" == http*://* ]]; then
+          if [[ ! "$manifest" =~ ^https:// ]]; then
+            errors+=("Manifest URL must be HTTPS. Got: '$manifest'")
+          fi
+          if [[ ! "$manifest" =~ \.xml($|\?) ]]; then
+            errors+=("Manifest URL should point to an XML file (.xml). Got: '$manifest'")
+          fi
+        else
+          if [[ ! "$manifest" =~ \.xml$ ]]; then
+            errors+=("Manifest filename must end with .xml. Got: '$manifest'")
+          fi
+          if [[ "$manifest" =~ [[:space:]] ]]; then
+            errors+=("Manifest filename cannot contain spaces. Got: '$manifest'")
+          fi
+        fi
+        
+        if [[ -z "$android_version" ]]; then
+          errors+=("Input 'android_version' cannot be empty")
+        elif [[ ! "$android_version" =~ ^android[0-9]+$ ]]; then
+          errors+=("Input 'android_version' contains invalid characters. Allowed: android followed by a number. Got: '$android_version'")
+        fi
+        
+        if [[ -z "$kernel_version" ]]; then
+          errors+=("Input 'kernel_version' cannot be empty")
+        elif [[ ! "$kernel_version" =~ ^[0-9]+\.[0-9]+$ ]]; then
+          errors+=("Input 'kernel_version' contains invalid characters. Allowed: number in X.Y format. Got: '$kernel_version'")
+        fi
+        
+        if [[ -z "$os_version" ]]; then
+          errors+=("Input 'os_version' cannot be empty")
+        elif [[ ! "$os_version" =~ ^OOS ]]; then
+          errors+=("Input 'os_version' does not start with 'OOS'. Got: '$os_version'")
+        fi
+        
+        if [[ -z "$hmbird" ]]; then
+          errors+=("Input 'hmbird' cannot be empty")
+        elif [[ "$hmbird" != "true" && "$hmbird" != "false" ]]; then
+          errors+=("Input 'hmbird' contains invalid characters. Allowed: 'true' or 'false'. Got: '$hmbird'")
+        fi
+        
+        if [[ -z "$susfs" ]]; then
+          errors+=("Input 'susfs' cannot be empty")
+        elif [[ "$susfs" != "true" && "$susfs" != "false" ]]; then
+          errors+=("Input 'susfs' contains invalid characters. Allowed: 'true' or 'false'. Got: '$susfs'")
+        fi
+        
+        if [[ -z "$bbg" ]]; then
+          errors+=("Input 'bbg' cannot be empty")
+        elif [[ "$bbg" != "true" && "$bbg" != "false" ]]; then
+          errors+=("Input 'bbg' contains invalid characters. Allowed: 'true' or 'false'. Got: '$bbg'")
+        fi
+        
+        if [[ -n "$ntsync" && "$ntsync" != "true" && "$ntsync" != "false" ]]; then
+          errors+=("Input 'ntsync' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ntsync'")
+        fi
+        
+        if [[ -z "$bbr" ]]; then
+          errors+=("Input 'bbr' cannot be empty")
+        elif [[ "$bbr" != "true" && "$bbr" != "false" ]]; then
+          errors+=("Input 'bbr' contains invalid characters. Allowed: 'true' or 'false'. Got: '$bbr'")
+        fi
+        
+        if [[ -z "$ttl" ]]; then
+          errors+=("Input 'ttl' cannot be empty")
+        elif [[ "$ttl" != "true" && "$ttl" != "false" ]]; then
+          errors+=("Input 'ttl' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ttl'")
+        fi
+        
+        if [[ -z "$ip_set" ]]; then
+          errors+=("Input 'ip_set' cannot be empty")
+        elif [[ "$ip_set" != "true" && "$ip_set" != "false" ]]; then
+          errors+=("Input 'ip_set' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ip_set'")
+        fi
+        
+        if [[ -z "$rust_build" ]]; then
+          errors+=("Input 'rust_build' cannot be empty")
+        elif [[ "$rust_build" != "true" && "$rust_build" != "false" ]]; then
+          errors+=("Input 'rust_build' contains invalid characters. Allowed: 'true' or 'false'. Got: '$rust_build'")
+        fi
+        
+        if [[ -z "$lto" ]]; then
+          errors+=("Input 'lto' cannot be empty")
+        elif [[ "$lto" != "none" && "$lto" != "thin" && "$lto" != "full" ]]; then
+          errors+=("Input 'lto' contains invalid characters. Allowed: 'thin', 'full' or 'none'. Got: '$lto'")
+        fi
+        
+        if [[ -z "$uname" ]]; then
+          errors+=("Input 'uname' cannot be empty")
+        elif [[ ${#uname} -gt 44 ]]; then
+          errors+=("Input 'uname' too long. Maximum length: 44. Got: '$uname'")
+        fi
+        
+        if [[ -z "$unicode" ]]; then
+          errors+=("Input 'unicode' cannot be empty")
+        elif [[ "$unicode" != "true" && "$unicode" != "false" ]]; then
+          errors+=("Input 'unicode' contains invalid characters. Allowed: 'true' or 'false'. Got: '$unicode'")
+        fi
+        
+        # OP_C_COMPILER currently has no checks!
+        
+        # OP_RUST_COMPILER currently has no checks!
+        
+        # OP_ZYC_COMPILER currently has no checks!
+        
+        case "$optimize" in
+          O2|O3) ;;
+          *) errors+=("optimize_level must be O2 or O3. Got: '$optimize'"); ;;
+        esac
+        
+        if [ ${#errors[@]} -ne 0 ]; then
+          echo "Found ${#errors[@]} validation error(s):" >&2
+          for error in "${errors[@]}"; do
+            echo "  - $error" >&2
+          done
+          echo "::error::Input validation failed. See logs for details."
+          exit 1
+        else
+          echo "Γ£à Input validation passed"
+        fi
+        echo "::endgroup::"
+
+    - name: Install bindgen only (no rustc)
+      shell: bash
+      if: ${{ env.OP_RUST_BUILD == 'true' }}
+      run: |
+        # Install bindgen via cargo (no full rustc needed)
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+        source $HOME/.cargo/env
+        
+        # Install bindgen CLI only (~50-100MB total)
+        cargo install bindgen-cli --version 0.69.5
+        
+        # Verify
+        bindgen --version
+        which bindgen
+
+    - name: Show bindgen version
+      shell: bash
+      if: ${{ env.OP_RUST_BUILD == 'true' }}
+      run: bindgen --version
+
+    - name: Setup Base Environment
+      shell: bash
+      run: |
+        set -euo pipefail
+        CONFIG="$OP_MODEL"
+        echo "CONFIG=$CONFIG" >> "$GITHUB_ENV"
+        REPO="/usr/local/bin/repo"
+        if [ ! -x "$REPO" ]; then
+          curl -s https://storage.googleapis.com/git-repo-downloads/repo -o "$REPO"
+          chmod +x "$REPO"
+        fi
+        echo "REPO=$REPO" >> "$GITHUB_ENV"
+
+    - name: Optimize Global Git for Repo Tool
+      shell: bash
+      run: |
+        set -euo pipefail
+        git config --global feature.manyFiles true
+        git config --global core.fsmonitor true
+        git config --global pack.sparse true
+
+    - name: Initialize and Sync Kernel Source
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Initialize kernel source"
+        echo "Creating folder for configuration: $CONFIG"
+        mkdir -p "$CONFIG"
+        cd "$CONFIG"
+        echo "Initializing and syncing kernel source..."
+        
+        if [[ "$OP_MANIFEST" == https://* ]]; then
+          mkdir -p .repo/manifests
+          curl --fail --show-error --location --proto '=https' "$OP_MANIFEST" -o .repo/manifests/temp_manifest.xml
+          "$REPO" init -u https://github.com/OnePlusOSS/kernel_manifest.git -b "oneplus/sm8650" -m temp_manifest.xml --repo-rev=v2.16 --depth=1 --no-clone-bundle --no-tags
+        elif [[ "$OP_BRANCH" == wild/* ]]; then
+          mkdir -p .repo/manifests
+          cp "../manifests/$(echo "$OP_OS_VERSION" | tr '[:upper:]' '[:lower:]')/$OP_MANIFEST" .repo/manifests/temp_manifest.xml
+          "$REPO" init -u https://github.com/OnePlusOSS/kernel_manifest.git -b "oneplus/sm8650" -m temp_manifest.xml --repo-rev=v2.16 --depth=1 --no-clone-bundle --no-tags
+        else
+          "$REPO" init -u https://github.com/OnePlusOSS/kernel_manifest.git -b "$OP_BRANCH" -m "$OP_MANIFEST" --repo-rev=v2.16 --depth=1 --no-clone-bundle --no-tags
+        fi
+        
+        "$REPO" --version
+        success=false
+        for i in 1 2 3; do
+          if "$REPO" sync -c --no-clone-bundle --no-tags --optimized-fetch \
+             -j"$(nproc --all)" --fail-fast; then
+            success=true
+            break
+          fi
+          echo "ΓÜá∩╕Å repo sync attempt $i failed; retrying..."
+          sleep 30
+        done
+        $success || { echo "::error::repo sync failed after 3 attempts"; exit 1; }
+        echo "Γ£à Kernel source synced"
+        echo "::endgroup::"
+
+    - name: Set Dir Paths
+      shell: bash
+      run: |
+        set -euo pipefail
+        CONFIG_DIR="$GITHUB_WORKSPACE/$CONFIG"
+        ARTIFACTS_DIR="$CONFIG_DIR/artifacts"
+        KERNEL_PLATFORM_DIR="$CONFIG_DIR/kernel_platform"
+        COMMON_KERNEL_DIR="$KERNEL_PLATFORM_DIR/common"
+        MSM_KERNEL_DIR="$KERNEL_PLATFORM_DIR/msm-kernel"
+        AK3_DIR="$GITHUB_WORKSPACE/AnyKernel3"
+        KERNEL_PATCHES_DIR="$GITHUB_WORKSPACE/kernel_patches"
+        SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
+        KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
+        KSUN_DIR="$KERNEL_PLATFORM_DIR/KernelSU-Next"
+        mkdir -p "$ARTIFACTS_DIR"
+        
+        # Save to environment for later steps
+        echo "CONFIG_FOLDER=$CONFIG_DIR" >> "$GITHUB_ENV"
+        echo "ARTIFACTS_FOLDER=$ARTIFACTS_DIR" >> "$GITHUB_ENV"
+        echo "KERNEL_PLATFORM_FOLDER=$KERNEL_PLATFORM_DIR" >> "$GITHUB_ENV"
+        echo "COMMON_KERNEL_FOLDER=$COMMON_KERNEL_DIR" >> "$GITHUB_ENV"
+        echo "MSM_KERNEL_FOLDER=$MSM_KERNEL_DIR" >> "$GITHUB_ENV"
+        echo "AK3_FOLDER=$AK3_DIR" >> "$GITHUB_ENV"
+        echo "KERNEL_PATCHES_FOLDER=$KERNEL_PATCHES_DIR" >> "$GITHUB_ENV"
+        echo "SUSFS_FOLDER=$SUSFS_DIR" >> "$GITHUB_ENV"
+        echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
+        echo "KSUN_FOLDER=$KSUN_DIR" >> "$GITHUB_ENV"
+
+    - name: Get Kernel Version Info
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Get kernel version"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        CONFIG_FILES=("build.config.common" "build.config.constants")
+        BRANCH_LINE=""
+        for f in "${CONFIG_FILES[@]}"; do
+          if [ -f "$f" ]; then
+            l=$(grep '^[[:space:]]*BRANCH=' "$f" || true)
+            if [ -n "$l" ]; then BRANCH_LINE="$l"; break; fi
+          fi
+        done
+        
+        if [ -z "$BRANCH_LINE" ]; then
+          echo "::error::No BRANCH= found in config files"; exit 1
+        fi
+        
+        BRANCH_VALUE="${BRANCH_LINE#*=}"
+        ANDROID_VERSION="${BRANCH_VALUE%-*}"
+        
+        if [ -z "$ANDROID_VERSION" ]; then
+          echo "::error::Could not parse android version from BRANCH=$BRANCH_VALUE"
+          exit 1
+        fi
+        
+        VERSION=$(grep '^VERSION *=' Makefile | awk '{print $3}')
+        PATCHLEVEL=$(grep '^PATCHLEVEL *=' Makefile | awk '{print $3}')
+        SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | awk '{print $3}')
+        FULL_VERSION="$VERSION.$PATCHLEVEL.$SUBLEVEL"
+        
+        cd "$ARTIFACTS_FOLDER"
+        echo "$ANDROID_VERSION-$FULL_VERSION" > "${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "$OP_OS_VERSION" >> "${OP_MODEL}_${OP_OS_VERSION}.txt"
+        
+        {
+          echo "ANDROID_VER=$ANDROID_VERSION"
+          echo "KERNEL_VER=$VERSION.$PATCHLEVEL"
+          echo "TKERNEL_VER=$FULL_VERSION"
+          echo "KERNEL_FULL_VER=$ANDROID_VERSION-$FULL_VERSION"
+          if [ "${{ env.OP_SUSFS }}" = true ]; then
+            echo "SUSFS_KERNEL_BRANCH=gki-$ANDROID_VERSION-$VERSION.$PATCHLEVEL"
+          fi
+        } >> "$GITHUB_ENV"
+        
+        echo "Γ£à Detected: $ANDROID_VERSION-$FULL_VERSION"
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
+          echo "   SUSFS Branch: gki-$ANDROID_VERSION-$VERSION.$PATCHLEVEL"
+        fi
+        echo "::endgroup::"
+
+    - name: ≡ƒÅ╖∩╕Å Set Build Identity (Hardcoded)
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Set build user/host"
+                
+        BUILD_USER="OnePlus"
+        BUILD_HOST="ubuntu-build"
+        
+        echo "BUILD_USER=$BUILD_USER" >> "$GITHUB_ENV"
+        echo "BUILD_HOST=$BUILD_HOST" >> "$GITHUB_ENV"
+        
+        echo ""
+        echo "Γ£à Build identity configured:"
+        echo "   User: $BUILD_USER"
+        echo "   Host: $BUILD_HOST"
+        echo "::endgroup::"
+
+    - name: Check or Detect Clang
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Detect Clang"
+        CLANG_FOUND=false
+        CLANG_BIN=""
+        
+        if [ -n "$OP_ZYC_COMPILER" ]; then
+          # Priority 1: User explicitly wants ZyC compiler
+          echo "OP_ZYC_COMPILER detected as download link: $OP_ZYC_COMPILER"
+          
+          ZYC_DIR="$CONFIG_FOLDER/compiler/zyc"
+          TEMP_TAR="$CONFIG_FOLDER/compiler.tar.gz"
+          mkdir -p "$ZYC_DIR"
+          
+          echo "Downloading ZyC Clang from link..."
+          
+          max_retries=5
+          attempt=1
+          download_success=false
+          
+          while [ $attempt -le $max_retries ]; do
+            echo "Download attempt $attempt/$max_retries..."
+            
+            if curl -L --fail --retry 3 --retry-delay 5 --connect-timeout 60 -o "$TEMP_TAR" "$OP_ZYC_COMPILER"; then
+                echo "Download successful."
+                download_success=true
+                break
+            else
+                echo "Download failed (attempt $attempt)."
+                rm -f "$TEMP_TAR" 2>/dev/null
+                if [ $attempt -eq $max_retries ]; then
+                    echo "Error: Failed to download ZyC Clang after $max_retries attempts."
+                    break
+                fi
+                attempt=$((attempt + 1))
+                sleep 8
+            fi
+          done
+        
+          if [ "$download_success" = true ]; then
+            # Extract
+            echo "Extracting to $ZYC_DIR ..."
+            if tar -xzf "$TEMP_TAR" -C "$ZYC_DIR" 2>/dev/null; then
+              # Symlink extraction fix
+              tar -xzf "$TEMP_TAR" -C "$ZYC_DIR" 2>/dev/null || true
+              # Cleanup
+              rm -f "$TEMP_TAR"
+              
+              # Verify clang exists
+              if [ -x "$ZYC_DIR/bin/clang" ]; then
+                  CLANG_BIN="$ZYC_DIR/bin"
+                  CLANG_FOUND=true
+                  echo "ZyC Clang successfully downloaded and extracted."
+                  echo "Using: $CLANG_BIN/clang"
+              else
+                  echo "Warning: Extraction done, but clang binary not found at $ZYC_DIR/bin/clang"
+              fi
+            else
+                echo "Error: Failed to extract the tar.gz file."
+                rm -f "$TEMP_TAR"
+            fi
+          fi
+        
+        elif [ -n "$OP_C_COMPILER" ]; then
+          # Priority 2: User specified a custom C compiler
+          if [ -x "$CONFIG_FOLDER/$OP_C_COMPILER/clang" ]; then
+            CLANG_BIN="$CONFIG_FOLDER/$OP_C_COMPILER"
+            CLANG_FOUND=true
+          else
+            echo "Warning: OP_C_COMPILER='$OP_C_COMPILER' but clang binary not found at $CONFIG_FOLDER/$OP_C_COMPILER/clang"
+          fi
+        fi
+        
+        if [ "$CLANG_FOUND" = false ]; then
+          # Priority 3: Auto-detect from prebuilts (when both variables are empty / user clang not found)
+          for base in "$KERNEL_PLATFORM_FOLDER/prebuilts" "$KERNEL_PLATFORM_FOLDER/prebuilts-master"; do
+            [ -d "$base/clang/host/linux-x86" ] || continue
+            latest=$(ls -d "$base/clang/host/linux-x86/clang-r"* 2>/dev/null | sort -V | tail -n1 || true)
+            if [ -n "$latest" ] && [ -x "$latest/bin/clang" ]; then
+              CLANG_BIN="$latest/bin"
+              CLANG_FOUND=true
+              break
+            fi
+          done
+        fi
+        
+        if [ "$CLANG_FOUND" = false ] && command -v clang >/dev/null 2>&1; then
+          # Priority 4: Fallback to system-installed clang
+          CLANG_BIN="$(dirname "$(command -v clang)")"
+          CLANG_FOUND=true
+          echo "Using system clang."
+        fi
+        
+        [ "$CLANG_FOUND" = true ] || { echo "::error::No clang toolchain found"; exit 1; }
+        
+        echo "CLANG_BIN_PATH=$CLANG_BIN" >> "$GITHUB_ENV"
+        
+        CLANG_VERSION="$("$CLANG_BIN/clang" --version | head -n1)"
+        echo "CLANG_VERSION=$CLANG_VERSION" >> "$GITHUB_ENV"
+        
+        echo "Derive Clang fingerprint"
+        
+        short="$("${CLANG_BIN}/clang" --version | sed -n '1s/.*clang-r\([0-9.]\+\).*/\1/p')"
+        
+        if [ -z "$short" ]; then
+          short="$("${CLANG_BIN}/clang" --version | sha256sum | cut -c1-8)"
+          echo "ΓÜá∩╕Å Could not extract clang-r version, using hash: $short"
+        else
+          echo "Γ£à Clang version fingerprint: $short"
+        fi
+        
+        echo "CLANG_VERSION_SHORT=$short" >> "$GITHUB_ENV"
+        
+        echo "Γ£à Detected Clang: $CLANG_VERSION"
+        echo "::endgroup::"
+
+    - name: Check or Detect Rust
+      shell: bash
+      if: ${{ env.OP_RUST_BUILD == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Detect Rust"
+        RUSTC_FOUND=false
+        
+        if [ -z "$OP_RUST_COMPILER" ]; then
+          for base in "$KERNEL_PLATFORM_FOLDER/prebuilts" "$KERNEL_PLATFORM_FOLDER/prebuilts-master"; do
+            [ -d "$base/rust/linux-x86" ] || continue
+            latest=$(ls -d "$base/rust/linux-x86/1."* 2>/dev/null | sort -V | head -n1 || true)
+            if [ -n "$latest" ] && [ -x "$latest/bin/rustc" ]; then
+              RUSTC_BIN="$latest/bin"
+              RUSTC_FOUND=true
+              break
+            fi
+          done
+        else
+          if [ -x "$CONFIG_FOLDER/$OP_RUST_COMPILER/rustc" ]; then
+            RUSTC_BIN="$CONFIG_FOLDER/$OP_RUST_COMPILER"
+            RUSTC_FOUND=true
+          fi
+        fi
+        
+        [ "$RUSTC_FOUND" = true ] || { echo "::error::No RUST toolchain found"; exit 1; }
+        
+        echo "RUSTC_BIN_PATH=$RUSTC_BIN" >> "$GITHUB_ENV"
+        RUSTC_VERSION="$("$RUSTC_BIN/rustc" --version | head -n1)"
+        echo "RUSTC_VERSION=$RUSTC_VERSION" >> "$GITHUB_ENV"
+        echo "Γ£à Detected RUSTC: $RUSTC_VERSION"
+        
+        echo "::endgroup::"
+
+    - name: Set Cache Environment
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Configure ccache environment"
+        
+        CACHE_DIR="$HOME/.ccache"
+        echo "CCACHE_DIR=$CACHE_DIR" >> "$GITHUB_ENV"
+        echo "CCACHE_MAXSIZE=1G" >> "$GITHUB_ENV"
+        
+        mkdir -p "$CACHE_DIR"
+        
+        echo "Cache configuration:"
+        echo "  Directory: $CACHE_DIR"
+        echo "  Max size: 1G"
+        echo "  Android: ${ANDROID_VER:-unknown}"
+        echo "  Kernel: ${KERNEL_VER:-unknown}"
+        echo "  OOS Version: ${OP_OS_VERSION:-unknown}"
+        echo "  Clang: ${CLANG_VERSION_SHORT:-unknown}"
+        echo "  Device: ${OP_MODEL:-unknown}"
+        echo "::endgroup::"
+    
+    - name: Cache ccache
+      uses: actions/cache@v5
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
+        restore-keys: |
+          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-
+          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-
+   
+    - name: Configure ccache
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Configure ccache for maximum performance"
+        
+        export CCACHE_DIR="$HOME/.ccache"
+        export CCACHE_MAXSIZE="1G"
+        
+        ccache -M "$CCACHE_MAXSIZE"
+        
+        export CCACHE_COMPILERCHECK="content"
+        export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
+        export CCACHE_NOHASHDIR="true"
+        
+        ccache -o compression=true
+        ccache -o compression_level=3
+        ccache -o direct_mode=true
+        ccache -o hash_dir=false
+        ccache -o file_clone=true
+        ccache -o inode_cache=true
+        ccache -o umask=002
+        
+        if ccache --help 2>&1 | grep -q 'depend_mode'; then
+          ccache -o depend_mode=true
+        fi
+        
+        ccache -o sloppiness=file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale
+        
+        export CCACHE_IGNOREOPTIONS="--sysroot*"
+        
+        {
+          echo "CCACHE_COMPILERCHECK=content"
+          echo "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
+          echo "CCACHE_NOHASHDIR=true"
+          echo "CCACHE_IGNOREOPTIONS=$CCACHE_IGNOREOPTIONS"
+        } >> "$GITHUB_ENV"
+        
+        echo "Γ£à ccache configured for production"
+        echo ""
+        echo "Configuration applied:"
+        echo "  Max size: 12G (persisted)"
+        echo "  Base dir: ${GITHUB_WORKSPACE}"
+        echo "  Compression: zstd level 3"
+        echo "  Direct mode: enabled"
+        echo "  File cloning: enabled"
+        echo "  Inode cache: enabled"
+        echo ""
+        
+        if [ -d "$CCACHE_DIR" ] && find "$CCACHE_DIR" -type f -print -quit 2>/dev/null | grep -q .; then
+          echo "Γ£à Restored cache found"
+          echo ""
+          echo "Pre-build cache statistics:"
+          ccache -s | head -n 20
+        else
+          echo "ΓÜá∩╕Å No existing cache - building from scratch"
+          echo "Cache will be populated for future builds"
+        fi
+        
+        echo "::endgroup::"
+
+    - name: Handle Clean Build Option
+      if: ${{ inputs.clean == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Clean build requested"
+        echo "ΓÜá∩╕Å Clean build mode enabled - ccache will be bypassed"
+        
+        echo "CCACHE_DISABLE=1" >> "$GITHUB_ENV"
+        
+        echo "Γ£à ccache disabled for clean build (no cache/stat wipe)"
+        echo "   Shared cache and statistics preserved for concurrent jobs"
+        echo "::endgroup::"
+
+    - name: Clone AnyKernel3 and Other Dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Clone dependencies"
+        echo "Cloning AnyKernel3 and other dependencies..."
+        
+        ANYKERNEL_BRANCH="gki-2.0"
+        
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
+          # Determine SUSFS branch/commit to use
+          SUSFS_INPUT="${{ inputs.susfs_commit_hash_or_branch }}"
+          
+          # Default SUSFS branches for each kernel version
+          declare -A DEFAULT_SUSFS=(
+            ["android12-5.10"]="gki-android12-5.10"
+            ["android13-5.15"]="gki-android13-5.15"
+            ["android14-6.1"]="gki-android14-6.1"
+            ["android15-6.6"]="gki-android15-6.6"
+            ["android16-6.12"]="gki-android16-6.12"
+          )
+          
+          # Determine which SUSFS ref to use
+          KERNEL_KEY="${{ env.ANDROID_VER }}-${{ env.KERNEL_VER }}"
+          if [ -z "$SUSFS_INPUT" ]; then
+            # use kernel-specific default
+            SUSFS_BRANCH="${DEFAULT_SUSFS[$KERNEL_KEY]:-gki-android15-6.6}"
+            echo "Γä╣∩╕Å  Using default SUSFS branch for $KERNEL_KEY: $SUSFS_BRANCH"
+          else
+            # 40-char hash or branch/commit passed directly
+            SUSFS_BRANCH="$SUSFS_INPUT"
+            echo "≡ƒöº Using resolved SUSFS ref: $SUSFS_BRANCH"
+          fi
+        fi
+        
+        echo "Using AnyKernel3 branch: $ANYKERNEL_BRANCH"
+        
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
+          echo "Using SUSFS branch/commit: $SUSFS_BRANCH"
+        fi
+        
+        retry_clone() {
+          local url="$1"
+          local branch="${2:-main}"
+          local depth="${3:-1}"
+          local dir="$(basename "$url" .git)"
+          local max_attempts=3
+          local attempt=1
+          
+          # Build git clone args
+          local clone_args=(--branch "$branch")
+          if [ "$depth" != "0" ] && [ -n "$depth" ]; then
+            clone_args+=(--depth "$depth")
+          fi
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "≡ƒöä Attempt $attempt/$max_attempts: cloning $url ($branch)${depth:+ [depth=$depth]}"
+            
+            # Clone with dynamic args
+            git clone "${clone_args[@]}" "$url" "$dir" && {
+              echo "Γ£à Success"
+              return 0
+            }
+            
+            echo "Γ¥î Failed, cleaning up..."
+            rm -rf "$dir" 2>/dev/null
+            sleep $((attempt++ * 5))
+          done
+          
+          echo "≡ƒÆÑ All attempts failed"
+          return 1
+        }
+        
+        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH"
+        retry_clone "https://github.com/TheWildJames/kernel_patches.git"
+        
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
+          retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
+          
+          cd susfs4ksu
+          
+          # Try to checkout the specified branch/commit
+          if git rev-parse --verify "origin/$SUSFS_BRANCH" >/dev/null 2>&1; then
+            # It's a remote branch
+            echo "Γ£à Checking out remote branch: $SUSFS_BRANCH"
+            git checkout "$SUSFS_BRANCH"
+          elif git rev-parse --verify "$SUSFS_BRANCH" >/dev/null 2>&1; then
+            # It's a local ref or commit hash
+            echo "Γ£à Checking out ref/commit: $SUSFS_BRANCH"
+            git checkout "$SUSFS_BRANCH"
+          else
+            echo "::error::SUSFS branch or commit '$SUSFS_BRANCH' not found in repository"
+            echo ""
+            echo "Available remote branches:"
+            git branch -r | head -n 20
+            exit 1
+          fi
+          
+          SUSFS_COMMIT_SHA=$(git rev-parse HEAD)
+          SUSFS_BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+          
+          echo "SUSFS_COMMIT_SHA=$SUSFS_COMMIT_SHA" >> $GITHUB_ENV
+          echo "SUSFS_BRANCH_NAME=$SUSFS_BRANCH_NAME" >> $GITHUB_ENV
+          
+          echo ""
+          echo "Γ£à SUSFS checked out successfully"
+          echo "   Branch/Ref: $SUSFS_BRANCH_NAME"
+          echo "   Commit: $SUSFS_COMMIT_SHA"
+        fi
+        cd ..
+        echo "Γ£à Dependencies cloned"
+        echo "::endgroup::"
+
+    - name: Clean Up ABI Protected Exports
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "$KERNEL_PLATFORM_FOLDER"
+        rm -f common/android/abi_gki_protected_exports_* || true
+        rm -f msm-kernel/android/abi_gki_protected_exports_* || true
+        sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
+        df -h
+
+    - name: Add KernelSU Next
+      shell: bash
+      if: ${{ inputs.ksu_type == 'KSUN' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Add KernelSU Next"
+        cd "$KERNEL_PLATFORM_FOLDER"
+        echo "Adding KernelSU Next..."
+        KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
+        if [ -z "$KSU_INPUT" ]; then
+          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+        else
+          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "$KSU_INPUT"
+        fi
+        git submodule update --init --recursive
+        cd KernelSU-Next/kernel
+        
+        COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD)
+        
+        if [ $COMMITS_COUNT -lt 2684 ]; then
+          BASE_VERSION=10200
+        else
+          BASE_VERSION=30000
+        fi
+        
+        KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
+        sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile
+        
+        sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
+        
+        if [ "$KSU_VERSION" -lt 12884 ]; then
+          echo "NEED_HOOKS=true" >> $GITHUB_ENV
+        else
+          echo "NEED_HOOKS=false" >> $GITHUB_ENV
+        fi
+        
+        cd ..
+        KSU_COMMIT_SHA=$(git rev-parse HEAD)
+        echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
+        
+        
+        echo "Add KSUN Configuration Settings"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_KSU=y
+        CONFIG_KSU_KPROBES_HOOK=n
+        EOF
+        
+        echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+        echo "KernelSU Next Version: $KSU_VERSION"
+        echo "Γ£à KernelSU Next added (commit: ${KSU_COMMIT_SHA:0:8})"
+        echo "::endgroup::"
+
+    - name: Add KernelSU
+      shell: bash
+      if: ${{ inputs.ksu_type == 'KSU' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Add KernelSU"
+        cd "$KERNEL_PLATFORM_FOLDER"
+        echo "Adding KernelSU..."
+        KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
+        if [ -z "$KSU_INPUT" ]; then
+          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+        else
+          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s "$KSU_INPUT"
+        fi
+        git submodule update --init --recursive
+        cd KernelSU/kernel
+        BASE_VERSION=20000
+        KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" $BASE_VERSION)
+        sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" Makefile
+        
+        sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
+        
+        echo "NEED_HOOKS=false" >> $GITHUB_ENV
+        
+        cd ..
+        KSU_COMMIT_SHA=$(git rev-parse HEAD)
+        echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
+        
+        echo "Add KSU Configuration Settings"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_KSU=y
+        EOF
+        
+        echo "KSU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+        echo "KernelSU Version: $KSU_VERSION"
+        echo "Γ£à KernelSU added (commit: ${KSU_COMMIT_SHA:0:8})"
+        echo "::endgroup::"
+
+    - name: Apply SUSFS Patches
+      shell: bash
+      if: ${{ env.OP_SUSFS == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply SUSFS patches"
+        cd "$KERNEL_PLATFORM_FOLDER"
+        echo "Applying SUSFS patches..."
+        cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
+        cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
+        
+        susfs_version=$(grep '#define SUSFS_VERSION' "$COMMON_KERNEL_FOLDER/include/linux/susfs.h" | awk -F'"' '{print $2}')
+        echo "SUSVER=$susfs_version" >> $GITHUB_ENV
+        echo "$susfs_version" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "SusFS Version: $susfs_version"
+        
+        # Function to compare semantic versions
+        version_lte() {
+          [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$1" ]
+        }
+        
+        if version_lte "${susfs_version:1}" "1.5.12"; then
+          echo "NEED_HOOKS=true" >> $GITHUB_ENV
+        else
+          echo "NEED_HOOKS=false" >> $GITHUB_ENV
+        fi
+        
+        case "$susfs_version" in
+          "v1.5.8")
+            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+              patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_apk_sign.c.patch"
+              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_core_hook.c.patch"
+              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_selinux.c.patch"
+              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_ksud.c.patch"
+            else
+              cd "$KSU_FOLDER"
+              patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+            fi
+            ;;
+          "v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12")
+            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+              cd "$KSUN_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              for file in $(find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1); do
+                echo "Patching file: $file.c with fix_$file.c.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
+              done
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
+            else
+              cd "$KSU_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+            fi
+            ;;
+          "v2.0.0")
+            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+              cd "$KSUN_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
+                echo "Patching file: $file with fix_$file.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+              done
+              echo "Patching Hook Mode!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              echo "Patching Multi-manager Support for SusFS kernel!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+              if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
+                echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
+              fi
+            else
+              cd "$KSU_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+            fi
+            ;;
+          "v2.1.0")
+            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+              cd "$KSUN_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
+                echo "Patching file: $file with fix_$file.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+              done
+              echo "Patching Hook Mode!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              echo "Patching Multi-manager Support for SusFS kernel!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+              if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
+                echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
+              fi
+            else
+              cd "$KSU_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+            fi
+            ;;
+          *)
+            echo "::error::Unsupported SUSFS version: $susfs_version"
+            exit 1
+            ;;
+        esac
+        
+        cd "$COMMON_KERNEL_FOLDER"
+        if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
+          if ! grep -qxF '#include <trace/hooks/fs.h>' ./fs/namespace.c; then
+            sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
+          fi
+        fi
+        
+        # Fake kernel patch to fix failures
+        fake_patched=0
+        if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
+          if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
+            echo "nr_subpages Line not found. Fake Patching!"
+            sed -i -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t \*res = NULL;' ./fs/proc/task_mmu.c
+            fake_patched=1
+          fi
+          
+          if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
+            echo "#include <linux/dma-buf.h> Line not found. Adding missing header"
+            sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
+          fi
+        fi
+        if [ "${{ env.ANDROID_VER }}" = "android12" ] && [ "${{ env.KERNEL_VER }}" = "5.10" ]; then
+          if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
+            echo "vma_pages Line not found. Fake Patching!"
+            fake_patched=1
+          fi
+        fi
+        if [ "${{ env.ANDROID_VER }}" = "android13" ] && [ "${{ env.KERNEL_VER }}" = "5.15" ]; then
+          if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
+            echo "vma_pages Line not found. Fake Patching!"
+            fake_patched=1
+          fi
+        fi
+        
+        if [ "${{ env.ANDROID_VER }}" = "android14" ] && [ "${{ env.KERNEL_VER }}" = "6.1" ]; then
+          if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
+            echo "vma_pages Line not found. Fake Patching!"
+            fake_patched=1
+          fi
+          
+          if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
+            echo "#include <linux/dma-buf.h> Line not found. Adding missing header"
+            sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
+          fi
+        fi
+        
+        patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
+        
+        # Revert Fake kernel patch
+        if [ "$fake_patched" = 1 ]; then
+          if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
+            if grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
+              echo "nr_subpages Line found. Revert Fake Patching!"
+              sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' -e '/pagemap_entry_t \*res = NULL;/d' ./fs/proc/task_mmu.c
+            fi
+          fi
+          if [ "${{ env.ANDROID_VER }}" = "android12" ] && [ "${{ env.KERNEL_VER }}" = "5.10" ]; then
+            if grep -qxF $'\t\t\tgoto show_pad;' ./fs/proc/task_mmu.c; then
+              echo "vma_pages Line found. Revert Fake Patching!"
+              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
+            fi
+          fi
+          if [ "${{ env.ANDROID_VER }}" = "android13" ] && [ "${{ env.KERNEL_VER }}" = "5.15" ]; then
+            if grep -qxF $'\t\t\tgoto show_pad;' ./fs/proc/task_mmu.c; then
+              echo "vma_pages Line found. Revert Fake Patching!"
+              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
+            fi
+          fi
+          if [ "${{ env.ANDROID_VER }}" = "android14" ] && [ "${{ env.KERNEL_VER }}" = "6.1" ]; then
+            if grep -qxF $'\t\t\tgoto show_pad;' ./fs/proc/task_mmu.c; then
+              echo "vma_pages Line found. Revert Fake Patching!"
+              sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
+            fi
+          fi
+        fi
+        echo "Γ£à SUSFS patches applied"
+        
+        echo "Add SUSFS Configuration Settings"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_KSU_SUSFS=y
+        CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
+        CONFIG_KSU_SUSFS_SUS_PATH=y
+        CONFIG_KSU_SUSFS_SUS_MOUNT=y
+        CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
+        CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
+        CONFIG_KSU_SUSFS_SUS_KSTAT=y
+        CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
+        CONFIG_KSU_SUSFS_TRY_UMOUNT=y
+        CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
+        CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+        CONFIG_KSU_SUSFS_ENABLE_LOG=y
+        CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+        CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+        CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+        CONFIG_KSU_SUSFS_SUS_MAP=y
+        CONFIG_KSU_SUSFS_SUS_SU=n
+        EOF
+        
+        echo "::endgroup::"
+
+    - name: Add BBG
+      if: ${{ env.OP_BBG == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Add BBG LSM"
+        cd "$KERNEL_PLATFORM_FOLDER"
+        echo "Adding BBG..."
+        curl --fail --location --proto '=https' --retry 3 --retry-all-errors -LSs "https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/main/setup.sh" | bash -s main
+        echo "CONFIG_BBG=y" >> common/arch/arm64/configs/gki_defconfig
+        sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' common/security/Kconfig
+        
+        if grep -qxF $'\t\tconst char* symlink_target_link = inode->i_op->get_link(dentry, inode, NULL);' ./Baseband-guard/baseband_guard.c; then
+          echo "Applying BBG get_link fix"
+          patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/experimental/bbg/bbg_fix_get_link.patch"
+        fi
+        
+        # if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+          # cd ./KernelSU-Next
+        # else
+          # cd ./KernelSU
+        # fi
+        
+        # echo "Patching BBG Enhanced Security!"
+        # patch -p1 --forward < "../../../kernel_patches/common/bbg_untrusted_cred.patch"
+        echo "Γ£à BBG LSM added"
+        echo "::endgroup::"
+
+    - name: Apply KSU Hooks
+      shell: bash
+      if: ${{ env.NEED_HOOKS == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply KSU hooks"
+        cd "$COMMON_KERNEL_FOLDER"
+        patch -p1 < "$KERNEL_PATCHES_FOLDER/next/scope_min_manual_hooks_v1.4.patch"
+        echo "Γ£à KSU hooks applied"
+        echo "::endgroup::"
+
+    - name: Apply Other Patches
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Apply Other patches"
+        cd "$COMMON_KERNEL_FOLDER"
+        KERNEL_VERSION="${{ env.KERNEL_VER }}"
+        MIN_VERSION="5.16"
+        if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | head -n1)" = "$KERNEL_VERSION" ]; then
+          echo "Patching ptrace!"
+          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/gki_ptrace.patch"
+        else
+          echo "Kernel >= $MIN_VERSION, skipping ptrace patch"
+        fi
+        if [ "$OP_HMBIRD" = true ]; then
+          echo "Patching hmbird!"
+          dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/fengchi_${OP_MODEL}_${OP_OS_VERSION}.patch"
+          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/fengchi_${OP_MODEL}_${OP_OS_VERSION}.patch"
+          dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
+          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
+          chmod +x ./drivers/of/overwriter/overwrite_configs/convert_configs.sh
+          dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
+          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
+        else
+          echo "Hmbird not enabled, skipping fengchi patch"
+        fi
+        
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/optimized_mem_operations.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/file_struct_8bytes_align.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_cache_pressure.patch"
+        
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/mem_opt_prefetch.patch"
+        
+        if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | tail -n1)" = "$KERNEL_VERSION" ]; then
+          patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/optimise_memcmp.patch"
+        elif [ "$(printf '%s\n' "$KERNEL_VERSION" "5.11" | sort -V | tail -n1)" = "$KERNEL_VERSION" ]; then
+          sed -e 's/SYM_FUNC_START(__pi_memcmp)/SYM_FUNC_START_WEAK_PI(memcmp)/' -e 's/SYM_FUNC_END(__pi_memcmp)/SYM_FUNC_END_PI(memcmp)/' -e 's/SYM_FUNC_ALIAS_WEAK(memcmp, __pi_memcmp)/EXPORT_SYMBOL_NOKASAN(memcmp)/' "$KERNEL_PATCHES_FOLDER/common/optimise_memcmp.patch" | patch -p1 --forward
+        else
+          echo "Optimised memcmp patch not found!"
+        fi
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/minimise_wakeup_time.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/int_sqrt.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/force_tcp_nodelay.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_gc_thread_sleep_time.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/add_timeout_wakelocks_globally.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/f2fs_reduce_congestion.patch"
+        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_freeze_timeout.patch"
+        
+        if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | head -n1)" = "$KERNEL_VERSION" ]; then
+          patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/clear_page_16bytes_align.patch"
+        else
+          cat "$KERNEL_PATCHES_FOLDER/common/clear_page_16bytes_align.patch" | sed -e 's/SYM_FUNC_START_PI(clear_page)/SYM_FUNC_START_PI(__pi_clear_page)/' | patch -p1 -F3 --forward
+        fi
+        
+        
+        echo "Patching add_limitation_scaling_min_freq.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/add_limitation_scaling_min_freq.patch"
+        echo "Patching re_write_limitation_scaling_min_freq.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/re_write_limitation_scaling_min_freq.patch"
+        echo "Patching adjust_cpu_scan_order.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/adjust_cpu_scan_order.patch"
+        echo "Patching avoid_extra_s2idle_wake_attempts.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/avoid_extra_s2idle_wake_attempts.patch"
+        echo "Patching disable_cache_hot_buddy.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/disable_cache_hot_buddy.patch"
+        echo "Patching f2fs_enlarge_min_fsync_blocks.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/f2fs_enlarge_min_fsync_blocks.patch"
+        echo "Patching increase_ext4_default_commit_age.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/increase_ext4_default_commit_age.patch"
+        echo "Patching increase_sk_mem_packets.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/increase_sk_mem_packets.patch"
+        echo "Patching reduce_pci_pme_wakeups.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_pci_pme_wakeups.patch"
+        echo "Patching silence_irq_cpu_logspam.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/silence_irq_cpu_logspam.patch"
+        echo "Patching silence_system_logspam.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/silence_system_logspam.patch"
+        echo "Patching use_unlikely_wrap_cpufreq.patch"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/use_unlikely_wrap_cpufreq.patch"
+        
+        
+        echo "Γ£à Other patches applied"
+        echo "::endgroup::"
+
+    - name: Apply Unicode Fix Patch
+      shell: bash
+      if: ${{ env.OP_UNICODE == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply Unicode Fix patch"
+        cd "$COMMON_KERNEL_FOLDER"
+        KERNEL_VERSION="${{ env.KERNEL_VER }}"
+        MIN_VERSION="5.16"
+        
+        echo "Patching unicode!"
+        if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | head -n1)" = "$KERNEL_VERSION" ]; then
+            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1-.patch"
+        else
+            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1+.patch"
+        fi
+
+    - name: Add Tmpfs Support
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Add Tmpfs Support"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_TMPFS_XATTR=y
+        CONFIG_TMPFS_POSIX_ACL=y
+        EOF
+
+
+    - name: Add BBR
+      if: ${{ env.OP_BBR == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Add BBR"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_TCP_CONG_ADVANCED=y
+        CONFIG_TCP_CONG_BBR=y
+        CONFIG_NET_SCH_FQ=y
+        CONFIG_NET_SCH_FQ_CODEL=y
+        EOF
+
+    - name: Add NTSync
+      if: ${{ env.OP_NTSYNC == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Add NTSync Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        KERNEL_VERSION="${{ env.KERNEL_VER }}"
+        
+        NTSYNC_PATCH_DIR="$GITHUB_WORKSPACE/ntsync_patches/$KERNEL_VERSION"
+        
+        if [ -d "$NTSYNC_PATCH_DIR" ]; then
+          for patch_file in "$NTSYNC_PATCH_DIR"/*.patch; do
+             if [ -f "$patch_file" ]; then
+               echo "Applying NTSync patch: $(basename "$patch_file")"
+               patch -p1 --forward < "$patch_file" || true
+             fi
+          done
+          
+          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_NTSYNC=y
+        EOF
+          echo "Γ£à NTSync configured for $KERNEL_VERSION"
+        else
+          echo "::warning::NTSync patches not found for kernel $KERNEL_VERSION. Skipping."
+        fi
+        echo "::endgroup::"
+
+    - name: Add TTL Target Support
+      if: ${{ env.OP_TTL == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Add TTL Target Support"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_IP_NF_TARGET_TTL=y
+        CONFIG_IP6_NF_TARGET_HL=y
+        CONFIG_IP6_NF_MATCH_HL=y
+        EOF
+
+    - name: Add IP SET & IPv6_NAT Support
+      if: ${{ env.OP_IP_SET == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Add IP SET & IPv6_NAT Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        KERNEL_VERSION="${{ env.KERNEL_VER }}"
+        
+        if [[ "$KERNEL_VERSION" == "6.12" ]] || [[ "$OP_BRANCH" == wild/mt* ]]; then
+            echo "::debug::Skipping CONFIG_BPF_STREAM_PARSER for $KERNEL_VERSION / $OP_BRANCH"
+        else
+            echo "CONFIG_BPF_STREAM_PARSER=y" >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+        fi
+        
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_IP_SET=y
+        CONFIG_IP_SET_MAX=65534
+        CONFIG_IP_SET_BITMAP_IP=y
+        CONFIG_IP_SET_BITMAP_IPMAC=y
+        CONFIG_IP_SET_BITMAP_PORT=y
+        CONFIG_IP_SET_HASH_IP=y
+        CONFIG_IP_SET_HASH_IPMARK=y
+        CONFIG_IP_SET_HASH_IPPORT=y
+        CONFIG_IP_SET_HASH_IPPORTIP=y
+        CONFIG_IP_SET_HASH_IPPORTNET=y
+        CONFIG_IP_SET_HASH_IPMAC=y
+        CONFIG_IP_SET_HASH_MAC=y
+        CONFIG_IP_SET_HASH_NETPORTNET=y
+        CONFIG_IP_SET_HASH_NET=y
+        CONFIG_IP_SET_HASH_NETNET=y
+        CONFIG_IP_SET_HASH_NETPORT=y
+        CONFIG_IP_SET_HASH_NETIFACE=y
+        CONFIG_IP_SET_LIST_SET=y
+        CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+        CONFIG_NETFILTER_XT_SET=y
+        CONFIG_IP6_NF_NAT=y
+        CONFIG_IP6_NF_TARGET_MASQUERADE=y
+        EOF
+        
+        patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
+
+    - name: Add WireGuard Support
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Add WireGuard Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        # 1. Enable Configuration globally
+        echo "Enabling WireGuard in gki_defconfig"
+        cat >> "arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_WIREGUARD=y
+        CONFIG_NET_UDP_TUNNEL=y
+        CONFIG_CRYPTO_CURVE25519=y
+        CONFIG_CRYPTO_CHACHA20POLY1305=y
+        EOF
+        
+        # 2. Apply Patches
+        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/wireguard_patches"
+        if [ -d "$WIREGUARD_PATCH_DIR" ]; then
+          for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
+            if [ -f "$patch_file" ]; then
+              echo "Applying WireGuard patch: $(basename "$patch_file")"
+              patch -p1 --forward < "$patch_file" || true
+            fi
+          done
+        fi
+        
+        echo "Γ£à WireGuard integrated and optimized"
+        echo "::endgroup::"
+
+    - name: Add Build based configs
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Add Build based configs"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y
+        CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=n
+        CONFIG_OPTIMIZE_INLINING=y
+        CONFIG_FRAME_WARN=0
+        CONFIG_TRACEPOINTS=y
+        EOF
+
+    - name: Add RUST build configs
+      shell: bash
+      if: ${{ env.OP_RUST_BUILD == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add Build based configs"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_ANDROID_BINDER_IPC_RUST=m
+        CONFIG_RUST=y
+        EOF
+
+    - name: Save Build Metadata
+      id: save_metadata
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Save Build Metadata"
+        cd "$ARTIFACTS_FOLDER"
+        echo "kernel_version=${{ env.KERNEL_FULL_VER }}" >> "$GITHUB_OUTPUT"
+        echo "ksu_version=${KSUVER:-unknown}" >> "$GITHUB_OUTPUT"
+        echo "ksu_type=${{ inputs.ksu_type }}" >> "$GITHUB_OUTPUT"
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
+          echo "susfs_version=${SUSVER:-unknown}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Customize Kernel Branding
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Customize Kernel Branding"
+        cd "$COMMON_KERNEL_FOLDER"
+        mkdir -p out
+        CUSTOM_LOCALVERSION="-${ANDROID_VER}-${OP_UNAME}"
+        echo "CUSTOM_LOCALVERSION=$CUSTOM_LOCALVERSION" >> "$GITHUB_ENV"
+
+    - name: Disable GPUEB
+      shell: bash
+      if: ${{ env.KERNEL_VER == '5.10' && (startsWith(env.OP_SOC, 'dimensity') || startsWith(env.OP_SOC, 'helio')) }}
+      run: |
+        set -euo pipefail
+        echo "Disabling GPUEB for MTK kernel 5.10"
+        sed -i '/obj-y.*gpueb/d' "$COMMON_KERNEL_FOLDER/drivers/gpu/mediatek/Makefile"
+
+    - name: Build Kernel
+      shell: bash
+      env:
+        PYTHONWARNINGS: "ignore:invalid escape sequence"
+      run: |
+        set -euo pipefail
+        echo "::group::Build kernel with ccache optimization"
+        
+        cd "$COMMON_KERNEL_FOLDER"
+        : > "$COMMON_KERNEL_FOLDER/.scmversion"
+        
+        export PYTHONWARNINGS="${PYTHONWARNINGS}"
+        
+        echo "Getting last commit timestamp from kernel source..."
+        COMMIT_TIMESTAMP=$(git log -1 --format=%ct 2>/dev/null || echo "$(date +%s)")
+        COMMIT_DATE=$(git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M:%S' 2>/dev/null || date -u '+%Y-%m-%d %H:%M:%S')
+        COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        
+        WORKSPACE="${GITHUB_WORKSPACE}"
+        MAP="-fdebug-prefix-map=${WORKSPACE}=."
+        MPMAP="-fmacro-prefix-map=${WORKSPACE}=."
+        FPMAP="-ffile-prefix-map=${WORKSPACE}=."
+        
+        export KCFLAGS="${KCFLAGS:-} $MAP $MPMAP $FPMAP -no-canonical-prefixes -fdiagnostics-color=never -Qunused-arguments -Wno-unused-command-line-argument -D__ANDROID_COMMON_KERNEL__"
+        export KCPPFLAGS="${KCPPFLAGS:-} $MAP $MPMAP $FPMAP"
+        
+        export LLVM=1 LLVM_IAS=1
+        export ARCH=arm64 SUBARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        export PAHOLE="$KERNEL_PLATFORM_FOLDER/prebuilts/kernel-build-tools/linux-x86/bin/pahole"
+        export LD=ld.lld HOSTLD=ld.lld AR=llvm-ar NM=llvm-nm 
+        export OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
+        
+        set +u
+        source "$KERNEL_PLATFORM_FOLDER/build/kernel/_setup_env.sh" 2>/dev/null || true
+        set -u
+        
+        KERNEL_BUILD_DATE=$(date -u)
+        export SOURCE_DATE_EPOCH=$COMMIT_TIMESTAMP
+        export KBUILD_BUILD_TIMESTAMP="$KERNEL_BUILD_DATE"
+        export KBUILD_BUILD_USER="${BUILD_USER:-kernel}"
+        export KBUILD_BUILD_HOST="${BUILD_HOST:-kleaf}"
+        export KBUILD_BUILD_VERSION=1
+        
+        echo "≡ƒôà Build timestamp: $KBUILD_BUILD_TIMESTAMP (from commit $COMMIT_HASH)"
+        echo "≡ƒöó SOURCE_DATE_EPOCH: $SOURCE_DATE_EPOCH"
+        echo "≡ƒæñ Build user: $KBUILD_BUILD_USER"
+        echo "≡ƒûÑ∩╕Å  Build host: $KBUILD_BUILD_HOST"
+        
+        export CC="ccache clang"
+        export CXX="ccache clang++"
+        export HOSTCC="ccache clang"
+        export HOSTCXX="ccache clang++"
+        
+        BASE_PATH="/usr/lib/ccache:${CLANG_BIN_PATH}:${KERNEL_PLATFORM_FOLDER}/prebuilts/kernel-build-tools/linux-x86/bin/:${KERNEL_PLATFORM_FOLDER}/prebuilts/kernel-build-tools/linux_musl-x86/bin/"
+        
+        if [ -n "${RUSTC_BIN_PATH:-}" ]; then
+          export PATH="${BASE_PATH}:${RUSTC_BIN_PATH}:${PATH}"
+          export RUSTC="$RUSTC_BIN_PATH/rustc"
+          if [ "${{ env.OP_RUST_BUILD}}" = "true" ]; then
+            export LIBCLANG_PATH="$CLANG_BIN_PATH/../lib"
+            export BINDGEN="bindgen"
+          fi
+        else
+          export PATH="${BASE_PATH}:${PATH}"
+        fi
+        
+        if [ "${{ inputs.clean }}" = "true" ]; then
+          echo "≡ƒº╣ Clean build mode - ccache disabled"
+          export CCACHE_DISABLE=1
+        else
+          echo "≡ƒÜÇ ccache-accelerated build"
+        fi
+        
+        OUT=out
+        mkdir -p "$OUT"
+        
+        echo "============================================"
+        echo "≡ƒöì Compiler & ccache Verification"
+        echo "============================================"
+        echo "PATH: ${PATH:0:200}..."
+        echo "which clang: $(which clang)"
+        echo "CC: $CC"
+        echo "CXX: $CXX"
+        echo "CCACHE_BASEDIR: ${CCACHE_BASEDIR:-not set}"
+        echo ""
+        
+        if [ "${{ inputs.clean }}" != "true" ]; then
+          echo "ccache wrapper test:"
+          clang --version 2>&1 | head -n1 || true
+          echo ""
+          echo "ccache configuration:"
+          ccache -p | grep -E "(compression|direct_mode|readonly_direct|depend|sloppiness)" || true
+          echo ""
+          echo "ccache pre-build status:"
+          ccache -s | head -n 20
+        else
+          echo "ΓÜá∩╕Å Clean build - ccache bypassed"
+        fi
+        echo "============================================"
+        
+        make O="$OUT" gki_defconfig
+        
+        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--SakFi-OP}"
+        if [ -n "${LOCAL_LOCALVERSION:-}" ]; then
+          scripts/config --file "$OUT/.config" --set-str LOCALVERSION "${LOCAL_LOCALVERSION}"
+          scripts/config --file "$OUT/.config" -d LOCALVERSION_AUTO || true
+          sed -i 's/scm_version="$(scm_version --short)"/scm_version=""/' scripts/setlocalversion
+        fi
+        
+        if [ "${{ inputs.optimize_level }}" = "O3" ]; then
+          scripts/config --file "$OUT/.config" -d CC_OPTIMIZE_FOR_PERFORMANCE
+          scripts/config --file "$OUT/.config" -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
+          KCFLAGS_EXTRA="-O3"
+        else
+          scripts/config --file "$OUT/.config" -e CC_OPTIMIZE_FOR_PERFORMANCE
+          scripts/config --file "$OUT/.config" -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+          KCFLAGS_EXTRA="-O2"
+        fi
+        
+        case "$OP_BRANCH" in
+          wild/sm8750|wild/sm8850|wild/sm8845)
+            KCFLAGS_EXTRA="-mcpu=oryon-1 ${KCFLAGS_EXTRA}"
+            ;;
+        esac
+        
+        case "${{ env.OP_LTO}}" in
+          "none")
+            scripts/config --file "$OUT/.config" -e LTO_CLANG
+            scripts/config --file "$OUT/.config" -e LTO_CLANG_NONE
+            scripts/config --file "$OUT/.config" -d LTO_CLANG_THIN
+            scripts/config --file "$OUT/.config" -d LTO_CLANG_FULL
+            ;;
+          "thin")
+            scripts/config --file "$OUT/.config" -e LTO_CLANG
+            scripts/config --file "$OUT/.config" -e LTO_CLANG_THIN
+            scripts/config --file "$OUT/.config" -d LTO_CLANG_NONE
+            scripts/config --file "$OUT/.config" -d LTO_CLANG_FULL
+            ;;
+          "full")
+            scripts/config --file "$OUT/.config" -e LTO_CLANG
+            scripts/config --file "$OUT/.config" -e LTO_CLANG_FULL
+            scripts/config --file "$OUT/.config" -d LTO_CLANG_NONE
+            scripts/config --file "$OUT/.config" -d LTO_CLANG_THIN
+            ;;
+          *)
+            echo "::error::Unsupported LTO option: ${{ env.OP_LTO}}"
+            exit 1
+            ;;
+        esac
+        
+        
+        make O="$OUT" olddefconfig
+        
+        KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
+        KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
+        
+        echo "============================================"
+        echo "≡ƒöº Build Configuration"
+        echo "============================================"
+        echo "Device: ${OP_MODEL}"
+        echo "Kernel: ${KERNEL_FULL_VER}"
+        echo "Threads: $(nproc --all)"
+        echo "Optimization: ${{ inputs.optimize_level }}"
+        echo "KCFLAGS: ${KCFLAGS:0:150}..."
+        echo "KCPPFLAGS: ${KCPPFLAGS:0:150}..."
+        echo "Timestamp: $KBUILD_BUILD_TIMESTAMP"
+        echo "Workspace: $WORKSPACE"
+        
+        if [ "${{ inputs.clean }}" != "true" ]; then
+          echo "ccache: ENABLED"
+          echo "  Dir: $CCACHE_DIR"
+          echo "  Base: $CCACHE_BASEDIR"
+          echo "  Max size: $CCACHE_MAXSIZE"
+          echo "  Compression: zstd level 3"
+          echo "  Features: readonly_direct, file_clone, inode_cache, depend"
+        else
+          echo "ccache: DISABLED (clean build)"
+        fi
+        echo "============================================"
+        
+        if [ "${{ inputs.clean }}" != "true" ]; then
+          if [ ! -d "$CCACHE_DIR" ] || [ -z "$(find "$CCACHE_DIR" -type f 2>/dev/null | head -n1)" ]; then
+            echo "≡ƒöÑ Priming cache with header preprocessing..."
+            make -C "$COMMON_KERNEL_FOLDER" O="$OUT" headers_install prepare 2>&1 | head -n 20 || true
+            echo ""
+          fi
+        fi
+        
+        BUILD_START=$(date +%s)
+        set -o pipefail
+        
+        make -j"$(nproc --all)" O="$OUT" KCFLAGS="$KCFLAGS" KCPPFLAGS="$KCPPFLAGS" 2>&1 | tee build.log
+        
+        BUILD_END=$(date +%s)
+        BUILD_TIME=$((BUILD_END - BUILD_START))
+        
+        echo "BUILD_START=$BUILD_START" >> "$GITHUB_ENV"
+        echo "BUILD_END=$BUILD_END" >> "$GITHUB_ENV"
+        echo "BUILD_TIME=$BUILD_TIME" >> "$GITHUB_ENV"
+        
+        IMG="$OUT/arch/arm64/boot/Image"
+        if [ ! -f "$IMG" ]; then
+          echo "::error::Kernel Image missing"
+          echo "::group::Last 100 lines of build log"
+          tail -n 100 build.log || echo "Build log not available"
+          echo "::endgroup::"
+          exit 1
+        fi
+        
+        IMG_SIZE=$(stat -c%s "$IMG")
+        
+        echo "============================================"
+        echo "Γ£à Build Completed Successfully"
+        echo "============================================"
+        echo "Duration: $((BUILD_TIME / 60))m $((BUILD_TIME % 60))s"
+        echo "Image: $(numfmt --to=iec-i --suffix=B "$IMG_SIZE")"
+        
+        if [ "${{ inputs.clean }}" != "true" ]; then
+          echo ""
+          echo "≡ƒôè ccache Post-Build Statistics"
+          echo "============================================"
+          ccache -s
+        fi
+        echo "============================================"
+        echo "::endgroup::"
+
+    - name: ≡ƒôè ccache Post-Build Statistics
+      id: ccache_stats
+      if: ${{ always() && inputs.clean != 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::ccache final statistics"
+        
+        export CCACHE_DIR="${{ env.CCACHE_DIR }}"
+        
+        echo "ccache Statistics"
+        ccache -s
+        
+        STATS="$(ccache -s)"
+        
+        CACHEABLE=$(echo "$STATS" | awk '/Cacheable calls:/ {
+          match($0, /[0-9]+/); 
+          print substr($0, RSTART, RLENGTH)
+        }' | head -n1)
+        
+        HITS=$(echo "$STATS" | awk '/^[[:space:]]*Hits:/ {
+          match($0, /[0-9]+/); 
+          print substr($0, RSTART, RLENGTH)
+        }' | head -n1)
+        
+        DIRECT=$(echo "$STATS" | awk '/Direct:/ {
+          match($0, /[0-9]+/); 
+          print substr($0, RSTART, RLENGTH)
+        }' | head -n1)
+        
+        if [ "${CACHEABLE:-0}" -gt 0 ]; then
+          HIT_RATE=$(awk -v h="${HITS:-0
+        }" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (h/c)*100}')
+          DIRECT_RATE=$(awk -v d="${DIRECT:-0}" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (d/c)*100}')
+        else
+          HIT_RATE="0.0"
+          DIRECT_RATE="0.0"
+        fi
+        
+        echo "hit_rate=${HIT_RATE}%" >> "$GITHUB_OUTPUT"
+        echo "direct_rate=${DIRECT_RATE}%" >> "$GITHUB_OUTPUT"
+        
+        echo "::endgroup::"
+        
+        echo "## ≡ƒôè ccache Statistics" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        ccache -s >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Collect Build Stats / Validate Image
+      id: collect_stats
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Collect Build stats"
+        IMG="$COMMON_KERNEL_FOLDER/out/arch/arm64/boot/Image"
+        
+        if [ -f "$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image" ]; then
+          IMG="$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image"
+        elif [ -f "$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image" ]; then
+          IMG="$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image"
+        fi
+        
+        if [ -f "$COMMON_KERNEL_FOLDER/build.log" ]; then
+          WARNINGS_COUNT="$(grep -ciE '\bwarning:' "$COMMON_KERNEL_FOLDER/build.log" || true)"
+          [ -n "$WARNINGS_COUNT" ] || WARNINGS_COUNT="0"
+        else
+          WARNINGS_COUNT="0"
+        fi
+        
+        if [ ! -f "$IMG" ]; then
+          echo "::error::Kernel Image not found at: $IMG"
+          exit 1
+        fi
+        
+        if ! file "$IMG" | grep -qi 'ARM64'; then
+          echo "::error::Image is not ARM64 format"
+          file "$IMG"
+          exit 1
+        fi
+        
+        IMG_SIZE=$(stat -c %s "$IMG")
+        MIN_SIZE=6102400
+        if [ "$IMG_SIZE" -lt "$MIN_SIZE" ]; then
+          echo "::error::Image size too small: $(numfmt --to=iec-i --suffix=B "$IMG_SIZE")"
+          exit 1
+        fi
+        
+        IMG_SHA256=$(sha256sum "$IMG" | awk '{print $1}')
+        BUILD_TIME="${BUILD_TIME:-0}"
+        
+        KERNEL_UNAME=$(strings "$IMG" | grep -E 'Linux version.*#' | tail -n1)
+        echo "Kernel Uname: $KERNEL_UNAME"
+        echo "KERNEL_UNAME=$KERNEL_UNAME" >> "$GITHUB_ENV"
+        
+        printf 'warnings_count=%s\n' "$WARNINGS_COUNT" >> "$GITHUB_OUTPUT"
+        printf 'image_sha256=%s\n' "$IMG_SHA256" >> "$GITHUB_OUTPUT"
+        printf 'build_time=%s\n' "$BUILD_TIME" >> "$GITHUB_OUTPUT"
+        
+        echo "Γ£à Validation passed:"
+        echo "   - Warnings: $WARNINGS_COUNT"
+        echo "   - Image size: $(numfmt --to=iec-i --suffix=B "$IMG_SIZE")"
+        echo "   - SHA256: $IMG_SHA256"
+        echo "   - Build time: ${BUILD_TIME}s"
+        echo "::endgroup::"
+
+    - name: Create Kernel ZIP
+      id: create_zip
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Create kernel ZIP package"
+        
+        IMAGE_PATH="$COMMON_KERNEL_FOLDER/out/arch/arm64/boot/Image"
+        
+        if [ -f "$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image" ]; then
+          IMAGE_PATH="$KERNEL_PLATFORM_FOLDER/out/$OP_ANDROID_VERSION-$OP_KERNEL_VERSION/dist/Image"
+        elif [ -f "$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image" ]; then
+          IMAGE_PATH="$KERNEL_PLATFORM_FOLDER/bazel-bin/common/kernel_aarch64/Image"
+        fi
+        
+        if [ ! -f "$IMAGE_PATH" ]; then
+          echo "::error::Built Image not found at: $IMAGE_PATH"
+          exit 1
+        fi
+        
+        cp "$IMAGE_PATH" "$AK3_FOLDER/Image"
+        mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
+        cd "$AK3_FOLDER"
+        
+        BANNER_FILE="${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt"
+        if [ -f "$BANNER_FILE" ]; then
+          echo "Applying custom banner to anykernel.sh..."
+          sed -i '/^ui_print/d' anykernel.sh
+          sed -i '/^kernel.string=/d' anykernel.sh
+          sed -i '/AnyKernel3 by osm0sis/d' META-INF/com/google/android/update-binary || true
+          
+          rm -f custom_banner.sh
+          awk '/\[ASCII_BANNER_START\]/{flag=1; next} /\[ASCII_BANNER_END\]/{flag=0; next} flag {
+            if ($0 ~ /^sleep/ || $0 ~ /^ui_print/) { print $0 }
+            else { gsub(/"/, "\\\"", $0); print "ui_print \"" $0 "\"" }
+          }' "$BANNER_FILE" > custom_banner.sh
+          
+          awk '/\[UI_PRINT_START\]/{flag=1; next} /\[UI_PRINT_END\]/{flag=0; next} flag' "$BANNER_FILE" >> custom_banner.sh
+          
+          awk '/^\. tools\/ak3-core\.sh;?/{print $0; print ""; while((getline line < "custom_banner.sh") > 0) print line; close("custom_banner.sh"); next} 1' anykernel.sh > anykernel.sh.tmp
+          mv anykernel.sh.tmp anykernel.sh
+          rm -f custom_banner.sh banner
+        fi
+        
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
+          ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+        else
+          ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
+        fi
+        mkdir -p "$ARTIFACTS_FOLDER"
+        
+        echo "Creating flashable ZIP: $ZIP_NAME"
+        
+        if ! zip -r9 "$ZIP_NAME" ./* \
+             -x "*.git*" \
+             -x "$ZIP_NAME" \
+             -x "README.md" 2>&1 | tee /tmp/zip.log; then
+          echo "::error::Failed to create ZIP package"
+          exit 1
+        fi
+        
+        mv "$ZIP_NAME" "$ARTIFACTS_FOLDER/"
+        
+        find "$ARTIFACTS_FOLDER" -maxdepth 1 -type f ! -name "$ZIP_NAME" -delete
+        
+        ZIP_SIZE=$(stat -c%s "$ARTIFACTS_FOLDER/$ZIP_NAME")
+        ZIP_SHA256=$(sha256sum "$ARTIFACTS_FOLDER/$ZIP_NAME" | awk '{print $1}')
+        
+        echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+        echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+        
+        echo ""
+        echo "Γ£à Kernel ZIP created successfully"
+        echo "   Name: $ZIP_NAME"
+        echo "   Size: $(numfmt --to=iec-i --suffix=B "$ZIP_SIZE")"
+        echo "   SHA256: $ZIP_SHA256"
+        echo "::endgroup::"
+
+    - name: Final Build Summary
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        # Get commit SHAs with fallback
+        KSU_SHA="${KSU_COMMIT_SHA:-unknown}"
+        SUSFS_SHA="${SUSFS_COMMIT_SHA:-unknown}"
+        
+        {
+          echo "Model: ${{ env.OP_MODEL }}"
+          echo "OS Version: ${{ env.OP_OS_VERSION }}"
+          echo "Android: ${{ env.ANDROID_VER }}"
+          echo "Kernel base: ${{ env.KERNEL_VER }}"
+          echo "Kernel full: ${{ env.KERNEL_FULL_VER }}"
+          echo "Kernel Uname: ${{ env.KERNEL_UNAME }}"
+          echo "Build User: ${{ env.BUILD_USER }}"
+          echo "Build Host: ${{ env.BUILD_HOST }}"
+          if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+            echo "KSUN Version: ${KSUVER:-unknown}"
+            echo "KSUN commit SHA: ${KSU_SHA:-unknown}"
+          else
+            echo "KSU Version: ${KSUVER:-unknown}"
+            echo "KSU commit SHA: ${KSU_SHA:-unknown}"
+          fi
+          if [ "${{ env.OP_SUSFS }}" = true ]; then
+            echo "SUSFS Version: ${SUSVER:-unknown}"
+            echo "SUSFS Branch: ${{ env.SUSFS_BRANCH_NAME }}"
+            echo "SUSFS commit SHA: $SUSFS_SHA"
+          fi
+          echo "Optimization: ${{ inputs.optimize_level }}"
+          echo "Clean Build: ${{ inputs.clean }}"
+          echo ""
+          echo "=== OnePlus Features ==="
+          echo "BBR: ${{ env.OP_BBR }}"
+          echo "BBG: ${{ env.OP_BBG }}"
+          echo "HMBIRD SCX: ${{ env.OP_HMBIRD }}"
+          echo "TTL: ${{ env.OP_TTL }}"
+          echo "IP_SET & IPv6 NAT: ${{ env.OP_IP_SET }}"
+          echo "Unicode Fix: ${{ env.OP_UNICODE }}"
+          echo ""
+          echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
+          echo "Compiler: ${CLANG_VERSION:-unknown}"
+          echo "Warnings Count: ${{ steps.collect_stats.outputs.warnings_count }}"
+          echo "Build Time: ${{ steps.collect_stats.outputs.build_time }}s"
+          if [ "${{ inputs.clean }}" != "true" ]; then
+            echo "ccache Hit Rate: ${{ steps.ccache_stats.outputs.hit_rate }}"
+            echo "ccache Direct Rate: ${{ steps.ccache_stats.outputs.direct_rate }}"
+          else
+            echo "ccache: Disabled (clean build)"
+          fi
+          echo "Artifact Name: ${{ env.ZIP_NAME }}"
+        } | tee summary.txt
+        
+        {
+          echo "### ≡ƒÄ» Kernel Build Summary"
+          echo ""
+          echo "| Metric | Value |"
+          echo "|--------|-------|"
+          echo "| **Model** | ${{ env.OP_MODEL }} |"
+          echo "| **OS Version** | ${{ env.OP_OS_VERSION }} |"
+          echo "| **Kernel Version** | ${{ steps.save_metadata.outputs.kernel_version }} |"
+          echo "| **Kernel Uname** | \`${{ env.KERNEL_UNAME }}\` |"
+          echo "| **Build User** | ${{ env.BUILD_USER }} |"
+          echo "| **Build Host** | ${{ env.BUILD_HOST }} |"
+          if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+            echo "| **KSUN Version** | ${KSUVER:-unknown} |"
+          else
+            echo "| **KSU Version** | ${KSUVER:-unknown} |"
+          fi
+          
+          if [ "$KSU_SHA" != "unknown" ]; then
+            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+              echo "| **KSUN Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/KernelSU-Next/KernelSU-Next/commit/$KSU_SHA) |"
+            else
+              echo "| **KSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/tiann/KernelSU/commit/$KSU_SHA) |"
+            fi
+          else
+            echo "| **KSU Commit** | unknown |"
+          fi
+          
+          if [ "${{ env.OP_SUSFS }}" = true ]; then
+            echo "| **SUSFS Version** | ${SUSVER:-unknown} |"
+            echo "| **SUSFS Branch** | \`${{ env.SUSFS_BRANCH_NAME }}\` |"
+            
+            if [ "$SUSFS_SHA" != "unknown" ]; then
+              echo "| **SUSFS Commit** | [\`${SUSFS_SHA:0:8}\`](https://gitlab.com/simonpunk/susfs4ksu/-/commit/$SUSFS_SHA) |"
+            else
+              echo "| **SUSFS Commit** | unknown |"
+            fi
+          fi
+          
+          echo ""
+          echo "### ≡ƒöº OnePlus Features"
+          echo ""
+          echo "| Feature | Status |"
+          echo "|---------|--------|"
+          echo "| **BBR** | ${{ env.OP_BBR }} |"
+          echo "| **BBG** | ${{ env.OP_BBG }} |"
+          echo "| **HMBIRD SCX** | ${{ env.OP_HMBIRD }} |"
+          echo "| **TTL** | ${{ env.OP_TTL }} |"
+          echo "| **IP_SET & IPv6 NAT** | ${{ env.OP_IP_SET }} |"
+          echo "| **Unicode Fix** | ${{ env.OP_UNICODE }} |"
+          
+          echo ""
+          echo "### ≡ƒôè Build Metrics"
+          echo ""
+          echo "| Metric | Value |"
+          echo "|--------|-------|"
+          echo "| **Optimization** | ${{ inputs.optimize_level }} |"
+          echo "| **Clean Build** | ${{ inputs.clean }} |"
+          echo "| **Build Time** | ${{ steps.collect_stats.outputs.build_time }}s |"
+          
+          if [ "${{ inputs.clean }}" != "true" ]; then
+            echo "| **ccache Hit Rate** | ${{ steps.ccache_stats.outputs.hit_rate }} |"
+            echo "| **ccache Direct Rate** | ${{ steps.ccache_stats.outputs.direct_rate }} |"
+          fi
+          
+          echo "| **Image SHA256** | \`${{ steps.collect_stats.outputs.image_sha256 }}\` |"
+          echo "| **Warnings** | ${{ steps.collect_stats.outputs.warnings_count }} |"
+          echo "| **Compiler** | \`${CLANG_VERSION:-unknown}\` |"
+          echo "| **Artifact Name** | \`${{ env.ZIP_NAME }}\` |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload Artifacts
+      if: success() && steps.create_zip.conclusion == 'success'
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ env.ZIP_NAME }}
+        path: ${{ env.ARTIFACTS_FOLDER }}/${{ env.ZIP_NAME }}
+        archive: false
+        compression-level: 0
+        retention-days: 90
