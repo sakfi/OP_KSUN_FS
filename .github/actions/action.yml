@@ -114,6 +114,7 @@ runs:
         ds="$OP_DS"
         ntsync="$OP_NTSYNC"
         battery_opt="$OP_BATTERY_OPT"
+        wireguard="$OP_WIREGUARD"
         optimize='${{ inputs.optimize_level }}'
         
         errors=()
@@ -248,6 +249,12 @@ runs:
           errors+=("Input 'battery_opt' cannot be empty")
         elif [[ "$battery_opt" != "true" && "$battery_opt" != "false" ]]; then
           errors+=("Input 'battery_opt' contains invalid characters. Allowed: 'true' or 'false'. Got: '$battery_opt'")
+        fi
+        
+        if [[ -z "$wireguard" ]]; then
+          errors+=("Input 'wireguard' cannot be empty")
+        elif [[ "$wireguard" != "true" && "$wireguard" != "false" ]]; then
+          errors+=("Input 'wireguard' contains invalid characters. Allowed: 'true' or 'false'. Got: '$wireguard'")
         fi
         
         # OP_C_COMPILER currently has no checks!
@@ -1496,6 +1503,7 @@ runs:
 
     - name: Add WireGuard Support
       shell: bash
+      if: ${{ env.OP_WIREGUARD == 'true' }}
       run: |
         set -euo pipefail
         echo "::group::Add WireGuard Support"
