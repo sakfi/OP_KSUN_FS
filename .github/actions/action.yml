@@ -762,8 +762,8 @@ runs:
           return 1
         }
         
-        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH" 1 "$AK3_DIR"
-        retry_clone "https://github.com/TheWildJames/kernel_patches.git" "main" 1 "$KERNEL_PATCHES_DIR"
+        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH" 1 "$AK3_FOLDER"
+        retry_clone "https://github.com/TheWildJames/kernel_patches.git" "main" 1 "$KERNEL_PATCHES_FOLDER"
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
