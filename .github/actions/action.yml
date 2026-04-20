@@ -342,7 +342,7 @@ runs:
         COMMON_KERNEL_DIR="$KERNEL_PLATFORM_DIR/common"
         MSM_KERNEL_DIR="$KERNEL_PLATFORM_DIR/msm-kernel"
         AK3_DIR="$GITHUB_WORKSPACE/AnyKernel3"
-        KERNEL_PATCHES_DIR="$GITHUB_WORKSPACE/kernel_patches"
+        KERNEL_PATCHES_DIR="/home/runner/kernel_patches"
         SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
         KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
         KSUN_DIR="$KERNEL_PLATFORM_DIR/KernelSU-Next"
@@ -734,7 +734,7 @@ runs:
           local url="$1"
           local branch="${2:-main}"
           local depth="${3:-1}"
-          local dir="$(basename "$url" .git)"
+          local dir="${4:-$(basename "$url" .git)}"
           local max_attempts=3
           local attempt=1
           
@@ -762,8 +762,8 @@ runs:
           return 1
         }
         
-        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH"
-        retry_clone "https://github.com/TheWildJames/kernel_patches.git"
+        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH" 1 "$AK3_DIR"
+        retry_clone "https://github.com/TheWildJames/kernel_patches.git" "main" 1 "$KERNEL_PATCHES_DIR"
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
