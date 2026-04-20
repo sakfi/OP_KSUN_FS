@@ -1,4 +1,4 @@
-name: 'Build OnePlus Kernel with KernelSU Next'
+﻿name: 'Build OnePlus Kernel with KernelSU Next'
 description: 'Builds OnePlus kernel with KSU and SUSFS'
 
 inputs:
@@ -103,15 +103,10 @@ runs:
         unicode="$OP_UNICODE"
         c_compiler="$OP_C_COMPILER"
         rust_compiler="$OP_RUST_COMPILER"
-        ds="${OP_DS:-false}"
         zyc_compiler="$OP_ZYC_COMPILER"
         optimize='${{ inputs.optimize_level }}'
         
         errors=()
-        
-        if [[ -n "$ds" && "$ds" != "true" && "$ds" != "false" ]]; then
-          errors+=("Input 'ds' must be 'true' or 'false'. Got: '$ds'")
-        fi
         
         if [[ -z "$model" ]]; then
           errors+=("Input 'model' cannot be empty")
@@ -250,7 +245,7 @@ runs:
           echo "::error::Input validation failed. See logs for details."
           exit 1
         else
-          echo "✅ Input validation passed"
+          echo "Γ£à Input validation passed"
         fi
         echo "::endgroup::"
 
@@ -325,11 +320,11 @@ runs:
             success=true
             break
           fi
-          echo "⚠️ repo sync attempt $i failed; retrying..."
+          echo "ΓÜá∩╕Å repo sync attempt $i failed; retrying..."
           sleep 30
         done
         $success || { echo "::error::repo sync failed after 3 attempts"; exit 1; }
-        echo "✅ Kernel source synced"
+        echo "Γ£à Kernel source synced"
         echo "::endgroup::"
 
     - name: Set Dir Paths
@@ -407,13 +402,13 @@ runs:
           fi
         } >> "$GITHUB_ENV"
         
-        echo "✅ Detected: $ANDROID_VERSION-$FULL_VERSION"
+        echo "Γ£à Detected: $ANDROID_VERSION-$FULL_VERSION"
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           echo "   SUSFS Branch: gki-$ANDROID_VERSION-$VERSION.$PATCHLEVEL"
         fi
         echo "::endgroup::"
 
-    - name: 🏷️ Set Build Identity (Hardcoded)
+    - name: ≡ƒÅ╖∩╕Å Set Build Identity (Hardcoded)
       shell: bash
       run: |
         set -euo pipefail
@@ -426,7 +421,7 @@ runs:
         echo "BUILD_HOST=$BUILD_HOST" >> "$GITHUB_ENV"
         
         echo ""
-        echo "✅ Build identity configured:"
+        echo "Γ£à Build identity configured:"
         echo "   User: $BUILD_USER"
         echo "   Host: $BUILD_HOST"
         echo "::endgroup::"
@@ -539,14 +534,14 @@ runs:
         
         if [ -z "$short" ]; then
           short="$("${CLANG_BIN}/clang" --version | sha256sum | cut -c1-8)"
-          echo "⚠️ Could not extract clang-r version, using hash: $short"
+          echo "ΓÜá∩╕Å Could not extract clang-r version, using hash: $short"
         else
-          echo "✅ Clang version fingerprint: $short"
+          echo "Γ£à Clang version fingerprint: $short"
         fi
         
         echo "CLANG_VERSION_SHORT=$short" >> "$GITHUB_ENV"
         
-        echo "✅ Detected Clang: $CLANG_VERSION"
+        echo "Γ£à Detected Clang: $CLANG_VERSION"
         echo "::endgroup::"
 
     - name: Check or Detect Rust
@@ -579,7 +574,7 @@ runs:
         echo "RUSTC_BIN_PATH=$RUSTC_BIN" >> "$GITHUB_ENV"
         RUSTC_VERSION="$("$RUSTC_BIN/rustc" --version | head -n1)"
         echo "RUSTC_VERSION=$RUSTC_VERSION" >> "$GITHUB_ENV"
-        echo "✅ Detected RUSTC: $RUSTC_VERSION"
+        echo "Γ£à Detected RUSTC: $RUSTC_VERSION"
         
         echo "::endgroup::"
 
@@ -652,7 +647,7 @@ runs:
           echo "CCACHE_IGNOREOPTIONS=$CCACHE_IGNOREOPTIONS"
         } >> "$GITHUB_ENV"
         
-        echo "✅ ccache configured for production"
+        echo "Γ£à ccache configured for production"
         echo ""
         echo "Configuration applied:"
         echo "  Max size: 12G (persisted)"
@@ -664,12 +659,12 @@ runs:
         echo ""
         
         if [ -d "$CCACHE_DIR" ] && find "$CCACHE_DIR" -type f -print -quit 2>/dev/null | grep -q .; then
-          echo "✅ Restored cache found"
+          echo "Γ£à Restored cache found"
           echo ""
           echo "Pre-build cache statistics:"
           ccache -s | head -n 20
         else
-          echo "⚠️ No existing cache - building from scratch"
+          echo "ΓÜá∩╕Å No existing cache - building from scratch"
           echo "Cache will be populated for future builds"
         fi
         
@@ -681,11 +676,11 @@ runs:
       run: |
         set -euo pipefail
         echo "::group::Clean build requested"
-        echo "⚠️ Clean build mode enabled - ccache will be bypassed"
+        echo "ΓÜá∩╕Å Clean build mode enabled - ccache will be bypassed"
         
         echo "CCACHE_DISABLE=1" >> "$GITHUB_ENV"
         
-        echo "✅ ccache disabled for clean build (no cache/stat wipe)"
+        echo "Γ£à ccache disabled for clean build (no cache/stat wipe)"
         echo "   Shared cache and statistics preserved for concurrent jobs"
         echo "::endgroup::"
 
@@ -716,11 +711,11 @@ runs:
           if [ -z "$SUSFS_INPUT" ]; then
             # use kernel-specific default
             SUSFS_BRANCH="${DEFAULT_SUSFS[$KERNEL_KEY]:-gki-android15-6.6}"
-            echo "ℹ️  Using default SUSFS branch for $KERNEL_KEY: $SUSFS_BRANCH"
+            echo "Γä╣∩╕Å  Using default SUSFS branch for $KERNEL_KEY: $SUSFS_BRANCH"
           else
             # 40-char hash or branch/commit passed directly
             SUSFS_BRANCH="$SUSFS_INPUT"
-            echo "🔧 Using resolved SUSFS ref: $SUSFS_BRANCH"
+            echo "≡ƒöº Using resolved SUSFS ref: $SUSFS_BRANCH"
           fi
         fi
         
@@ -745,20 +740,20 @@ runs:
           fi
           
           while [ $attempt -le $max_attempts ]; do
-            echo "🔄 Attempt $attempt/$max_attempts: cloning $url ($branch)${depth:+ [depth=$depth]}"
+            echo "≡ƒöä Attempt $attempt/$max_attempts: cloning $url ($branch)${depth:+ [depth=$depth]}"
             
             # Clone with dynamic args
             git clone "${clone_args[@]}" "$url" "$dir" && {
-              echo "✅ Success"
+              echo "Γ£à Success"
               return 0
             }
             
-            echo "❌ Failed, cleaning up..."
+            echo "Γ¥î Failed, cleaning up..."
             rm -rf "$dir" 2>/dev/null
             sleep $((attempt++ * 5))
           done
           
-          echo "💥 All attempts failed"
+          echo "≡ƒÆÑ All attempts failed"
           return 1
         }
         
@@ -773,11 +768,11 @@ runs:
           # Try to checkout the specified branch/commit
           if git rev-parse --verify "origin/$SUSFS_BRANCH" >/dev/null 2>&1; then
             # It's a remote branch
-            echo "✅ Checking out remote branch: $SUSFS_BRANCH"
+            echo "Γ£à Checking out remote branch: $SUSFS_BRANCH"
             git checkout "$SUSFS_BRANCH"
           elif git rev-parse --verify "$SUSFS_BRANCH" >/dev/null 2>&1; then
             # It's a local ref or commit hash
-            echo "✅ Checking out ref/commit: $SUSFS_BRANCH"
+            echo "Γ£à Checking out ref/commit: $SUSFS_BRANCH"
             git checkout "$SUSFS_BRANCH"
           else
             echo "::error::SUSFS branch or commit '$SUSFS_BRANCH' not found in repository"
@@ -794,12 +789,12 @@ runs:
           echo "SUSFS_BRANCH_NAME=$SUSFS_BRANCH_NAME" >> $GITHUB_ENV
           
           echo ""
-          echo "✅ SUSFS checked out successfully"
+          echo "Γ£à SUSFS checked out successfully"
           echo "   Branch/Ref: $SUSFS_BRANCH_NAME"
           echo "   Commit: $SUSFS_COMMIT_SHA"
         fi
         cd ..
-        echo "✅ Dependencies cloned"
+        echo "Γ£à Dependencies cloned"
         echo "::endgroup::"
 
     - name: Clean Up ABI Protected Exports
@@ -863,7 +858,7 @@ runs:
         echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
         echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
         echo "KernelSU Next Version: $KSU_VERSION"
-        echo "✅ KernelSU Next added (commit: ${KSU_COMMIT_SHA:0:8})"
+        echo "Γ£à KernelSU Next added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
     - name: Add KernelSU
@@ -903,7 +898,7 @@ runs:
         echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
         echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
         echo "KernelSU Version: $KSU_VERSION"
-        echo "✅ KernelSU added (commit: ${KSU_COMMIT_SHA:0:8})"
+        echo "Γ£à KernelSU added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
     - name: Apply SUSFS Patches
@@ -926,6 +921,7 @@ runs:
         version_lte() {
           [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$1" ]
         }
+        
         if version_lte "${susfs_version:1}" "1.5.12"; then
           echo "NEED_HOOKS=true" >> $GITHUB_ENV
         else
@@ -1086,7 +1082,7 @@ runs:
             fi
           fi
         fi
-        echo "✅ SUSFS patches applied"
+        echo "Γ£à SUSFS patches applied"
         
         echo "Add SUSFS Configuration Settings"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
@@ -1136,7 +1132,7 @@ runs:
         
         # echo "Patching BBG Enhanced Security!"
         # patch -p1 --forward < "../../../kernel_patches/common/bbg_untrusted_cred.patch"
-        echo "✅ BBG LSM added"
+        echo "Γ£à BBG LSM added"
         echo "::endgroup::"
 
     - name: Apply KSU Hooks
@@ -1147,7 +1143,7 @@ runs:
         echo "::group::Apply KSU hooks"
         cd "$COMMON_KERNEL_FOLDER"
         patch -p1 < "$KERNEL_PATCHES_FOLDER/next/scope_min_manual_hooks_v1.4.patch"
-        echo "✅ KSU hooks applied"
+        echo "Γ£à KSU hooks applied"
         echo "::endgroup::"
 
     - name: Apply Other Patches
@@ -1231,34 +1227,7 @@ runs:
         patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/use_unlikely_wrap_cpufreq.patch"
         
         
-        echo "✅ Other patches applied"
-        echo "::endgroup::"
-
-    - name: Apply Battery Optimization Suite
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "::group::Apply Battery Optimization Suite"
-        cd "$COMMON_KERNEL_FOLDER"
-        
-        BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
-        
-        if [ -d "$BATTERY_PATCH_DIR" ]; then
-          echo "?? Applying 4-patch Battery Optimization Suite..."
-          # Explicitly apply the 4 patches as requested
-          for patch_name in "mem_opt.patch" "sched_efficiency.patch" "silence_logging.patch" "wakelock_reduction.patch"; do
-            patch_file="$BATTERY_PATCH_DIR/$patch_name"
-            if [ -f "$patch_file" ]; then
-              echo "Applying: $patch_name"
-              patch -p1 --forward < "$patch_file" || true
-            else
-              echo "::warning::Battery patch $patch_name missing from suite folder."
-            fi
-          done
-          echo "✅ Battery optimization suite applied"
-        else
-          echo "::warning::Battery optimization suite folder missing. Skipping."
-        fi
+        echo "Γ£à Other patches applied"
         echo "::endgroup::"
 
     - name: Apply Unicode Fix Patch
@@ -1294,25 +1263,13 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "::group::Add BBR"
-        cd "$COMMON_KERNEL_FOLDER"
-        
-        # Sourcing: Strictly Upstream
-        BBR_PATCH="$KERNEL_PATCHES_FOLDER/common/bbr.patch"
-        if [ -f "$BBR_PATCH" ]; then
-          echo "Applying Upstream BBR patch..."
-          patch -p1 --forward < "$BBR_PATCH" || true
-        fi
-        
-        echo "Configuring BBR in gki_defconfig..."
+        echo "Add BBR"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_TCP_CONG_ADVANCED=y
         CONFIG_TCP_CONG_BBR=y
         CONFIG_NET_SCH_FQ=y
         CONFIG_NET_SCH_FQ_CODEL=y
         EOF
-        echo "✅ BBR configured"
-        echo "::endgroup::"
 
     - name: Add NTSync
       if: ${{ env.OP_NTSYNC == 'true' }}
@@ -1323,21 +1280,9 @@ runs:
         cd "$COMMON_KERNEL_FOLDER"
         KERNEL_VERSION="${{ env.KERNEL_VER }}"
         
-        # Sourcing Priority: Upstream -> Local Repo -> Skip
-        NTSYNC_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ntsync/$KERNEL_VERSION"
-        NTSYNC_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/ntsync_patches/$KERNEL_VERSION"
+        NTSYNC_PATCH_DIR="$GITHUB_WORKSPACE/ntsync_patches/$KERNEL_VERSION"
         
-        if [ -d "$NTSYNC_UPSTREAM" ]; then
-          NTSYNC_PATCH_DIR="$NTSYNC_UPSTREAM"
-          echo "?? Using Upstream NTSync patches for $KERNEL_VERSION"
-        elif [ -d "$NTSYNC_REPO" ]; then
-          NTSYNC_PATCH_DIR="$NTSYNC_REPO"
-          echo "?? Using Local Repo NTSync patches for $KERNEL_VERSION"
-        else
-          NTSYNC_PATCH_DIR=""
-        fi
-        
-        if [ -n "$NTSYNC_PATCH_DIR" ]; then
+        if [ -d "$NTSYNC_PATCH_DIR" ]; then
           for patch_file in "$NTSYNC_PATCH_DIR"/*.patch; do
              if [ -f "$patch_file" ]; then
                echo "Applying NTSync patch: $(basename "$patch_file")"
@@ -1348,48 +1293,9 @@ runs:
           cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_NTSYNC=y
         EOF
-          echo "OP_NTSYNC_STATUS=Applied" >> "$GITHUB_ENV"
-          echo "✅ NTSync configured for $KERNEL_VERSION"
+          echo "Γ£à NTSync configured for $KERNEL_VERSION"
         else
-          echo "OP_NTSYNC_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
-          echo "::warning::NTSync patches not found in Upstream or Repo for $KERNEL_VERSION. Skipping."
-        fi
-        echo "::endgroup::"
-
-    - name: Add Droidspaces
-      if: ${{ env.OP_DS == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "::group::Add Droidspaces Support"
-        cd "$COMMON_KERNEL_FOLDER"
-        
-        # Sourcing Priority: Upstream -> Local Repo -> Skip
-        DS_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ds"
-        DS_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/droidspaces_patches"
-        
-        if [ -d "$DS_UPSTREAM" ]; then
-          DS_PATCH_DIR="$DS_UPSTREAM"
-          echo "?? Using Upstream Droidspaces patches"
-        elif [ -d "$DS_REPO" ]; then
-          DS_PATCH_DIR="$DS_REPO"
-          echo "?? Using Local Repo Droidspaces patches"
-        else
-          DS_PATCH_DIR=""
-        fi
-        
-        if [ -n "$DS_PATCH_DIR" ]; then
-          for patch_file in "$DS_PATCH_DIR"/*.patch; do
-             if [ -f "$patch_file" ]; then
-               echo "Applying Droidspaces patch: $(basename "$patch_file")"
-               patch -p1 --forward < "$patch_file" || true
-             fi
-          done
-          echo "OP_DS_STATUS=Applied" >> "$GITHUB_ENV"
-          echo "✅ Droidspaces configured"
-        else
-          echo "OP_DS_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
-          echo "::warning::Droidspaces patches not found in Upstream or Repo. Skipping."
+          echo "::warning::NTSync patches not found for kernel $KERNEL_VERSION. Skipping."
         fi
         echo "::endgroup::"
 
@@ -1398,47 +1304,21 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "::group::Add TTL Target Support"
-        cd "$COMMON_KERNEL_FOLDER"
-        
-        # Sourcing: Strictly Upstream
-        TTL_PATCH="$KERNEL_PATCHES_FOLDER/common/ttl_target.patch"
-        if [ -f "$TTL_PATCH" ]; then
-          echo "Applying Upstream TTL patch..."
-          patch -p1 --forward < "$TTL_PATCH" || true
-        fi
-        
-        echo "Configuring TTL in gki_defconfig..."
+        echo "Add TTL Target Support"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_IP_NF_TARGET_TTL=y
         CONFIG_IP6_NF_TARGET_HL=y
         CONFIG_IP6_NF_MATCH_HL=y
         EOF
-        echo "✅ TTL configured"
-        echo "::endgroup::"
 
     - name: Add IP SET & IPv6_NAT Support
       if: ${{ env.OP_IP_SET == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
-        echo "::group::Add IP SET & IPv6_NAT Support"
+        echo "Add IP SET & IPv6_NAT Support"
         cd "$COMMON_KERNEL_FOLDER"
         KERNEL_VERSION="${{ env.KERNEL_VER }}"
-        
-        # Sourcing Priority: Strictly Upstream
-        IPSET_PATCH="$KERNEL_PATCHES_FOLDER/common/ip_set.patch"
-        IPV6_NAT_PATCH="$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
-        
-        if [ -f "$IPSET_PATCH" ]; then
-          echo "Applying Upstream IP_SET patch..."
-          patch -p1 --forward < "$IPSET_PATCH" || true
-        fi
-        
-        if [ -f "$IPV6_NAT_PATCH" ]; then
-          echo "Applying Upstream IPv6_NAT_FIX patch..."
-          patch -p1 -F 3 < "$IPV6_NAT_PATCH" || true
-        fi
         
         if [[ "$KERNEL_VERSION" == "6.12" ]] || [[ "$OP_BRANCH" == wild/mt* ]]; then
             echo "::debug::Skipping CONFIG_BPF_STREAM_PARSER for $KERNEL_VERSION / $OP_BRANCH"
@@ -1470,8 +1350,8 @@ runs:
         CONFIG_IP6_NF_NAT=y
         CONFIG_IP6_NF_TARGET_MASQUERADE=y
         EOF
-        echo "✅ IP SET & IPv6_NAT configured"
-        echo "::endgroup::"
+        
+        patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
 
     - name: Add WireGuard Support
       shell: bash
@@ -1490,7 +1370,7 @@ runs:
         EOF
         
         # 2. Apply Patches
-        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
+        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/wireguard_patches"
         if [ -d "$WIREGUARD_PATCH_DIR" ]; then
           for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
             if [ -f "$patch_file" ]; then
@@ -1498,11 +1378,9 @@ runs:
               patch -p1 --forward < "$patch_file" || true
             fi
           done
-        else
-          echo "::warning::WireGuard patches not found in Repos. Skipping."
         fi
         
-        echo "✅ WireGuard integrated and optimized"
+        echo "Γ£à WireGuard integrated and optimized"
         echo "::endgroup::"
 
     - name: Add Build based configs
@@ -1605,10 +1483,10 @@ runs:
         export KBUILD_BUILD_HOST="${BUILD_HOST:-kleaf}"
         export KBUILD_BUILD_VERSION=1
         
-        echo "📅 Build timestamp: $KBUILD_BUILD_TIMESTAMP (from commit $COMMIT_HASH)"
-        echo "🔢 SOURCE_DATE_EPOCH: $SOURCE_DATE_EPOCH"
-        echo "👤 Build user: $KBUILD_BUILD_USER"
-        echo "🖥️  Build host: $KBUILD_BUILD_HOST"
+        echo "≡ƒôà Build timestamp: $KBUILD_BUILD_TIMESTAMP (from commit $COMMIT_HASH)"
+        echo "≡ƒöó SOURCE_DATE_EPOCH: $SOURCE_DATE_EPOCH"
+        echo "≡ƒæñ Build user: $KBUILD_BUILD_USER"
+        echo "≡ƒûÑ∩╕Å  Build host: $KBUILD_BUILD_HOST"
         
         export CC="ccache clang"
         export CXX="ccache clang++"
@@ -1629,17 +1507,17 @@ runs:
         fi
         
         if [ "${{ inputs.clean }}" = "true" ]; then
-          echo "🧹 Clean build mode - ccache disabled"
+          echo "≡ƒº╣ Clean build mode - ccache disabled"
           export CCACHE_DISABLE=1
         else
-          echo "🚀 ccache-accelerated build"
+          echo "≡ƒÜÇ ccache-accelerated build"
         fi
         
         OUT=out
         mkdir -p "$OUT"
         
         echo "============================================"
-        echo "🔍 Compiler & ccache Verification"
+        echo "≡ƒöì Compiler & ccache Verification"
         echo "============================================"
         echo "PATH: ${PATH:0:200}..."
         echo "which clang: $(which clang)"
@@ -1658,7 +1536,7 @@ runs:
           echo "ccache pre-build status:"
           ccache -s | head -n 20
         else
-          echo "⚠️ Clean build - ccache bypassed"
+          echo "ΓÜá∩╕Å Clean build - ccache bypassed"
         fi
         echo "============================================"
         
@@ -1719,7 +1597,7 @@ runs:
         KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
         
         echo "============================================"
-        echo "🔧 Build Configuration"
+        echo "≡ƒöº Build Configuration"
         echo "============================================"
         echo "Device: ${OP_MODEL}"
         echo "Kernel: ${KERNEL_FULL_VER}"
@@ -1744,7 +1622,7 @@ runs:
         
         if [ "${{ inputs.clean }}" != "true" ]; then
           if [ ! -d "$CCACHE_DIR" ] || [ -z "$(find "$CCACHE_DIR" -type f 2>/dev/null | head -n1)" ]; then
-            echo "🔥 Priming cache with header preprocessing..."
+            echo "≡ƒöÑ Priming cache with header preprocessing..."
             make -C "$COMMON_KERNEL_FOLDER" O="$OUT" headers_install prepare 2>&1 | head -n 20 || true
             echo ""
           fi
@@ -1774,21 +1652,21 @@ runs:
         IMG_SIZE=$(stat -c%s "$IMG")
         
         echo "============================================"
-        echo "✅ Build Completed Successfully"
+        echo "Γ£à Build Completed Successfully"
         echo "============================================"
         echo "Duration: $((BUILD_TIME / 60))m $((BUILD_TIME % 60))s"
         echo "Image: $(numfmt --to=iec-i --suffix=B "$IMG_SIZE")"
         
         if [ "${{ inputs.clean }}" != "true" ]; then
           echo ""
-          echo "📊 ccache Post-Build Statistics"
+          echo "≡ƒôè ccache Post-Build Statistics"
           echo "============================================"
           ccache -s
         fi
         echo "============================================"
         echo "::endgroup::"
 
-    - name: 📊 ccache Post-Build Statistics
+    - name: ≡ƒôè ccache Post-Build Statistics
       id: ccache_stats
       if: ${{ always() && inputs.clean != 'true' }}
       shell: bash
@@ -1832,7 +1710,7 @@ runs:
         
         echo "::endgroup::"
         
-        echo "## 📊 ccache Statistics" >> $GITHUB_STEP_SUMMARY
+        echo "## ≡ƒôè ccache Statistics" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         ccache -s >> $GITHUB_STEP_SUMMARY
@@ -1888,7 +1766,7 @@ runs:
         printf 'image_sha256=%s\n' "$IMG_SHA256" >> "$GITHUB_OUTPUT"
         printf 'build_time=%s\n' "$BUILD_TIME" >> "$GITHUB_OUTPUT"
         
-        echo "✅ Validation passed:"
+        echo "Γ£à Validation passed:"
         echo "   - Warnings: $WARNINGS_COUNT"
         echo "   - Image size: $(numfmt --to=iec-i --suffix=B "$IMG_SIZE")"
         echo "   - SHA256: $IMG_SHA256"
@@ -1967,7 +1845,7 @@ runs:
         echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
         
         echo ""
-        echo "✅ Kernel ZIP created successfully"
+        echo "Γ£à Kernel ZIP created successfully"
         echo "   Name: $ZIP_NAME"
         echo "   Size: $(numfmt --to=iec-i --suffix=B "$ZIP_SIZE")"
         echo "   SHA256: $ZIP_SHA256"
@@ -2013,8 +1891,6 @@ runs:
           echo "TTL: ${{ env.OP_TTL }}"
           echo "IP_SET & IPv6 NAT: ${{ env.OP_IP_SET }}"
           echo "Unicode Fix: ${{ env.OP_UNICODE }}"
-          echo "NTSync: ${OP_NTSYNC_STATUS:-Disabled}"
-          echo "Droidspaces: ${OP_DS_STATUS:-Disabled}"
           echo ""
           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
           echo "Compiler: ${CLANG_VERSION:-unknown}"
@@ -2030,7 +1906,7 @@ runs:
         } | tee summary.txt
         
         {
-          echo "### 🎯 Kernel Build Summary"
+          echo "### ≡ƒÄ» Kernel Build Summary"
           echo ""
           echo "| Metric | Value |"
           echo "|--------|-------|"
@@ -2068,7 +1944,7 @@ runs:
           fi
           
           echo ""
-          echo "### 🔧 OnePlus Features"
+          echo "### ≡ƒöº OnePlus Features"
           echo ""
           echo "| Feature | Status |"
           echo "|---------|--------|"
@@ -2078,11 +1954,9 @@ runs:
           echo "| **TTL** | ${{ env.OP_TTL }} |"
           echo "| **IP_SET & IPv6 NAT** | ${{ env.OP_IP_SET }} |"
           echo "| **Unicode Fix** | ${{ env.OP_UNICODE }} |"
-          echo "| **NTSync** | ${OP_NTSYNC_STATUS:-Disabled} |"
-          echo "| **Droidspaces** | ${OP_DS_STATUS:-Disabled} |"
           
           echo ""
-          echo "### 📊 Build Metrics"
+          echo "### ≡ƒôè Build Metrics"
           echo ""
           echo "| Metric | Value |"
           echo "|--------|-------|"
