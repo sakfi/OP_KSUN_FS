@@ -38,6 +38,21 @@ inputs:
     required: false
     type: string
     default: 'false'
+  enable_wireguard:
+    description: 'Global Master Switch: Enable WireGuard'
+    required: false
+    type: string
+    default: 'true'
+  enable_battery_opt:
+    description: 'Global Master Switch: Enable Battery Optimization'
+    required: false
+    type: string
+    default: 'true'
+  enable_ntsync:
+    description: 'Global Master Switch: Enable NTSync'
+    required: false
+    type: string
+    default: 'true'
 
 outputs:
   kernel_version:
@@ -82,16 +97,47 @@ runs:
       run: |
         set -euo pipefail
         
-        # Set default values for features before parsing JSON
-        echo "OP_WIREGUARD=true" >> "$GITHUB_ENV"
-        echo "OP_NTSYNC=true" >> "$GITHUB_ENV"
-        echo "OP_BATTERY_OPT=true" >> "$GITHUB_ENV"
-        echo "OP_HMBIRD=false" >> "$GITHUB_ENV"
-        echo "OP_DS=false" >> "$GITHUB_ENV"
+        # 1. Start with Hardcoded Defaults
+        ntsync_def="true"
+        battery_def="true"
+        wireguard_def="true"
+        hmbird_def="false"
+        ds_def="false"
         
+        # 2. Extract Device-Specific values from JSON
         echo '${{ inputs.op_config_json }}' > /tmp/config.json
-        jq -r 'to_entries[] | "OP_\(.key | ascii_upcase)=\(.value)"' /tmp/config.json >> "$GITHUB_ENV"
-        echo "Parsed config:"
+        JSON_NTSYNC=$(jq -r '.ntsync // empty' /tmp/config.json)
+        JSON_BATTERY=$(jq -r '.battery_opt // empty' /tmp/config.json)
+        JSON_WIREGUARD=$(jq -r '.wireguard // empty' /tmp/config.json)
+        JSON_HMBIRD=$(jq -r '.hmbird // empty' /tmp/config.json)
+        JSON_DS=$(jq -r '.ds // empty' /tmp/config.json)
+        
+        # 3. Apply Global Override Logic (Master Switches)
+        # If UI input is 'false', it's OFF globally.
+        # If UI input is 'true', we use JSON value (defaulting to system default if empty).
+        
+        [[ "${{ inputs.enable_ntsync }}" == "false" ]] && FINAL_NTSYNC="false" || FINAL_NTSYNC="${JSON_NTSYNC:-$ntsync_def}"
+        [[ "${{ inputs.enable_battery_opt }}" == "false" ]] && FINAL_BATTERY="false" || FINAL_BATTERY="${JSON_BATTERY:-$battery_def}"
+        [[ "${{ inputs.enable_wireguard }}" == "false" ]] && FINAL_WIREGUARD="false" || FINAL_WIREGUARD="${JSON_WIREGUARD:-$wireguard_def}"
+        
+        FINAL_HMBIRD="${JSON_HMBIRD:-$hmbird_def}"
+        FINAL_DS="${JSON_DS:-$ds_def}"
+
+        # 4. Export to Environment
+        echo "OP_NTSYNC=$FINAL_NTSYNC" >> "$GITHUB_ENV"
+        echo "OP_BATTERY_OPT=$FINAL_BATTERY" >> "$GITHUB_ENV"
+        echo "OP_WIREGUARD=$FINAL_WIREGUARD" >> "$GITHUB_ENV"
+        echo "OP_HMBIRD=$FINAL_HMBIRD" >> "$GITHUB_ENV"
+        echo "OP_DS=$FINAL_DS" >> "$GITHUB_ENV"
+        
+        # Final Export of other JSON keys (model, soc, etc.)
+        jq -r 'to_entries[] | select(.key != "ntsync" and .key != "battery_opt" and .key != "wireguard" and .key != "hmbird" and .key != "ds") | "OP_\(.key | ascii_upcase)=\(.value)"' /tmp/config.json >> "$GITHUB_ENV"
+        
+        echo "Parsed final features:"
+        echo "NTSync: $FINAL_NTSYNC (UI: ${{ inputs.enable_ntsync }})"
+        echo "Battery Opt: $FINAL_BATTERY (UI: ${{ inputs.enable_battery_opt }})"
+        echo "WireGuard: $FINAL_WIREGUARD (UI: ${{ inputs.enable_wireguard }})"
+        echo "Full Device Config:"
         jq '.' /tmp/config.json
 
     - name: Validate Inputs

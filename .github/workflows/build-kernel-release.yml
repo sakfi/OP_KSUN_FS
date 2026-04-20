@@ -97,6 +97,21 @@ on:
         required: true
         type: string
         default: '[{"type":"ksun","hash":"551ad80473f60e052917aec08abf5323b6ab2f7c"}]'
+      enable_wireguard:
+        description: '🛂 Global Master Switch: Enable WireGuard for all models'
+        required: true
+        type: boolean
+        default: true
+      enable_battery_opt:
+        description: '🔋 Global Master Switch: Enable Battery Optimization for all models'
+        required: true
+        type: boolean
+        default: true
+      enable_ntsync:
+        description: '🕹️ Global Master Switch: Enable NTSync for all models'
+        required: true
+        type: boolean
+        default: true
       optimize_level:
         description: "Compiler optimization level"
         required: true
@@ -614,6 +629,9 @@ jobs:
         uses: ./.github/actions
         with:
           op_config_json: ${{ steps.prepare_config.outputs.config_json }}
+          enable_wireguard: ${{ github.event.inputs.enable_wireguard }}
+          enable_battery_opt: ${{ github.event.inputs.enable_battery_opt }}
+          enable_ntsync: ${{ github.event.inputs.enable_ntsync }}
           ksu_type: ${{ matrix.ksu_type }}
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
@@ -910,8 +928,13 @@ jobs:
               echo "Warning: No JSON entry found for model: $model" >&2
               features_str="N/A"
             else
-              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync battery_opt wireguard <<< "$feature_flags"
+              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync_json battery_json wireguard_json <<< "$feature_flags"
               
+              # Harmonize Master Switches with JSON values
+              [[ "${{ github.event.inputs.enable_ntsync }}" == "true" ]] && ntsync="$ntsync_json" || ntsync="false"
+              [[ "${{ github.event.inputs.enable_battery_opt }}" == "true" ]] && battery_opt="$battery_json" || battery_opt="false"
+              [[ "${{ github.event.inputs.enable_wireguard }}" == "true" ]] && wireguard="$wireguard_json" || wireguard="false"
+
               # Build features string based on boolean values
               [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
               [[ "$susfs" == "true" ]] && features+=("🛡️ SusFS")
