@@ -1,4 +1,4 @@
-name: "🔨 Build and Release OnePlus Kernels"
+name: 🔨 Build and Release OnePlus Kernels
 
 permissions:
   contents: write
@@ -107,30 +107,30 @@ on:
         description: 'Clean build (no ccache)'
         type: boolean
         default: false
-      enable_ntsync:
-        description: 'Install NTSync (For Linux 6.1+)'
-        type: boolean
-        default: false
+      build_timestamp:
+        description: 'Custom kernel build timestamp for uname -a (e.g. "Tue Feb 10 10:01:02 UTC 2026"). Leave empty for current time.'
+        type: string
+        default: ''
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
-        default: '6b92a79fa6476f36aae81c6ec284a5cd4391d0d9'      
+        default: '674f72b6f683e837d7f557704cabe00a83eeb0b4'      
       android13-5_15_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android13-5.15'
         type: string
-        default: '92b9a4977672181b7a9c462b5ee4c31e78a9aad1'      
+        default: 'eaa5d299dd85a4230f936b94dc5dd8303f27130a'      
       android14-6_1_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android14-6.1'
         type: string
-        default: 'ff05609254d5c9f90f1a815bc9fafed91338530c'
+        default: '971cc4e770b7f344a4df35ce92d7a859e6a1e0fd'
       android15-6_6_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android15-6.6'
         type: string
-        default: 'f2cc10c131760fd6d2cfeeef1b1135f02afb24b9'
+        default: '85bcfac5edc8ba7808581e8d0a3ca9c7deca78e4'
       android16-6_12_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
-        default: '1fe81d23fa8c6b6039ea732c7bf1d787d38d9429'
+        default: '5fbf04e8c6c08b8ca759e0ac81bed7d2dc96f7f8'
 
 jobs:
   set-op-model:
@@ -146,7 +146,6 @@ jobs:
       susfs_hash_android16_6_12: ${{ steps.set-matrix.outputs.susfs_hash_android16_6_12 }}
       ksu_resolved_hash:    ${{ steps.set-matrix.outputs.ksu_resolved_hash }}
       ksu_options_normalized: ${{ steps.set-matrix.outputs.ksu_options_normalized }}
-      susfs_base_version: ${{ steps.set-matrix.outputs.susfs_base_version }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_HTTP_TIMEOUT: 600
@@ -252,13 +251,17 @@ jobs:
           echo "$filtered" | jq '.' > matrix.json
           
           # For each device + each ksu option → one combined entry
-          merged_matrix=$(jq -n --argjson devices "$filtered" --argjson ksu_list "$ksu_options_normalized" '[ $devices[] as $dev | $ksu_list[] as $ksu | ($dev + {ksu_type: $ksu.type, ksu_hash: $ksu.hash}) ]')
+          merged_matrix=$(jq -n --argjson devices "$filtered" --argjson ksu_list "$ksu_options_normalized" \
+            '[ $devices[] as $dev | $ksu_list[] as $ksu | ($dev + {ksu_type: $ksu.type, ksu_hash: $ksu.hash}) ]')
+          
+          # Sort matrix by OOS version (OOS16 -> OOS15 -> OOS14)
+          merged_matrix=$(echo "$merged_matrix" | jq -c 'sort_by(.os_version) | reverse')
           
           final_count=$(echo "$merged_matrix" | jq 'length')
           
           echo "✅ Found $final_count device(s) to build"
           echo ""
-          echo "Selected devices:"
+          echo "Selected devices (Sorted by OOS version):"
           jq -r '.[] | "  - \(.model) (\(.os_version), \(.android_version)-\(.kernel_version), \(.ksu_type) - \(.ksu_hash))"' <<<"$merged_matrix"
           
           echo "count=$count" >> "$GITHUB_OUTPUT"
@@ -324,8 +327,10 @@ jobs:
           # Inject ksu_resolved_hash into each device in the matrix
           merged_matrix=$(echo "$merged_matrix" | jq  --arg resolved_sha "$resolved_sha" 'map(.ksu_resolved_hash = $resolved_sha)')
           
-          # SUSFS hash resolution (Stable Beta Logic)
+          # SUSFS hash fetch
+          SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"
           PROJECT_ID="simonpunk%2fsusfs4ksu"
+          
           declare -A default_branches=(
             ["android12-5.10"]="gki-android12-5.10"
             ["android13-5.15"]="gki-android13-5.15"
@@ -333,6 +338,7 @@ jobs:
             ["android15-6.6"]="gki-android15-6.6"
             ["android16-6.12"]="gki-android16-6.12"
           )
+          
           declare -A user_inputs=(
             ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
             ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
@@ -341,28 +347,49 @@ jobs:
             ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
           )
           
-          mapfile -t active_keys < <(echo "$merged_matrix" | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' | sort -u)
+          mapfile -t active_keys < <(
+            echo "$merged_matrix" \
+              | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' \
+              | sort -u
+          )
+          
           echo "🔍 Resolving SUSFS hashes for: ${active_keys[*]:-none}"
           
           declare -A susfs_hashes
           for key in "${active_keys[@]}"; do
             default_val="${default_branches[$key]}"
             user_val="${user_inputs[$key]:-$default_val}"
-            RESULT=$(curl -sf "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${user_val}" || echo "{}")
-            resolved=$(echo "$RESULT" | jq -r '.id // empty')
-            if [ -z "$resolved" ]; then echo "::error::Could not resolve SUSFS $user_val for $key"; exit 1; fi
+            
+            MAX_RETRIES=3
+            RETRY_COUNT=0
+            RETRY_DELAY=5
+            resolved=""
+            
+            until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
+              # We query the commit endpoint which accepts Branch, Tag, or SHA
+              RESULT=$(curl -s --fail "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${user_val}")
+              EXIT_CODE=$?
+              
+              if [ $EXIT_CODE -eq 0 ] && [ -n "$RESULT" ]; then
+                resolved=$(echo "$RESULT" | jq -r '.id')
+                echo "  ✅ Query for $key input field Success"
+                break
+              fi
+              
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "::warning::GitLab API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
+              sleep $RETRY_DELAY
+            done
+            
+            # Final Validation
+            if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then
+               echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
+               exit 1
+            fi
+            
             susfs_hashes["$key"]="$resolved"
-            echo "✅ Resolved: $key -> $resolved"
+            echo "  ✅ Resolved: $key → $resolved"
           done
-          
-          # Write outputs for workflow synchronization
-          echo "active_gki_keys=$(IFS=','; echo "${active_keys[*]:-}")" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_base_version=v2.1.0" >> "$GITHUB_OUTPUT"
           
           # Write CSV list of active GKI versions
           active_gki_keys_csv=$(IFS=','; echo "${active_keys[*]:-}")
@@ -433,6 +460,14 @@ jobs:
           EOF
           
             echo "- KSU Config: $ksu_display"
+            
+            build_ts_input="${{ inputs.build_timestamp }}"
+            if [ -z "$build_ts_input" ]; then
+              build_ts_display="⏱️ auto (current build time)"
+            else
+              build_ts_display="📌 \`$build_ts_input\`"
+            fi
+            echo "- Build Timestamp: $build_ts_display"
           
             cat << 'EOF'
           - Optimization: ${{ inputs.optimize_level }}
@@ -568,11 +603,11 @@ jobs:
             echo "::endgroup::"
           fi
 
-      - name: 🧹 Prepare op_config_json (without KSU fields, with extras)
+      - name: 🧹 Prepare op_config_json (without KSU fields)
         id: prepare_config
         shell: bash
         run: |
-          echo "config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' --argjson ntsync ${{ inputs.enable_ntsync }} '$m | del(.ksu_type, .ksu_hash, .ksu_resolved_hash) | .ntsync = $ntsync')" >> "$GITHUB_OUTPUT"
+          echo "config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' '$m | del(.ksu_type, .ksu_hash, .ksu_resolved_hash)')" >> "$GITHUB_OUTPUT"
 
       - name: 🔨 Build Kernel
         id: build
@@ -583,6 +618,7 @@ jobs:
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
+          build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
 
       - name: 📊 Build statistics
@@ -843,7 +879,7 @@ jobs:
           [![Workflow](https://img.shields.io/badge/Workflow-Build--Kernel-orange?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           
           <a href="${{ github.server_url }}/${{ github.repository }}">
-            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Integrated+NTSync+%26+WireGuard;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
+            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
           </a>
           
           > **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC') | **Build ID:** \`${{ github.run_id }}\`
@@ -865,43 +901,48 @@ jobs:
             feature_flags=$(jq -r --arg MODEL "$model" '
               .[] | 
               select(.model == $MODEL) |
-              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.battery_opt // false)"
+              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)\t\(.battery_opt // false)"
             ' <<< "$JSON_BUILD_DATA")
             
-            features=""
+            features=()
              # If no match found, skip or handle error
             if [[ -z "$feature_flags" ]]; then
               echo "Warning: No JSON entry found for model: $model" >&2
+              features_str="N/A"
             else
-              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds battery_opt <<< "$feature_flags"
+              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync battery_opt <<< "$feature_flags"
               
-              # Build features string based on boolean values - Unique Icons & Strict Applicability
-              [[ "$susfs" == "true" ]] && features+="🛡️ SusFS "
-              [[ "$hmbird" == "true" ]] && features+="🦋 HMBird "
-              [[ "$bbr" == "true" ]] && features+="🚀 BBR "
-              [[ "$bbg" == "true" ]] && features+="🧱 BBG "
-              [[ "$ttl" == "true" ]] && features+="🌐 TTL "
-              [[ "$ip_set" == "true" ]] && features+="📡 IPSET "
-              [[ "$unicode" == "true" ]] && features+="🔧 Unicode "
-              [[ "$ds" == "true" ]] && features+="🌌 Droidspaces "
-              [[ "$battery_opt" == "true" ]] && features+="🔋 Battery "
+              # Build features string based on boolean values
+              [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
+              [[ "$susfs" == "true" ]] && features+=("ඞ SusFS")
+              [[ "$bbr" == "true" ]] && features+=("🚀 BBR")
+              [[ "$bbg" == "true" ]] && features+=("🛡️ BBG")
+              [[ "$ttl" == "true" ]] && features+=("🌐 TTL")
+              [[ "$ip_set" == "true" ]] && features+=("🧱 IP_SET & IPv6 NAT")
+              [[ "$unicode" == "true" ]] && features+=("🔧 Unicode Fix")
+              [[ "$ds" == "true" ]] && features+=("💻 Droidspaces")
+              [[ "$ntsync" == "true" ]] && features+=("🔃 NTSync")
+              [[ "$battery_opt" == "true" ]] && features+=("🔋 Battery Opt")
               
-              # NTSync strict applicability: Only for Linux 6.1, 6.6, 6.12 if enabled in inputs
-              if [[ "${{ inputs.enable_ntsync }}" == "true" ]]; then
-                if [[ "$kernel_ver" == "6.1"* || "$kernel_ver" == "6.6"* || "$kernel_ver" == "6.12"* ]]; then
-                  features+="🕹️ NTSync "
-                fi
+              if [ ${#features[@]} -eq 0 ]; then
+                features_str="N/A"
+              else
+                features_str=$(printf '%s ' "${features[@]}")
+                features_str=${features_str%" "}
+                features_str=$(echo "$features_str" | awk '
+                  {
+                    for(i=1; i<=NF; i++) {
+                      printf "%s", $i
+                      if (i % 3 == 0 && i < NF) printf "<br>"
+                      else if (i < NF) printf "   "
+                    }
+                  }
+                ')
               fi
-              
-              # WireGuard is standard integrated feature
-              features+="🛂 WireGuard "
             fi
             
-            # Remove any trailing spaces and clean up
-            features=$(echo "$features" | sed 's/ *$//')
-            
-            printf "| %-13s | %-10s | %-16s | %s |\n" \
-              "$model" "$os_ver" "$kernel_ver" "$features" >> release_notes.md
+            printf "| %-13s | %-10s | %-16s | %-48s |\n" \
+              "$model" "$os_ver" "$kernel_ver" "$features_str" >> release_notes.md
           done
           
           if [ ${#device_info[@]} -gt 0 ]; then
@@ -975,30 +1016,20 @@ jobs:
           
           | 🏷️ Feature | 📝 Description |
           |:---|:---|
-          EOF
-          if [ -n "$KSUN_BRANCH" ]; then
-            cat << EOF >> release_notes.md
-          | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
-          EOF
-          elif [ -n "$KSU_BRANCH" ]; then
-            cat << EOF >> release_notes.md
-          | 🔐 **KernelSU** | Kernel-level root solution |
-          EOF
-          fi
-          cat << EOF >> release_notes.md
           | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
           | 🥷 **SUSFS v2.1.0** | Advanced root hiding with Magic Mount support |
+          | 💻 **Droidspaces** | SYSVIPC support for multi-instance app environments |
+          | 🔃 **NTSync** | Fast wine synchronization primitives for emulation |
           | 🛠️ **Manual Hooks** | \`scope_min_manual_hooks_v1.4\` for better app compatibility |
           | 🖧 **BBR** | Improved TCP congestion control |
           | 🛡️ **BBG** | LSM-based Baseband Guard security |
           | 🌐 **TTL Target Support** | Network packet manipulation |
           | 🧱 **IP Set Support** | Advanced firewall capabilities |
-          | 🔄 **NTSync** | Universal NT synchronization primitives for gaming |
-          | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
           | 🏗️ **HMBIRD SCX** | Scheduler extensions for SM8750 devices |
           | ✅ **LTO** | Link Time Optimization |
           | ⚡️ **TMPFS XATTR** | Extended attributes for Mountify support |
           | 🚀 **Optimization** | Memory, I/O, CPU scheduler, network tuning patches |
+          | 🔋 **Battery** | Multi-patch suite for power efficiency and wakelock reduction |
           
           <br>
           
@@ -1014,23 +1045,10 @@ jobs:
           ## 📱 Manager Applications
           
           ### Official Manager
-          EOF
-          if [ -n "$KSUN_BRANCH" ]; then
-            cat << EOF >> release_notes.md
           - **KernelSU Next Manager**  
             → [GitHub](https://github.com/KernelSU-Next/KernelSU-Next)
           - **Wild KernelSU Manager** (Alternative) 
             → [GitHub](https://github.com/WildKernels/KernelSU_Action/releases)
-          EOF
-          elif [ -n "$KSU_BRANCH" ]; then
-            cat << EOF >> release_notes.md
-          - **KernelSU Manager**  
-            → [GitHub Release](https://github.com/tiann/KernelSU/releases)
-          - **Wild KernelSU Manager** (Alternative)  
-            → [GitHub Release](https://github.com/WildKernels/KernelSU_Action/releases)
-          EOF
-          fi
-          cat <<EOF >> release_notes.md
           
           ### SusFS Module
           - **KSU SUSFS Module** (Required for SUSFS features)  
@@ -1066,19 +1084,16 @@ jobs:
           ## 📜 Changelog
           
           ### This Release
-          EOF
-          
-          # Auto-generate changelog from git commits since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            echo "Generating changelog since tag: $LAST_TAG"
-            git log "$LAST_TAG"..HEAD --pretty=format:"          - %s" --no-merges >> release_notes.md
-          else
-            echo "No previous tag found, using last 10 commits"
-            git log --pretty=format:"          - %s" --no-merges -10 >> release_notes.md
-          fi
-          
-          cat <<EOF >> release_notes.md
+          - Updated the kernels as per latest OnePlus updates
+          - Add OnePlus Pad 3 device support.
+          - Add OnePlus 15T device support.
+          - Add OnePlus Turbo 6V device support.
+          - Add OnePlus Turbo 6 device support.
+          - Add Oryon Optimizations for sm8750, sm8845 and sm8850 (Build using ZyC Clang 19 only for sm8750).
+          - Fix Patches updated.
+          - Workflow refactored.
+          - Added ZyC Clang support.
+          - Multi Sepolicy patch is applied.
           
           ### Previous Releases
           See [Releases Page](https://github.com/sakfi/OP_KSUN_FS/releases)
@@ -1160,42 +1175,3 @@ jobs:
               echo "- \`$name\` (${size_mb} MB)" >> $GITHUB_STEP_SUMMARY
             fi
           done
-
-      - name: 📣 Send message to Telegram
-        if: success()
-        env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          GROUP_ID: ${{ secrets.TELEGRAM_GROUP }}
-          CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL }}
-          REL_NAME: ${{ env.RELEASE_NAME }}
-          REL_TAG: ${{ env.NEW_TAG }}
-          REL_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }}
-          REPO: ${{ github.repository }}
-        run: |
-          # Build message (HTML formatted)
-          MESSAGE=$(cat <<EOF
-          <b>🚀 New release published</b>
-          
-          <b>Repository:</b> $REPO
-          <b>Tag:</b> $REL_TAG
-          <b>Title:</b> $REL_NAME
-          <b>Link:</b> $REL_URL
-          EOF
-          )
-
-          send_telegram() {
-            local chat_id="$1"
-            if [ -n "$chat_id" ]; then
-              echo "Sending to $chat_id..."
-              curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-                --data-urlencode "chat_id=$chat_id" \
-                --data-urlencode "text=$MESSAGE" \
-                --data-urlencode "parse_mode=HTML" \
-                -w "\n"
-            else
-              echo "Warning: Chat ID missing"
-            fi
-          }
-
-          send_telegram "$GROUP_ID"
-          send_telegram "$CHANNEL_ID"

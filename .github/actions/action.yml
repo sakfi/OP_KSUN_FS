@@ -28,6 +28,11 @@ inputs:
     required: false
     type: string
     default: O2
+  build_timestamp:
+    description: 'Custom kernel build timestamp shown in uname -a (e.g. "Tue Feb 10 10:01:02 UTC 2026"). Leave empty to use the current build time.'
+    required: false
+    type: string
+    default: ''
   clean:
     description: 'Force clean build without ccache acceleration'
     required: false
@@ -41,6 +46,9 @@ outputs:
   ksu_version:
     description: 'KernelSU version number'
     value: ${{ steps.save_metadata.outputs.ksu_version }}
+  build_timestamp:
+    description: 'Effective kernel build timestamp used in uname -a'
+    value: ${{ steps.save_metadata.outputs.build_timestamp }}
   ksu_type:
     description: 'KernelSU Variant'
     value: ${{ steps.save_metadata.outputs.ksu_type }}
@@ -96,22 +104,19 @@ runs:
         bbr="$OP_BBR"
         ttl="$OP_TTL"
         ip_set="$OP_IP_SET"
-        ntsync="$OP_NTSYNC"
         rust_build="$OP_RUST_BUILD"
         lto="$OP_LTO"
         uname="$OP_UNAME"
         unicode="$OP_UNICODE"
         c_compiler="$OP_C_COMPILER"
         rust_compiler="$OP_RUST_COMPILER"
-        ds="${OP_DS:-false}"
         zyc_compiler="$OP_ZYC_COMPILER"
+        ds="$OP_DS"
+        ntsync="$OP_NTSYNC"
+        battery_opt="$OP_BATTERY_OPT"
         optimize='${{ inputs.optimize_level }}'
         
         errors=()
-        
-        if [[ -n "$ds" && "$ds" != "true" && "$ds" != "false" ]]; then
-          errors+=("Input 'ds' must be 'true' or 'false'. Got: '$ds'")
-        fi
         
         if [[ -z "$model" ]]; then
           errors+=("Input 'model' cannot be empty")
@@ -185,10 +190,6 @@ runs:
           errors+=("Input 'bbg' contains invalid characters. Allowed: 'true' or 'false'. Got: '$bbg'")
         fi
         
-        if [[ -n "$ntsync" && "$ntsync" != "true" && "$ntsync" != "false" ]]; then
-          errors+=("Input 'ntsync' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ntsync'")
-        fi
-        
         if [[ -z "$bbr" ]]; then
           errors+=("Input 'bbr' cannot be empty")
         elif [[ "$bbr" != "true" && "$bbr" != "false" ]]; then
@@ -229,6 +230,24 @@ runs:
           errors+=("Input 'unicode' cannot be empty")
         elif [[ "$unicode" != "true" && "$unicode" != "false" ]]; then
           errors+=("Input 'unicode' contains invalid characters. Allowed: 'true' or 'false'. Got: '$unicode'")
+        fi
+        
+        if [[ -z "$ds" ]]; then
+          errors+=("Input 'ds' cannot be empty")
+        elif [[ "$ds" != "true" && "$ds" != "false" ]]; then
+          errors+=("Input 'ds' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ds'")
+        fi
+        
+        if [[ -z "$ntsync" ]]; then
+          errors+=("Input 'ntsync' cannot be empty")
+        elif [[ "$ntsync" != "true" && "$ntsync" != "false" ]]; then
+          errors+=("Input 'ntsync' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ntsync'")
+        fi
+        
+        if [[ -z "$battery_opt" ]]; then
+          errors+=("Input 'battery_opt' cannot be empty")
+        elif [[ "$battery_opt" != "true" && "$battery_opt" != "false" ]]; then
+          errors+=("Input 'battery_opt' contains invalid characters. Allowed: 'true' or 'false'. Got: '$battery_opt'")
         fi
         
         # OP_C_COMPILER currently has no checks!
@@ -840,7 +859,15 @@ runs:
         KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
         sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile
         
-        sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
+        if [ -f ksu.c ]; then
+          sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
+        fi
+        
+        if [[ "$KSU_VERSION" -gt 33095 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]]; then
+          sed -i 's|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include -I$(KSU_KERNEL_DIR)/include/uapi|' Kbuild
+          sed -i 's|$(src)|$(abspath $(src))|' Kbuild
+          sed -i 's|$(srctree)/$(src)|$(abspath $(srctree)/$(src))|' Kbuild
+        fi
         
         if [ "$KSU_VERSION" -lt 12884 ]; then
           echo "NEED_HOOKS=true" >> $GITHUB_ENV
@@ -926,6 +953,7 @@ runs:
         version_lte() {
           [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$1" ]
         }
+        
         if version_lte "${susfs_version:1}" "1.5.12"; then
           echo "NEED_HOOKS=true" >> $GITHUB_ENV
         else
@@ -971,8 +999,10 @@ runs:
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
-              echo "Patching Multi-manager Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+              if [ "$KSUVER" -le 33095 ]; then
+                echo "Patching Multi-manager Support for SusFS kernel!"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+              fi
               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
                 echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
                 patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
@@ -994,8 +1024,10 @@ runs:
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
-              echo "Patching Multi-manager Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+              if [ "$KSUVER" -le 33095 ]; then
+                echo "Patching Multi-manager Support for SusFS kernel!"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+              fi
               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
                 echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
                 patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
@@ -1236,16 +1268,14 @@ runs:
 
     - name: Apply Battery Optimization Suite
       shell: bash
+      if: ${{ env.OP_BATTERY_OPT == 'true' }}
       run: |
         set -euo pipefail
         echo "::group::Apply Battery Optimization Suite"
         cd "$COMMON_KERNEL_FOLDER"
-        
         BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
-        
         if [ -d "$BATTERY_PATCH_DIR" ]; then
-          echo "?? Applying 4-patch Battery Optimization Suite..."
-          # Explicitly apply the 4 patches as requested
+          echo "Applying 4-patch Battery Optimization Suite..."
           for patch_name in "mem_opt.patch" "sched_efficiency.patch" "silence_logging.patch" "wakelock_reduction.patch"; do
             patch_file="$BATTERY_PATCH_DIR/$patch_name"
             if [ -f "$patch_file" ]; then
@@ -1294,155 +1324,36 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "::group::Add BBR"
-        cd "$COMMON_KERNEL_FOLDER"
-        
-        # Sourcing: Strictly Upstream
-        BBR_PATCH="$KERNEL_PATCHES_FOLDER/common/bbr.patch"
-        if [ -f "$BBR_PATCH" ]; then
-          echo "Applying Upstream BBR patch..."
-          patch -p1 --forward < "$BBR_PATCH" || true
-        fi
-        
-        echo "Configuring BBR in gki_defconfig..."
+        echo "Add BBR"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_TCP_CONG_ADVANCED=y
         CONFIG_TCP_CONG_BBR=y
         CONFIG_NET_SCH_FQ=y
         CONFIG_NET_SCH_FQ_CODEL=y
         EOF
-        echo "✅ BBR configured"
-        echo "::endgroup::"
-
-    - name: Add NTSync
-      if: ${{ env.OP_NTSYNC == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "::group::Add NTSync Support"
-        cd "$COMMON_KERNEL_FOLDER"
-        KERNEL_VERSION="${{ env.KERNEL_VER }}"
-        
-        # Sourcing Priority: Upstream -> Local Repo -> Skip
-        NTSYNC_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ntsync/$KERNEL_VERSION"
-        NTSYNC_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/ntsync_patches/$KERNEL_VERSION"
-        
-        if [ -d "$NTSYNC_UPSTREAM" ]; then
-          NTSYNC_PATCH_DIR="$NTSYNC_UPSTREAM"
-          echo "?? Using Upstream NTSync patches for $KERNEL_VERSION"
-        elif [ -d "$NTSYNC_REPO" ]; then
-          NTSYNC_PATCH_DIR="$NTSYNC_REPO"
-          echo "?? Using Local Repo NTSync patches for $KERNEL_VERSION"
-        else
-          NTSYNC_PATCH_DIR=""
-        fi
-        
-        if [ -n "$NTSYNC_PATCH_DIR" ]; then
-          for patch_file in "$NTSYNC_PATCH_DIR"/*.patch; do
-             if [ -f "$patch_file" ]; then
-               echo "Applying NTSync patch: $(basename "$patch_file")"
-               patch -p1 --forward < "$patch_file" || true
-             fi
-          done
-          
-          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
-        CONFIG_NTSYNC=y
-        EOF
-          echo "OP_NTSYNC_STATUS=Applied" >> "$GITHUB_ENV"
-          echo "✅ NTSync configured for $KERNEL_VERSION"
-        else
-          echo "OP_NTSYNC_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
-          echo "::warning::NTSync patches not found in Upstream or Repo for $KERNEL_VERSION. Skipping."
-        fi
-        echo "::endgroup::"
-
-    - name: Add Droidspaces
-      if: ${{ env.OP_DS == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "::group::Add Droidspaces Support"
-        cd "$COMMON_KERNEL_FOLDER"
-        
-        # Sourcing Priority: Upstream -> Local Repo -> Skip
-        DS_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ds"
-        DS_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/droidspaces_patches"
-        
-        if [ -d "$DS_UPSTREAM" ]; then
-          DS_PATCH_DIR="$DS_UPSTREAM"
-          echo "?? Using Upstream Droidspaces patches"
-        elif [ -d "$DS_REPO" ]; then
-          DS_PATCH_DIR="$DS_REPO"
-          echo "?? Using Local Repo Droidspaces patches"
-        else
-          DS_PATCH_DIR=""
-        fi
-        
-        if [ -n "$DS_PATCH_DIR" ]; then
-          for patch_file in "$DS_PATCH_DIR"/*.patch; do
-             if [ -f "$patch_file" ]; then
-               echo "Applying Droidspaces patch: $(basename "$patch_file")"
-               patch -p1 --forward < "$patch_file" || true
-             fi
-          done
-          echo "OP_DS_STATUS=Applied" >> "$GITHUB_ENV"
-          echo "✅ Droidspaces configured"
-        else
-          echo "OP_DS_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
-          echo "::warning::Droidspaces patches not found in Upstream or Repo. Skipping."
-        fi
-        echo "::endgroup::"
 
     - name: Add TTL Target Support
       if: ${{ env.OP_TTL == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
-        echo "::group::Add TTL Target Support"
-        cd "$COMMON_KERNEL_FOLDER"
-        
-        # Sourcing: Strictly Upstream
-        TTL_PATCH="$KERNEL_PATCHES_FOLDER/common/ttl_target.patch"
-        if [ -f "$TTL_PATCH" ]; then
-          echo "Applying Upstream TTL patch..."
-          patch -p1 --forward < "$TTL_PATCH" || true
-        fi
-        
-        echo "Configuring TTL in gki_defconfig..."
+        echo "Add TTL Target Support"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_IP_NF_TARGET_TTL=y
         CONFIG_IP6_NF_TARGET_HL=y
         CONFIG_IP6_NF_MATCH_HL=y
         EOF
-        echo "✅ TTL configured"
-        echo "::endgroup::"
 
     - name: Add IP SET & IPv6_NAT Support
       if: ${{ env.OP_IP_SET == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
-        echo "::group::Add IP SET & IPv6_NAT Support"
+        echo "Add IP SET & IPv6_NAT Support"
         cd "$COMMON_KERNEL_FOLDER"
         KERNEL_VERSION="${{ env.KERNEL_VER }}"
         
-        # Sourcing Priority: Strictly Upstream
-        IPSET_PATCH="$KERNEL_PATCHES_FOLDER/common/ip_set.patch"
-        IPV6_NAT_PATCH="$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
-        
-        if [ -f "$IPSET_PATCH" ]; then
-          echo "Applying Upstream IP_SET patch..."
-          patch -p1 --forward < "$IPSET_PATCH" || true
-        fi
-        
-        if [ -f "$IPV6_NAT_PATCH" ]; then
-          echo "Applying Upstream IPv6_NAT_FIX patch..."
-          patch -p1 -F 3 < "$IPV6_NAT_PATCH" || true
-        fi
-        
-        if [[ "$KERNEL_VERSION" == "6.12" ]] || [[ "$OP_BRANCH" == wild/mt* ]]; then
-            echo "::debug::Skipping CONFIG_BPF_STREAM_PARSER for $KERNEL_VERSION / $OP_BRANCH"
-        else
+        if [[ "$KERNEL_VERSION" != "6.12" ]]; then
             echo "CONFIG_BPF_STREAM_PARSER=y" >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
         fi
         
@@ -1470,39 +1381,117 @@ runs:
         CONFIG_IP6_NF_NAT=y
         CONFIG_IP6_NF_TARGET_MASQUERADE=y
         EOF
-        echo "✅ IP SET & IPv6_NAT configured"
-        echo "::endgroup::"
+        
+        patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
 
-    - name: Add WireGuard Support
+    - name: Add Droidspaces support
       shell: bash
+      if: ${{ env.OP_DS == 'true' }}
       run: |
         set -euo pipefail
-        echo "::group::Add WireGuard Support"
+        echo "::group::Add Droidspaces Support"
         cd "$COMMON_KERNEL_FOLDER"
         
-        # 1. Enable Configuration globally
-        echo "Enabling WireGuard in gki_defconfig"
-        cat >> "arch/arm64/configs/gki_defconfig" <<EOF
-        CONFIG_WIREGUARD=y
-        CONFIG_NET_UDP_TUNNEL=y
-        CONFIG_CRYPTO_CURVE25519=y
-        CONFIG_CRYPTO_CHACHA20POLY1305=y
+        echo "Applying patch to enable SYSVIPC without breaking ABI"
+        case "$OP_BRANCH" in
+          wild/sm8550|wild/sm7550)
+            if [ -f "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch" ]; then
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch" || true
+            else
+              echo "::warning::Droidspaces patch 1_2_3 not found. Skipping."
+            fi
+            ;;
+          *)
+            if [ -f "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch" ]; then
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch" || true
+            else
+              echo "::warning::Droidspaces patch 6_7_8 not found. Skipping."
+            fi
+            ;;
+        esac
+        
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_SYSVIPC=y
+        CONFIG_DEVTMPFS=y
+        CONFIG_PID_NS=y
+        CONFIG_POSIX_MQUEUE=y
+        CONFIG_NETFILTER_XT_TARGET_REJECT=y
+        CONFIG_NETFILTER_XT_TARGET_LOG=y
+        CONFIG_NETFILTER_XT_MATCH_RECENT=y
         EOF
         
-        # 2. Apply Patches
-        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
-        if [ -d "$WIREGUARD_PATCH_DIR" ]; then
-          for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
-            if [ -f "$patch_file" ]; then
-              echo "Applying WireGuard patch: $(basename "$patch_file")"
-              patch -p1 --forward < "$patch_file" || true
+        echo "✅ Droidspaces Support applied"
+        echo "::endgroup::"
+
+    - name: Apply NTSync Patch
+      shell: bash
+      if: ${{ env.OP_NTSYNC == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply NTSync patch"
+        cd "$COMMON_KERNEL_FOLDER"
+        NTSYNC_FOLDER="$KERNEL_PATCHES_FOLDER/common/ntsync"
+        NATIVE_NTSYNC_FOLDER="${GITHUB_WORKSPACE}/ntsync_patches"
+        GKI_KEY="${ANDROID_VER}-${KERNEL_VER}"
+        NTSYNC_PATCH=""
+        NTSYNC_BASE=""
+        
+        validate_and_set_patch() {
+          local test_patch="$1"
+          if [ -f "$test_patch" ]; then
+            if patch -p1 --forward --dry-run < "$test_patch" >/dev/null 2>&1; then
+               echo "$test_patch"
+               return 0
+            else
+               echo "::warning::Patch $test_patch conflicted during dry-run. Rejecting." >&2
+               return 1
             fi
-          done
-        else
-          echo "::warning::WireGuard patches not found in Repos. Skipping."
+          fi
+          return 1
+        }
+        
+        if [ -f "$NTSYNC_FOLDER/ntsync_base.patch" ]; then
+          NTSYNC_BASE="$NTSYNC_FOLDER/ntsync_base.patch"
+        elif [ -f "$NATIVE_NTSYNC_FOLDER/ntsync_base.patch" ]; then
+          NTSYNC_BASE="$NATIVE_NTSYNC_FOLDER/ntsync_base.patch"
         fi
         
-        echo "✅ WireGuard integrated and optimized"
+        echo "Validating path candidates for NTSync..."
+        if [[ "$OP_MODEL" == "OP10r" || "$OP_MODEL" == "OP-ACE-RACE" ]] && [[ "$OP_OS_VERSION" == "OOS15" ]]; then
+          NTSYNC_PATCH=$(validate_and_set_patch "$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch") || \
+          NTSYNC_PATCH=$(validate_and_set_patch "$NATIVE_NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch") || true
+        else
+          NTSYNC_PATCH=$(validate_and_set_patch "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch") || \
+          NTSYNC_PATCH=$(validate_and_set_patch "$NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch") || \
+          NTSYNC_PATCH=$(validate_and_set_patch "$NATIVE_NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}_${OP_OS_VERSION}.patch") || \
+          NTSYNC_PATCH=$(validate_and_set_patch "$NATIVE_NTSYNC_FOLDER/ntsync_compat_${GKI_KEY}.patch") || true
+        fi
+        
+        if [ -z "$NTSYNC_PATCH" ]; then
+          echo "::warning::Clean NTSync patch not found for ${GKI_KEY}. Fallback chain exhausted. Skipping NTSync entirely."
+          echo "::endgroup::"
+          exit 0
+        fi
+        
+        echo "Using patch: $(basename $NTSYNC_PATCH)"
+        if [ "$ANDROID_VER" = "android16" ] && [ "$KERNEL_VER" = "6.12" ]; then
+          echo "Removing pre-existing ntsync files for android16-6.12"
+          rm -f include/uapi/linux/ntsync.h
+          rm -f drivers/misc/ntsync.c
+        fi
+        
+        echo "Patching $(basename $NTSYNC_PATCH)!"
+        patch -p1 --forward < "$NTSYNC_PATCH"
+        
+        if [ -n "$NTSYNC_BASE" ]; then
+          echo "Patching ntsync_base!"
+          patch -p1 --forward < "$NTSYNC_BASE" || true
+        fi
+        
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_NTSYNC=y
+        EOF
+        echo "✅ NTSync patch applied cleanly"
         echo "::endgroup::"
 
     - name: Add Build based configs
@@ -1525,7 +1514,10 @@ runs:
         set -euo pipefail
         echo "Add Build based configs"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
-        CONFIG_ANDROID_BINDER_IPC_RUST=m
+        CONFIG_ANDROID_BINDER_IPC_RUST=y
+        CONFIG_CMDLINE="module_blacklist=rust_binder"
+        CONFIG_CMDLINE_EXTEND=y
+        CONFIG_CMDLINE_FORCE=n
         CONFIG_RUST=y
         EOF
 
@@ -1539,6 +1531,7 @@ runs:
         echo "kernel_version=${{ env.KERNEL_FULL_VER }}" >> "$GITHUB_OUTPUT"
         echo "ksu_version=${KSUVER:-unknown}" >> "$GITHUB_OUTPUT"
         echo "ksu_type=${{ inputs.ksu_type }}" >> "$GITHUB_OUTPUT"
+        echo "build_timestamp=${EFFECTIVE_BUILD_TIMESTAMP:-unknown}" >> "$GITHUB_OUTPUT"
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           echo "susfs_version=${SUSVER:-unknown}" >> "$GITHUB_OUTPUT"
         fi
@@ -1600,7 +1593,14 @@ runs:
         
         KERNEL_BUILD_DATE=$(date -u)
         export SOURCE_DATE_EPOCH=$COMMIT_TIMESTAMP
-        export KBUILD_BUILD_TIMESTAMP="$KERNEL_BUILD_DATE"
+        if [ -n "${{ inputs.build_timestamp }}" ]; then
+          export KBUILD_BUILD_TIMESTAMP="${{ inputs.build_timestamp }}"
+          echo "📅 Using custom build timestamp: $KBUILD_BUILD_TIMESTAMP"
+        else
+          export KBUILD_BUILD_TIMESTAMP="$KERNEL_BUILD_DATE"
+          echo "📅 Using current UTC build timestamp: $KBUILD_BUILD_TIMESTAMP"
+        fi
+        echo "EFFECTIVE_BUILD_TIMESTAMP=$KBUILD_BUILD_TIMESTAMP" >> "$GITHUB_ENV"
         export KBUILD_BUILD_USER="${BUILD_USER:-kernel}"
         export KBUILD_BUILD_HOST="${BUILD_HOST:-kleaf}"
         export KBUILD_BUILD_VERSION=1
@@ -1939,6 +1939,8 @@ runs:
           rm -f custom_banner.sh banner
         fi
         
+        sed -i 's/do.check_boot_version=.*/do.check_boot_version=1/' anykernel.sh
+        
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
         else
@@ -2013,8 +2015,6 @@ runs:
           echo "TTL: ${{ env.OP_TTL }}"
           echo "IP_SET & IPv6 NAT: ${{ env.OP_IP_SET }}"
           echo "Unicode Fix: ${{ env.OP_UNICODE }}"
-          echo "NTSync: ${OP_NTSYNC_STATUS:-Disabled}"
-          echo "Droidspaces: ${OP_DS_STATUS:-Disabled}"
           echo ""
           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
           echo "Compiler: ${CLANG_VERSION:-unknown}"
@@ -2078,8 +2078,6 @@ runs:
           echo "| **TTL** | ${{ env.OP_TTL }} |"
           echo "| **IP_SET & IPv6 NAT** | ${{ env.OP_IP_SET }} |"
           echo "| **Unicode Fix** | ${{ env.OP_UNICODE }} |"
-          echo "| **NTSync** | ${OP_NTSYNC_STATUS:-Disabled} |"
-          echo "| **Droidspaces** | ${OP_DS_STATUS:-Disabled} |"
           
           echo ""
           echo "### 📊 Build Metrics"
