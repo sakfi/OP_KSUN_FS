@@ -38,5 +38,3 @@ diff --git a/mm/vmscan.c b/mm/vmscan.c
  		finish_wait(&pgdat->kswapd_wait, &wait);
  		return;
  	}
--- 
-2.43.0

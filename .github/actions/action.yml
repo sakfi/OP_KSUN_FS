@@ -1337,16 +1337,24 @@ runs:
         BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
         if [ -d "$BATTERY_PATCH_DIR" ]; then
           echo "Applying 4-patch Battery Optimization Suite..."
+          success_count=0
+          total_count=0
           for patch_name in "mem_opt.patch" "sched_efficiency.patch" "silence_logging.patch" "wakelock_reduction.patch"; do
             patch_file="$BATTERY_PATCH_DIR/$patch_name"
             if [ -f "$patch_file" ]; then
+              total_count=$((total_count+1))
               echo "Applying: $patch_name"
-              patch -p1 --forward < "$patch_file" || true
+              if patch -p1 --forward < "$patch_file"; then
+                echo "✅ $patch_name applied successfully"
+                success_count=$((success_count+1))
+              else
+                echo "::warning::$patch_name failed to apply (likely context mismatch). Skipping."
+              fi
             else
               echo "::warning::Battery patch $patch_name missing from suite folder."
             fi
           done
-          echo "✅ Battery optimization suite applied"
+          echo "✅ Applied $success_count/$total_count battery optimizations"
         else
           echo "::warning::Battery optimization suite folder missing. Skipping."
         fi
@@ -1562,6 +1570,14 @@ runs:
         set -euo pipefail
         echo "::group::Add WireGuard Support"
         cd "$COMMON_KERNEL_FOLDER"
+        
+        # 1. Download official WireGuard source
+        echo "Downloading WireGuard source from official repository..."
+        git clone --depth 1 https://github.com/WireGuard/wireguard-linux-compat.git /tmp/wireguard-source
+        mkdir -p drivers/net/wireguard
+        cp -af /tmp/wireguard-source/src/* drivers/net/wireguard/
+        
+        # 2. Configure Build Linkage
         echo "Enabling WireGuard in gki_defconfig"
         cat >> "arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_WIREGUARD=y
@@ -1569,17 +1585,27 @@ runs:
         CONFIG_CRYPTO_CURVE25519=y
         CONFIG_CRYPTO_CHACHA20POLY1305=y
         EOF
+        
+        # 3. Apply linkage and optimization patches
         WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
         if [ -d "$WIREGUARD_PATCH_DIR" ]; then
+          success_count=0
+          total_count=0
           for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
             if [ -f "$patch_file" ]; then
+              total_count=$((total_count+1))
               echo "Applying WireGuard patch: $(basename "$patch_file")"
-              patch -p1 --forward < "$patch_file" || true
+              if patch -p1 --forward < "$patch_file"; then
+                echo "✅ $(basename "$patch_file") applied successfully"
+                success_count=$((success_count+1))
+              else
+                echo "::warning::$(basename "$patch_file") failed to apply (likely context mismatch). skipping."
+              fi
             fi
           done
-          echo "✅ WireGuard integrated and optimized"
+          echo "✅ WireGuard integrated and $success_count/$total_count patches applied"
         else
-          echo "::warning::WireGuard patches not found in Repos. Skipping."
+          echo "::warning::WireGuard patches not found. Using base linkage."
         fi
         echo "::endgroup::"
 

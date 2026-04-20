@@ -12,31 +12,30 @@ Optimizes wakelock management to reduce power drain during idle.
 diff --git a/kernel/power/wakelock.c b/kernel/power/wakelock.c
 --- a/kernel/power/wakelock.c
 +++ b/kernel/power/wakelock.c
-@@ -20,6 +20,11 @@
+@@ -10,6 +10,11 @@
+ 
  #include <linux/device.h>
  #include <linux/suspend.h>
- 
++
 +/* Battery: Increase default wakelock expiration check interval */
 +#ifndef WAKELOCK_EXPIRE_INTERVAL
 +#define WAKELOCK_EXPIRE_INTERVAL (2 * HZ)
 +#endif
-+
+ 
  static DEFINE_MUTEX(wakelocks_lock);
- static LIST_HEAD(run_wakelocks);
  
 diff --git a/kernel/power/main.c b/kernel/power/main.c
 --- a/kernel/power/main.c
 +++ b/kernel/power/main.c
-@@ -25,6 +25,10 @@
+@@ -11,6 +11,10 @@
+ #include <linux/export.h>
+ #include <linux/suspend.h>
  #include <linux/suspend_stats.h>
- #include <trace/events/power.h>
- 
++
 +/* Battery: Allow more slack for background power state entries */
 +#ifndef DEFAULT_SUSPEND_DELAY
 +#define DEFAULT_SUSPEND_DELAY 500
 +#endif
-+
- #include "power.h"
  
--- 
-2.43.0
+ #include <trace/events/power.h>
+ #include <linux/freezer.h>
