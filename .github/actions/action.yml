@@ -103,10 +103,15 @@ runs:
         unicode="$OP_UNICODE"
         c_compiler="$OP_C_COMPILER"
         rust_compiler="$OP_RUST_COMPILER"
+        ds="${OP_DS:-false}"
         zyc_compiler="$OP_ZYC_COMPILER"
         optimize='${{ inputs.optimize_level }}'
         
         errors=()
+        
+        if [[ -n "$ds" && "$ds" != "true" && "$ds" != "false" ]]; then
+          errors+=("Input 'ds' must be 'true' or 'false'. Got: '$ds'")
+        fi
         
         if [[ -z "$model" ]]; then
           errors+=("Input 'model' cannot be empty")
@@ -1230,6 +1235,33 @@ runs:
         echo "✅ Other patches applied"
         echo "::endgroup::"
 
+    - name: Apply Battery Optimization Suite
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Apply Battery Optimization Suite"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
+        
+        if [ -d "$BATTERY_PATCH_DIR" ]; then
+          echo "?? Applying 4-patch Battery Optimization Suite..."
+          # Explicitly apply the 4 patches as requested
+          for patch_name in "mem_opt.patch" "sched_efficiency.patch" "silence_logging.patch" "wakelock_reduction.patch"; do
+            patch_file="$BATTERY_PATCH_DIR/$patch_name"
+            if [ -f "$patch_file" ]; then
+              echo "Applying: $patch_name"
+              patch -p1 --forward < "$patch_file" || true
+            else
+              echo "::warning::Battery patch $patch_name missing from suite folder."
+            fi
+          done
+          echo "✅ Battery optimization suite applied"
+        else
+          echo "::warning::Battery optimization suite folder missing. Skipping."
+        fi
+        echo "::endgroup::"
+
     - name: Apply Unicode Fix Patch
       shell: bash
       if: ${{ env.OP_UNICODE == 'true' }}
@@ -1263,13 +1295,25 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "Add BBR"
+        echo "::group::Add BBR"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        # Sourcing: Strictly Upstream
+        BBR_PATCH="$KERNEL_PATCHES_FOLDER/common/bbr.patch"
+        if [ -f "$BBR_PATCH" ]; then
+          echo "Applying Upstream BBR patch..."
+          patch -p1 --forward < "$BBR_PATCH" || true
+        fi
+        
+        echo "Configuring BBR in gki_defconfig..."
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_TCP_CONG_ADVANCED=y
         CONFIG_TCP_CONG_BBR=y
         CONFIG_NET_SCH_FQ=y
         CONFIG_NET_SCH_FQ_CODEL=y
         EOF
+        echo "✅ BBR configured"
+        echo "::endgroup::"
 
     - name: Add NTSync
       if: ${{ env.OP_NTSYNC == 'true' }}
@@ -1280,9 +1324,21 @@ runs:
         cd "$COMMON_KERNEL_FOLDER"
         KERNEL_VERSION="${{ env.KERNEL_VER }}"
         
-        NTSYNC_PATCH_DIR="$GITHUB_WORKSPACE/ntsync_patches/$KERNEL_VERSION"
+        # Sourcing Priority: Upstream -> Local Repo -> Skip
+        NTSYNC_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ntsync/$KERNEL_VERSION"
+        NTSYNC_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/ntsync_patches/$KERNEL_VERSION"
         
-        if [ -d "$NTSYNC_PATCH_DIR" ]; then
+        if [ -d "$NTSYNC_UPSTREAM" ]; then
+          NTSYNC_PATCH_DIR="$NTSYNC_UPSTREAM"
+          echo "?? Using Upstream NTSync patches for $KERNEL_VERSION"
+        elif [ -d "$NTSYNC_REPO" ]; then
+          NTSYNC_PATCH_DIR="$NTSYNC_REPO"
+          echo "?? Using Local Repo NTSync patches for $KERNEL_VERSION"
+        else
+          NTSYNC_PATCH_DIR=""
+        fi
+        
+        if [ -n "$NTSYNC_PATCH_DIR" ]; then
           for patch_file in "$NTSYNC_PATCH_DIR"/*.patch; do
              if [ -f "$patch_file" ]; then
                echo "Applying NTSync patch: $(basename "$patch_file")"
@@ -1293,9 +1349,48 @@ runs:
           cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_NTSYNC=y
         EOF
+          echo "OP_NTSYNC_STATUS=Applied" >> "$GITHUB_ENV"
           echo "✅ NTSync configured for $KERNEL_VERSION"
         else
-          echo "::warning::NTSync patches not found for kernel $KERNEL_VERSION. Skipping."
+          echo "OP_NTSYNC_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
+          echo "::warning::NTSync patches not found in Upstream or Repo for $KERNEL_VERSION. Skipping."
+        fi
+        echo "::endgroup::"
+
+    - name: Add Droidspaces
+      if: ${{ env.OP_DS == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Add Droidspaces Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        # Sourcing Priority: Upstream -> Local Repo -> Skip
+        DS_UPSTREAM="$KERNEL_PATCHES_FOLDER/next/ds"
+        DS_REPO="$GITHUB_WORKSPACE/configs/kernel_patches/droidspaces_patches"
+        
+        if [ -d "$DS_UPSTREAM" ]; then
+          DS_PATCH_DIR="$DS_UPSTREAM"
+          echo "?? Using Upstream Droidspaces patches"
+        elif [ -d "$DS_REPO" ]; then
+          DS_PATCH_DIR="$DS_REPO"
+          echo "?? Using Local Repo Droidspaces patches"
+        else
+          DS_PATCH_DIR=""
+        fi
+        
+        if [ -n "$DS_PATCH_DIR" ]; then
+          for patch_file in "$DS_PATCH_DIR"/*.patch; do
+             if [ -f "$patch_file" ]; then
+               echo "Applying Droidspaces patch: $(basename "$patch_file")"
+               patch -p1 --forward < "$patch_file" || true
+             fi
+          done
+          echo "OP_DS_STATUS=Applied" >> "$GITHUB_ENV"
+          echo "✅ Droidspaces configured"
+        else
+          echo "OP_DS_STATUS=Skipped (Missing Patches)" >> "$GITHUB_ENV"
+          echo "::warning::Droidspaces patches not found in Upstream or Repo. Skipping."
         fi
         echo "::endgroup::"
 
@@ -1304,21 +1399,47 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "Add TTL Target Support"
+        echo "::group::Add TTL Target Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        # Sourcing: Strictly Upstream
+        TTL_PATCH="$KERNEL_PATCHES_FOLDER/common/ttl_target.patch"
+        if [ -f "$TTL_PATCH" ]; then
+          echo "Applying Upstream TTL patch..."
+          patch -p1 --forward < "$TTL_PATCH" || true
+        fi
+        
+        echo "Configuring TTL in gki_defconfig..."
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_IP_NF_TARGET_TTL=y
         CONFIG_IP6_NF_TARGET_HL=y
         CONFIG_IP6_NF_MATCH_HL=y
         EOF
+        echo "✅ TTL configured"
+        echo "::endgroup::"
 
     - name: Add IP SET & IPv6_NAT Support
       if: ${{ env.OP_IP_SET == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
-        echo "Add IP SET & IPv6_NAT Support"
+        echo "::group::Add IP SET & IPv6_NAT Support"
         cd "$COMMON_KERNEL_FOLDER"
         KERNEL_VERSION="${{ env.KERNEL_VER }}"
+        
+        # Sourcing Priority: Strictly Upstream
+        IPSET_PATCH="$KERNEL_PATCHES_FOLDER/common/ip_set.patch"
+        IPV6_NAT_PATCH="$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
+        
+        if [ -f "$IPSET_PATCH" ]; then
+          echo "Applying Upstream IP_SET patch..."
+          patch -p1 --forward < "$IPSET_PATCH" || true
+        fi
+        
+        if [ -f "$IPV6_NAT_PATCH" ]; then
+          echo "Applying Upstream IPv6_NAT_FIX patch..."
+          patch -p1 -F 3 < "$IPV6_NAT_PATCH" || true
+        fi
         
         if [[ "$KERNEL_VERSION" == "6.12" ]] || [[ "$OP_BRANCH" == wild/mt* ]]; then
             echo "::debug::Skipping CONFIG_BPF_STREAM_PARSER for $KERNEL_VERSION / $OP_BRANCH"
@@ -1350,8 +1471,8 @@ runs:
         CONFIG_IP6_NF_NAT=y
         CONFIG_IP6_NF_TARGET_MASQUERADE=y
         EOF
-        
-        patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
+        echo "✅ IP SET & IPv6_NAT configured"
+        echo "::endgroup::"
 
     - name: Add WireGuard Support
       shell: bash
@@ -1370,7 +1491,7 @@ runs:
         EOF
         
         # 2. Apply Patches
-        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/wireguard_patches"
+        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
         if [ -d "$WIREGUARD_PATCH_DIR" ]; then
           for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
             if [ -f "$patch_file" ]; then
@@ -1378,6 +1499,8 @@ runs:
               patch -p1 --forward < "$patch_file" || true
             fi
           done
+        else
+          echo "::warning::WireGuard patches not found in Repos. Skipping."
         fi
         
         echo "✅ WireGuard integrated and optimized"
@@ -1891,6 +2014,8 @@ runs:
           echo "TTL: ${{ env.OP_TTL }}"
           echo "IP_SET & IPv6 NAT: ${{ env.OP_IP_SET }}"
           echo "Unicode Fix: ${{ env.OP_UNICODE }}"
+          echo "NTSync: ${OP_NTSYNC_STATUS:-Disabled}"
+          echo "Droidspaces: ${OP_DS_STATUS:-Disabled}"
           echo ""
           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
           echo "Compiler: ${CLANG_VERSION:-unknown}"
@@ -1954,6 +2079,8 @@ runs:
           echo "| **TTL** | ${{ env.OP_TTL }} |"
           echo "| **IP_SET & IPv6 NAT** | ${{ env.OP_IP_SET }} |"
           echo "| **Unicode Fix** | ${{ env.OP_UNICODE }} |"
+          echo "| **NTSync** | ${OP_NTSYNC_STATUS:-Disabled} |"
+          echo "| **Droidspaces** | ${OP_DS_STATUS:-Disabled} |"
           
           echo ""
           echo "### 📊 Build Metrics"
