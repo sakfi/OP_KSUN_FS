@@ -1341,18 +1341,18 @@ runs:
         # Power management slack
         sed -i '/#include <linux\/suspend_stats.h>/a \
 \
-/* Battery: Allow more slack for background power state entries */\
-#ifndef DEFAULT_SUSPEND_DELAY\
-#define DEFAULT_SUSPEND_DELAY 500\
-#endif' kernel/power/main.c || true
+        /* Battery: Allow more slack for background power state entries */\
+        #ifndef DEFAULT_SUSPEND_DELAY\
+        #define DEFAULT_SUSPEND_DELAY 500\
+        #endif' kernel/power/main.c || true
         
         # Memory reclaim efficiency
         sed -i '/#include <linux\/pagemap.h>/a \
 \
-/* Battery optimization: Reduce kswapd wakeups on light pressure */\
-#ifndef CONFIG_KSWAPD_SLEEP_DEFERRED_MS\
-#define KSWAPD_SLEEP_DEFERRED_MS 1000\
-#endif' mm/vmscan.c || true
+        /* Battery optimization: Reduce kswapd wakeups on light pressure */\
+        #ifndef CONFIG_KSWAPD_SLEEP_DEFERRED_MS\
+        #define KSWAPD_SLEEP_DEFERRED_MS 1000\
+        #endif' mm/vmscan.c || true
         
         # 2. Apply remaining optimization patches (Sanitized)
         BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
@@ -1612,7 +1612,7 @@ runs:
         CONFIG_NET_UDP_TUNNEL=y
         CONFIG_CRYPTO_CURVE25519=y
         CONFIG_CRYPTO_CHACHA20POLY1305=y
-        EOF
+EOF
         
         # 4. Apply performance optimizations
         WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
