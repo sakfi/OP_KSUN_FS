@@ -1349,7 +1349,7 @@ runs:
         if [ -d "$BATTERY_PATCH_DIR" ]; then
           success_count=0
           total_count=0
-          for patch_name in "sched_efficiency.patch" "silence_logging.patch"; do
+          for patch_name in "silence_logging.patch"; do
             patch_file="$BATTERY_PATCH_DIR/$patch_name"
             if [ -f "$patch_file" ]; then
               total_count=$((total_count+1))
@@ -1879,7 +1879,7 @@ runs:
         fi
 
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
-        KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
+        KCPPFLAGS="${KCPPFLAGS:-}"
         
         echo "============================================"
         echo "🔧 Build Configuration"
