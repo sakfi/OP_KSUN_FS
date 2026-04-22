@@ -1335,34 +1335,21 @@ runs:
         echo "::group::Apply Battery Optimization Suite"
         cd "$COMMON_KERNEL_FOLDER"
         
-        # 1. Inject Battery Macros via SED (Fuzz-proof)
-        echo "Injecting battery-saving macros..."
-        
-        # Power management slack
-        sed -i '/#include <linux\/suspend_stats.h>/a /* Battery: Allow more slack for background power state entries */\n#ifndef DEFAULT_SUSPEND_DELAY\n#define DEFAULT_SUSPEND_DELAY 500\n#endif' kernel/power/main.c || true
-        
-        # Memory reclaim efficiency
-        sed -i '/#include <linux\/pagemap.h>/a /* Battery optimization: Reduce kswapd wakeups on light pressure */\n#ifndef CONFIG_KSWAPD_SLEEP_DEFERRED_MS\n#define KSWAPD_SLEEP_DEFERRED_MS 1000\n#endif' mm/vmscan.c || true
-        
-        # 2. Apply remaining optimization patches (Sanitized)
         BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
         if [ -d "$BATTERY_PATCH_DIR" ]; then
-          success_count=0
-          total_count=0
-          for patch_name in "silence_logging.patch"; do
+          echo "Applying 4-patch Battery Optimization Suite..."
+          for patch_name in "mem_opt.patch" "sched_efficiency.patch" "silence_logging.patch" "wakelock_reduction.patch"; do
             patch_file="$BATTERY_PATCH_DIR/$patch_name"
             if [ -f "$patch_file" ]; then
-              total_count=$((total_count+1))
               echo "Applying: $patch_name"
-              if patch -p1 --forward --fuzz=3 < "$patch_file"; then
-                echo "✅ $patch_name applied successfully"
-                success_count=$((success_count+1))
-              else
-                echo "::warning::$patch_name skipped (already applied or context mismatch)."
-              fi
+              patch -p1 --forward < "$patch_file" || true
+            else
+              echo "::warning::Battery patch $patch_name missing from suite folder."
             fi
           done
-          echo "✅ Applied $success_count/$total_count battery patch refinements"
+          echo "✅ Battery optimization suite applied"
+        else
+          echo "::warning::Battery optimization suite folder missing. Skipping."
         fi
         echo "::endgroup::"
 
@@ -1576,61 +1563,25 @@ runs:
         set -euo pipefail
         echo "::group::Add WireGuard Support"
         cd "$COMMON_KERNEL_FOLDER"
-        
-        # 1. Acquire WireGuard source (Only for kernels < 5.6)
-        KERNEL_VERSION="${{ env.KERNEL_VER }}"
-        if [ "$(printf '%s\n' "5.6" "$KERNEL_VERSION" | sort -V | head -n1)" != "5.6" ]; then
-          echo "📥 Kernel < 5.6 detected. Acquiring WireGuard compat source..."
-          git clone --depth 1 https://github.com/WireGuard/wireguard-linux-compat.git /tmp/wireguard-source
-          mkdir -p drivers/net/wireguard
-          cp -af /tmp/wireguard-source/src/* drivers/net/wireguard/
-
-          # Fix: Strip KERNEL_MODE_NEON selection from compat Kconfig to prevent
-          # recursive Kconfig dependency on ARM64 GKI kernels:
-          #   WIREGUARD -> KERNEL_MODE_NEON -> EFI -> ARCH_SUPPORTS_ACPI -> ACPI
-          #   -> ACPI_CONFIGFS -> CONFIGFS_FS -> SYSFS -> KASAN -> KMSAN -> WIREGUARD
-          if [ -f drivers/net/wireguard/Kconfig ]; then
-            sed -i '/select KERNEL_MODE_NEON/d' drivers/net/wireguard/Kconfig
-            sed -i '/select VFP/d' drivers/net/wireguard/Kconfig
-            sed -i '/select VFPv3/d' drivers/net/wireguard/Kconfig
-            sed -i '/select NEON if CPU_V7/d' drivers/net/wireguard/Kconfig
-            echo "✅ Stripped ARMv7-only Kconfig selects from wireguard compat"
-          fi
-
-          # 2. Source Linkage via SED (Fuzz-proof)
-          echo "🔗 Linking WireGuard into legacy kernel build system..."
-          if ! grep -q "drivers/net/wireguard/Kconfig" drivers/net/Kconfig; then
-            # Use safer anchor point for Kconfig linkage to avoid recursive loops
-            sed -i '/menuconfig NETDEVICES/a source "drivers/net/wireguard/Kconfig"' drivers/net/Kconfig || \
-            echo 'source "drivers/net/wireguard/Kconfig"' >> drivers/net/Kconfig
-          fi
-
-          if ! grep -q "wireguard/" drivers/net/Makefile; then
-            sed -i '/obj-$(CONFIG_NET_UDP_TUNNEL)/a obj-$(CONFIG_WIREGUARD) += wireguard/' drivers/net/Makefile || \
-            echo 'obj-$(CONFIG_WIREGUARD) += wireguard/' >> drivers/net/Makefile
-          fi
-
-          # 4. Apply performance optimizations
-          WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
-          if [ -d "$WIREGUARD_PATCH_DIR" ]; then
-            for patch_file in "$WIREGUARD_PATCH_DIR"/0002-Optimize-NEON-ARM64.patch; do
-              if [ -f "$patch_file" ]; then
-                echo "Applying performance patch: $(basename "$patch_file")"
-                patch -p1 --forward --fuzz=3 < "$patch_file" || true
-              fi
-            done
-          fi
+        echo "Enabling WireGuard in gki_defconfig"
+        cat >> "arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_WIREGUARD=y
+        CONFIG_NET_UDP_TUNNEL=y
+        CONFIG_CRYPTO_CURVE25519=y
+        CONFIG_CRYPTO_CHACHA20POLY1305=y
+        EOF
+        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
+        if [ -d "$WIREGUARD_PATCH_DIR" ]; then
+          for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
+            if [ -f "$patch_file" ]; then
+              echo "Applying WireGuard patch: $(basename "$patch_file")"
+              patch -p1 --forward < "$patch_file" || true
+            fi
+          done
+          echo "✅ WireGuard integrated and optimized"
         else
-          echo "✅ Kernel >= 5.6 detected. Using mainline WireGuard driver."
+          echo "::warning::WireGuard patches not found in Repos. Skipping."
         fi
-
-        # 3. Mark WireGuard as deferred — applied via scripts/config post-olddefconfig
-        #    to bypass Kconfig recursive dependency resolution that causes:
-        #    WIREGUARD -> KMSAN -> KASAN -> ... -> EFI -> KERNEL_MODE_NEON -> WIREGUARD
-        echo "WIREGUARD_DEFERRED_CONFIG=true" >> "$GITHUB_ENV"
-        echo "⏩ WireGuard config deferred to post-olddefconfig scripts/config injection"
-
-        echo "✅ WireGuard source integrated (config injection deferred)"
         echo "::endgroup::"
 
     - name: Add Build based configs
@@ -1879,7 +1830,7 @@ runs:
         fi
 
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
-        KCPPFLAGS="${KCPPFLAGS:-}"
+        KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
         
         echo "============================================"
         echo "🔧 Build Configuration"

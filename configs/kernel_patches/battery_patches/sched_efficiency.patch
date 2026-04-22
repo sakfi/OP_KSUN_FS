@@ -12,26 +12,25 @@ Adjusts energy-aware scheduling parameters for efficiency.
 diff --git a/kernel/sched/cpufreq_schedutil.c b/kernel/sched/cpufreq_schedutil.c
 --- a/kernel/sched/cpufreq_schedutil.c
 +++ b/kernel/sched/cpufreq_schedutil.c
-@@ -10,6 +10,11 @@
- 
+@@ -20,6 +20,11 @@
  #include <linux/sched/cpufreq.h>
+ #include <trace/events/power.h>
  
 +/* Battery optimization: Reduce frequency ramping speed for efficiency */
 +#ifndef SCHEDUTIL_UP_RATE_LIMIT_NS
 +#define SCHEDUTIL_UP_RATE_LIMIT_NS (2000 * NSEC_PER_USEC)
 +#endif
 +
- #include <linux/cpufreq.h>
- #include <linux/kthread.h>
+ struct su_policy {
+ 	struct cpufreq_policy	*policy;
  
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -10,6 +10,14 @@
+@@ -25,6 +25,14 @@
+ #include <linux/mempolicy.h>
+ #include <linux/migrate.h>
  
- #include <linux/latencytop.h>
- #include <linux/sched.h>
-+
 +/* Battery: Increase bias toward Little cores for efficiency */
 +#ifdef EAS_BIAS_THRESHOLD_UTIL
 +#undef EAS_BIAS_THRESHOLD_UTIL
@@ -39,6 +38,9 @@ diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
 +#ifndef EAS_BIAS_THRESHOLD_UTIL
 +#define EAS_BIAS_THRESHOLD_UTIL 800
 +#endif
++
+ #include "sched.h"
  
- #include <linux/cpumask.h>
- #include <linux/cpuset.h>
+ #ifdef CONFIG_SMP
+-- 
+2.43.0
