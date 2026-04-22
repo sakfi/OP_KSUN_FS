@@ -822,7 +822,7 @@ jobs:
           for file in $(find downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | sort); do
             if [ -f "$file" ]; then
               zipname=$(basename "$file" .zip)
-              rest="${zipname#AK3_}"
+              rest="${zipname#SKF_}"
               IFS='_' read -ra parts <<< "$rest"
               model="${parts[0]}"
               os_version="${parts[1]}"
