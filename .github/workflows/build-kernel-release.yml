@@ -1045,15 +1045,11 @@ jobs:
             cat << EOF >> release_notes.md
           - **KernelSU Next Manager**  
             → [GitHub](https://github.com/KernelSU-Next/KernelSU-Next)
-          - **Wild KernelSU Manager** (Alternative) 
-            → [GitHub](https://github.com/WildKernels/KernelSU_Action/releases)
           EOF
           elif [ -n "$KSU_BRANCH" ]; then
             cat << EOF >> release_notes.md
           - **KernelSU Manager**  
             → [GitHub Release](https://github.com/tiann/KernelSU/releases)
-          - **Wild KernelSU Manager** (Alternative)  
-            → [GitHub Release](https://github.com/WildKernels/KernelSU_Action/releases)
           EOF
           fi
           cat <<EOF >> release_notes.md
