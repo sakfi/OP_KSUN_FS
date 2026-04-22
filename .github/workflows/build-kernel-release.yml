@@ -536,14 +536,40 @@ jobs:
           fetch-depth: 1
 
       - name: Install Minimal Dependencies
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           echo "::group::Install dependencies"
-          sudo apt-get -o Acquire::Retries=3 update -qq
+          
+          # Wait for any background apt processes (unattended-upgrades) to finish
+          echo "Checking for apt locks..."
+          while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+            echo "Waiting for other apt processes to finish..."
+            sleep 5
+          done
+          
+          # Retry loop for apt-get update with ForceIPv4
+          MAX_RETRIES=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i: Updating apt repositories..."
+            if sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::ForceIPv4=true update; then
+              echo "✅ Apt update successful"
+              break
+            fi
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "::error::Failed to update apt after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "⚠️ Apt update failed, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "Installing packages..."
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             git curl ca-certificates build-essential clang lld flex bison \
             libelf-dev libssl-dev libncurses-dev zlib1g-dev liblz4-tool \
             libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils
+          
           sudo apt-get clean
           echo "✅ Dependencies installed"
           echo "::endgroup::"
@@ -1066,19 +1092,14 @@ jobs:
           ## 📜 Changelog
           
           ### This Release
-          EOF
-          
-          # Auto-generate changelog from git commits since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            echo "Generating changelog since tag: $LAST_TAG"
-            git log "$LAST_TAG"..HEAD --pretty=format:"          - %s" --no-merges >> release_notes.md
-          else
-            echo "No previous tag found, using last 10 commits"
-            git log --pretty=format:"          - %s" --no-merges -10 >> release_notes.md
-          fi
-          
-          cat <<EOF >> release_notes.md
+          $(
+            PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
+            if [ -n "$PREV_TAG" ]; then
+              git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)"
+            else
+              git log --oneline --pretty=format:"- %s (%h)" -n 15
+            fi
+          )
           
           ### Previous Releases
           See [Releases Page](https://github.com/sakfi/OP_KSUN_FS/releases)
