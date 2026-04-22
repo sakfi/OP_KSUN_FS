@@ -1090,8 +1090,6 @@ jobs:
           ### Official Manager
           - **KernelSU Next Manager**  
             → [GitHub](https://github.com/KernelSU-Next/KernelSU-Next)
-          - **Wild KernelSU Manager** (Alternative) 
-            → [GitHub](https://github.com/WildKernels/KernelSU_Action/releases)
           
           ### SusFS Module
           - **KSU SUSFS Module** (Required for SUSFS features)  
