@@ -13,9 +13,59 @@ on:
         type: string
         default: ''
       op_model:
-        description: "Enter Model(s) (comma-separated, e.g. OP12, OP13) or 'All'. Valid models: OP-ACE, OP-ACE-2, OP-ACE-2-PRO, OP-ACE-2V, OP-ACE-3, OP-ACE-3-PRO, OP-ACE-3V, OP-ACE-5, OP-ACE-5-PRO, OP-ACE-5-RACE, OP-ACE-5-ULTRA, OP-ACE-6, OP-ACE-6T, OP-ACE-RACE, OP-NORD-3, OP-NORD-4, OP-NORD-4-CE, OP-NORD-5, OP-NORD-CE-5, OP-NORD-CE4-LITE, OP-OPEN, OP-PAD-2-MT6991, OP-PAD-2-PRO, OP-PAD-2-SM8650, OP-PAD-3-MT6897, OP-PAD-3-SM8750, OP-PAD-GO-2, OP-PAD-LITE, OP-PAD-MT6983, OP-PAD-PRO, OP10pro, OP10r, OP10t, OP11, OP11r, OP12, OP12r, OP13, OP13-CPH, OP13-PJZ, OP13S, OP13T, OP13r, OP15, OP15r, OP15T, OP-TURBO-6, OP-TURBO-6V"
+        description: 'Select the OnePlus Devices to build'
         required: true
-        type: string
+        type: choice
+        options:
+          - All
+          - OP-ACE
+          - OP-ACE-2
+          - OP-ACE-2-PRO
+          - OP-ACE-2V
+          - OP-ACE-3
+          - OP-ACE-3-PRO
+          - OP-ACE-3V
+          - OP-ACE-5
+          - OP-ACE-5-PRO
+          - OP-ACE-5-RACE
+          - OP-ACE-5-ULTRA
+          - OP-ACE-6
+          - OP-ACE-6T
+          - OP-ACE-RACE
+          - OP-NORD-3
+          - OP-NORD-4
+          - OP-NORD-4-CE
+          - OP-NORD-5
+          - OP-NORD-CE-5
+          - OP-NORD-CE4-LITE
+          - OP-OPEN
+          - OP-PAD-2-MT6991
+          - OP-PAD-2-PRO
+          - OP-PAD-2-SM8650
+          - OP-PAD-3-MT6897
+          - OP-PAD-3-SM8750
+          - OP-PAD-GO-2
+          - OP-PAD-LITE
+          - OP-PAD-MT6983
+          - OP-PAD-PRO
+          - OP10pro
+          - OP10r
+          - OP10t
+          - OP11
+          - OP11r
+          - OP12
+          - OP12r
+          - OP13
+          - OP13-CPH
+          - OP13-PJZ
+          - OP13S
+          - OP13T
+          - OP13r
+          - OP15
+          - OP15r
+          - OP15T
+          - OP-TURBO-6
+          - OP-TURBO-6V
         default: All
       android_version_filter:
         description: 'Select the Android Version to build'
@@ -152,15 +202,16 @@ jobs:
           done
           echo "]" >> matrix.json
           
-          # Initialize JQ models array for multi-select
-          if [[ "$input" == "All" || "$input" == "all" ]]; then
-            models_json="[]"
-            jq_filter="."
-          else
-            echo "ℹ️  Multi-device filter applied: $input"
-            models_json=$(echo "$input" | jq -R -c 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')
-            jq_filter='map(select(.model as $m | $models | index($m)))'
-          fi
+          jq_filter="."
+          
+          case "$input" in
+            All)
+              ;;
+            *)
+              echo "ℹ️  Device-specific filter applied: $input"
+              jq_filter="map(select(.model == \"$input\"))"
+              ;;
+          esac
           
           android_input="${{ github.event.inputs.android_version_filter }}"
           android_jq_filter=""
@@ -202,7 +253,7 @@ jobs:
           fi
 
           combined_filter="${jq_filter}${android_jq_filter}${kernel_jq_filter}"
-          filtered=$(jq -c --argjson models "$models_json" "$combined_filter" matrix.json)
+          filtered=$(jq -c "$combined_filter" matrix.json)
           count=$(jq 'length' <<<"$filtered")
           
           if [ "$count" -eq 0 ]; then
