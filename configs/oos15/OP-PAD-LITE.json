@@ -1,4 +1,4 @@
-{
+﻿{
     "model":  "OP-PAD-LITE",
     "soc":  "helio_g99",
     "branch":  "wild/mt6789",
@@ -14,12 +14,12 @@
     "disk_cleanup":  false,
     "hmbird":  false,
     "susfs":  true,
-    "ds":  false,
     "bbg":  true,
     "bbr":  true,
     "ttl":  true,
     "ip_set":  true,
     "unicode":  true,
-    "ntsync":  true,
-    "uname":  "SakFi-OP"
+    "uname":  "SakFi-OP",
+    "ds":  true,
+    "battery_opt":  true
 }

@@ -11,9 +11,9 @@
 </a>
 
 [![KernelSU-Next](https://img.shields.io/badge/KernelSU_Next-Supported-green)](https://kernelsu-next.github.io/webpage/)
-[![Wild KSU](https://img.shields.io/badge/Wild_KSU-Temporary%20Not%20Supported-cb2431)](https://github.com/WildKernels/Wild_KSU/)
+[![Wild KSU](https://img.shields.io/badge/Wild_KSU-Not%20Supported-cb2431)](https://github.com/WildKernels/Wild_KSU/)
 [![KernelSU](https://img.shields.io/badge/KernelSU-Not%20Supported-cb2431)](https://kernelsu.org/)
-[![SUSFS](https://img.shields.io/badge/SUSFS_2.1-Integrated-orange)](https://gitlab.com/simonpunk/susfs4ksu)
+[![SUSFS](https://img.shields.io/badge/SUSFS-Integrated-orange?logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu)
 
 > **Forked from [WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)**
 
@@ -51,19 +51,26 @@ Flashing this kernel will not void your warranty, but there is always a risk of 
 This repository provides a fully automated GitHub Actions workflow that:
 - 📥 Clones the OnePlus GKI kernel source via `repo sync`
 - 🛡️ Integrates **KernelSU-Next (KSUN)** or **KernelSU (KSU)**
-- 🥷 Applies **SUSFS** patches for advanced root hiding
+- ⚔️ Applies **SUSFS** patches (Dynamically updated via GitLab API)
+- 🔋 Integrates a comprehensive **Battery Optimization Suite**
 - 🚀 Applies a curated set of performance & optimization patches
 - 📦 Builds and packages a flashable **AnyKernel3 ZIP**
 - 📱 Supports all major OnePlus OxygenOS versions (OOS14, OOS15, OOS16)
+- 🔄 **Fully Synchronized Workflow**: Automatic dependency resolution via GitHub GraphQL and GitLab APIs.
+
+<br>
 
 ---
 
 ## ✨ Features
 
+<br>
+
 | 🏷️ Feature | 📝 Description |
 |:---|:---|
 | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
-| 🕶️ **SUSFS v2.1.0** | Advanced root hiding with Magic Mount support |
+| 🛡️ **SUSFS v2.1.0+** | Advanced root hiding with Magic Mount support (Auto-synced) |
+| 🔋 **Battery Optimization** | Modular suite: Wakelock hard-caps, Schedutil tuning, MGLRU, and Log Silencing |
 | 🛠️ **Manual Hooks** | `scope_min_manual_hooks_v1.4` for better app compatibility |
 | 🖧 **BBR** | Improved TCP congestion control |
 | 🛡️ **BBG** | LSM-based Baseband Guard security |
@@ -73,11 +80,14 @@ This repository provides a fully automated GitHub Actions workflow that:
 | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
 | 🏗️ **HMBIRD SCX** | Scheduler extensions for SM8750 devices |
 | ✅ **LTO** | Link Time Optimization (thin/full/none configurable) |
-| ⚡️ **TMPFS XATTR / POSIX ACL** | Extended attributes for Mountify support |
+| ⚡️ **TMPFS XATTR** | Extended attributes for Mountify and Meta support |
 | 🚀 **Optimization patches** | Memory, I/O, CPU scheduler, network tuning |
-| ⚡️ **TMPFS XATTR / POSIX ACL** | Extended TMPFS support for meta modules and Mountify |
-| </> **Unicode Bypass Fix** | Prevent path traversal and other detections using non-printable Unicode codepoints [Experimental] |
-| 🖥️ **Droidspaces Support** | Support Portable Linux containers to run full Linux environments. |
+| </> **Unicode Bypass Fix** | Prevent path traversal using non-printable Unicode codepoints |
+| 🖥️ **Droidspaces Support** | Support for Portable Linux containers |
+
+<br>
+
+---
 
 <details>
 <summary><b>👀 View SUSFS Hide Capabilities</b></summary>
@@ -90,15 +100,32 @@ This repository provides a fully automated GitHub Actions workflow that:
 
 ## 📱 Supported Devices
 
-Device configs are located in [`configs/`](./configs/). Devices are grouped by OxygenOS version:
+Device configs are located in [`configs/`](./configs/). Internal patches are centralized in [`configs/kernel_patches/`](./configs/kernel_patches/).
 
 | OOS Version | Kernel | Example Devices |
 |-------------|--------|-----------------|
-| **OOS14** | `android12` (5.10) <br> `android13` (5.15) <br> `android14` (6.1) | OP10 Pro, OP11, OP12, OP-ACE series |
-| **OOS15** | `android13` (5.15) <br> `android14` (6.1) <br> `android15` (6.6) | OP12, OP13, OP13S, OP-ACE-5, OP-NORD series, OP-PAD series |
-| **OOS16** | `android14` (6.1) <br> `android15` (6.6) <br> `android16` (6.12) | OP13, OP-ACE-5 series, OP-PAD series |
+| **OOS14** | `5.10` / `5.15` / `6.1` | OP10 Pro, OP11, OP12, OP-ACE series |
+| **OOS15** | `5.15` / `6.1` / `6.6` | OP12, OP13, OP13S, OP-ACE-5, OP-NORD series |
+| **OOS16** | `6.1` / `6.6` / `6.12` | OP13, OP-ACE-5 series, OP-PAD series |
 
-> 📁 **Full device list**: Browse the [`configs/`](./configs/) folder.
+### 🛠️ Internal Patches
+All local kernel enhancements are organized under one roof for easier maintenance:
+- **`Battery patches`**: The core battery optimization suite.
+- **`NTSync patches`**: Emulation synchronization backports for 6.1/6.6/6.12.
+- **`WireGuard patches`**: Secure kernel-level VPN implementation.
+
+<br>
+
+---
+
+## 🔋 Battery Optimization Suite
+Our unique battery suite targets three critical areas to maximize OnePlus performance:
+1. **Wakelock Hard-Caps**: Automatic 10s safety timeout for aggressive drivers (`wlan`, `IPA`).
+2. **Scheduling Efficiency**: Tuned `schedutil` damping and EAS bias toward "Little" cores (80% util).
+3. **Memory Optimization**: Strategic kswapd dampening and dynamic **MGLRU** enablement.
+4. **Log Silencing**: Compile-level silencing of debug noise to reduce CPU/IO churn.
+
+<br>
 
 ---
 
@@ -122,6 +149,8 @@ Device configs are located in [`configs/`](./configs/). Devices are grouped by O
 
 > 📖 **For GKI installation details:** [kernelsu.org/guide/installation](https://kernelsu.org/guide/installation.html)
 
+<br>
+
 ---
 
 ## 🌟 Special Thanks
@@ -142,6 +171,8 @@ These amazing people help make this project possible! ❤️
 
 *If you have contributed and are not listed here, please remind me!* 🙏
 
+<br>
+
 ---
 
 ## 💬 Support
@@ -153,9 +184,13 @@ If you encounter any issues or need help, feel free to:
 - 🐛 Open an issue in this repository
 - 💬 Reach out to me directly
 
+<br>
+
 ---
 
 ## 📱 Connect With Me
+
+<br>
 
 <div align="center">
 
@@ -167,4 +202,3 @@ If you encounter any issues or need help, feel free to:
 <p align="center">
   <img src="https://komarev.com/ghpvc/?username=sakfi&label=Profile%20Views&color=ff007f&style=for-the-badge" alt="sakfi" />
 </p>
-

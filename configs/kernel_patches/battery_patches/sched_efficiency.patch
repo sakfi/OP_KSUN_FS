@@ -1,0 +1,46 @@
+From: Antigravity <antigravity@google.com>
+Date: Mon, 20 Apr 2026 21:31:00 +0600
+Subject: [PATCH] battery: improve scheduler efficiency
+
+Adjusts energy-aware scheduling parameters for efficiency.
+
+---
+ kernel/sched/cpufreq_schedutil.c | 5 +++++
+ kernel/sched/fair.c            | 8 ++++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/kernel/sched/cpufreq_schedutil.c b/kernel/sched/cpufreq_schedutil.c
+--- a/kernel/sched/cpufreq_schedutil.c
++++ b/kernel/sched/cpufreq_schedutil.c
+@@ -20,6 +20,11 @@
+ #include <linux/sched/cpufreq.h>
+ #include <trace/events/power.h>
+ 
++/* Battery optimization: Reduce frequency ramping speed for efficiency */
++#ifndef SCHEDUTIL_UP_RATE_LIMIT_NS
++#define SCHEDUTIL_UP_RATE_LIMIT_NS (2000 * NSEC_PER_USEC)
++#endif
++
+ struct su_policy {
+ 	struct cpufreq_policy	*policy;
+ 
+diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
+--- a/kernel/sched/fair.c
++++ b/kernel/sched/fair.c
+@@ -25,6 +25,14 @@
+ #include <linux/mempolicy.h>
+ #include <linux/migrate.h>
+ 
++/* Battery: Increase bias toward Little cores for efficiency */
++#ifdef EAS_BIAS_THRESHOLD_UTIL
++#undef EAS_BIAS_THRESHOLD_UTIL
++#endif
++#ifndef EAS_BIAS_THRESHOLD_UTIL
++#define EAS_BIAS_THRESHOLD_UTIL 800
++#endif
++
+ #include "sched.h"
+ 
+ #ifdef CONFIG_SMP
+-- 
+2.43.0

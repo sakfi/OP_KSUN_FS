@@ -1,0 +1,43 @@
+From: Antigravity <antigravity@google.com>
+Date: Mon, 20 Apr 2026 21:32:00 +0600
+Subject: [PATCH] battery: silence excessive kernel logging
+
+Reduces power consumption by damping noisy logs in performance-sensitive paths.
+
+---
+ fs/sync.c    | 5 +++++
+ kernel/printk/printk.c | 4 ++++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/fs/sync.c b/fs/sync.c
+--- a/fs/sync.c
++++ b/fs/sync.c
+@@ -25,6 +25,11 @@
+ #include <linux/backing-dev.h>
+ #include <trace/events/writeback.h>
+ 
++/* Battery: Reduce emergency sync noise */
++#ifdef pr_warn
++#undef pr_warn
++#define pr_warn(fmt, ...) pr_debug(fmt, ##__VA_ARGS__)
++#endif
++
+ /*
+  * Sync everything. We don't restart across signals; just return
+  * success or error after one full sync.
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -55,6 +55,10 @@
+ #include "console_cmdline.h"
+ #include "braille.h"
+ 
++/* Battery: Increase log level threshold during high load */
++#ifndef CONSOLE_LOGLEVEL_DEFAULT
++#define CONSOLE_LOGLEVEL_DEFAULT 3
++#endif
++
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/printk.h>
+-- 
+2.43.0

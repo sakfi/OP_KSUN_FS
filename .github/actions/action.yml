@@ -38,6 +38,21 @@ inputs:
     required: false
     type: string
     default: 'false'
+  enable_wireguard:
+    description: 'Global Master Switch: Enable WireGuard'
+    required: false
+    type: string
+    default: 'true'
+  enable_battery_opt:
+    description: 'Global Master Switch: Enable Battery Optimization'
+    required: false
+    type: string
+    default: 'true'
+  enable_ntsync:
+    description: 'Global Master Switch: Enable NTSync'
+    required: false
+    type: string
+    default: 'true'
 
 outputs:
   kernel_version:
@@ -81,9 +96,48 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        
+        # 1. Start with Hardcoded Defaults
+        ntsync_def="true"
+        battery_def="true"
+        wireguard_def="true"
+        hmbird_def="false"
+        ds_def="false"
+        
+        # 2. Extract Device-Specific values from JSON
         echo '${{ inputs.op_config_json }}' > /tmp/config.json
-        jq -r 'to_entries[] | "OP_\(.key | ascii_upcase)=\(.value)"' /tmp/config.json >> "$GITHUB_ENV"
-        echo "Parsed config:"
+        JSON_NTSYNC=$(jq -r '.ntsync // empty' /tmp/config.json)
+        JSON_BATTERY=$(jq -r '.battery_opt // empty' /tmp/config.json)
+        JSON_WIREGUARD=$(jq -r '.wireguard // empty' /tmp/config.json)
+        JSON_HMBIRD=$(jq -r '.hmbird // empty' /tmp/config.json)
+        JSON_DS=$(jq -r '.ds // empty' /tmp/config.json)
+        
+        # 3. Apply Global Override Logic (Master Switches)
+        # If UI input is 'false', it's OFF globally.
+        # If UI input is 'true', we use JSON value (defaulting to system default if empty).
+        
+        [[ "${{ inputs.enable_ntsync }}" == "false" ]] && FINAL_NTSYNC="false" || FINAL_NTSYNC="${JSON_NTSYNC:-$ntsync_def}"
+        [[ "${{ inputs.enable_battery_opt }}" == "false" ]] && FINAL_BATTERY="false" || FINAL_BATTERY="${JSON_BATTERY:-$battery_def}"
+        [[ "${{ inputs.enable_wireguard }}" == "false" ]] && FINAL_WIREGUARD="false" || FINAL_WIREGUARD="${JSON_WIREGUARD:-$wireguard_def}"
+        
+        FINAL_HMBIRD="${JSON_HMBIRD:-$hmbird_def}"
+        FINAL_DS="${JSON_DS:-$ds_def}"
+
+        # 4. Export to Environment
+        echo "OP_NTSYNC=$FINAL_NTSYNC" >> "$GITHUB_ENV"
+        echo "OP_BATTERY_OPT=$FINAL_BATTERY" >> "$GITHUB_ENV"
+        echo "OP_WIREGUARD=$FINAL_WIREGUARD" >> "$GITHUB_ENV"
+        echo "OP_HMBIRD=$FINAL_HMBIRD" >> "$GITHUB_ENV"
+        echo "OP_DS=$FINAL_DS" >> "$GITHUB_ENV"
+        
+        # Final Export of other JSON keys (model, soc, etc.)
+        jq -r 'to_entries[] | select(.key != "ntsync" and .key != "battery_opt" and .key != "wireguard" and .key != "hmbird" and .key != "ds") | "OP_\(.key | ascii_upcase)=\(.value)"' /tmp/config.json >> "$GITHUB_ENV"
+        
+        echo "Parsed final features:"
+        echo "NTSync: $FINAL_NTSYNC (UI: ${{ inputs.enable_ntsync }})"
+        echo "Battery Opt: $FINAL_BATTERY (UI: ${{ inputs.enable_battery_opt }})"
+        echo "WireGuard: $FINAL_WIREGUARD (UI: ${{ inputs.enable_wireguard }})"
+        echo "Full Device Config:"
         jq '.' /tmp/config.json
 
     - name: Validate Inputs
@@ -98,21 +152,23 @@ runs:
         android_version="$OP_ANDROID_VERSION"
         kernel_version="$OP_KERNEL_VERSION"
         os_version="$OP_OS_VERSION"
-        hmbird="$OP_HMBIRD"
-        susfs="$OP_SUSFS"
-        bbg="$OP_BBG"
-        bbr="$OP_BBR"
-        ttl="$OP_TTL"
-        ip_set="$OP_IP_SET"
-        rust_build="$OP_RUST_BUILD"
-        lto="$OP_LTO"
-        uname="$OP_UNAME"
-        unicode="$OP_UNICODE"
-        c_compiler="$OP_C_COMPILER"
-        rust_compiler="$OP_RUST_COMPILER"
-        zyc_compiler="$OP_ZYC_COMPILER"
-        ds="$OP_DS"
-        ntsync="$OP_NTSYNC"
+        hmbird="${OP_HMBIRD:-false}"
+        susfs="${OP_SUSFS:-false}"
+        bbg="${OP_BBG:-false}"
+        bbr="${OP_BBR:-false}"
+        ttl="${OP_TTL:-false}"
+        ip_set="${OP_IP_SET:-false}"
+        rust_build="${OP_RUST_BUILD:-false}"
+        lto="${OP_LTO:-thin}"
+        uname="${OP_UNAME:-SakFi-OP}"
+        unicode="${OP_UNICODE:-false}"
+        c_compiler="${OP_C_COMPILER:-}"
+        rust_compiler="${OP_RUST_COMPILER:-}"
+        zyc_compiler="${OP_ZYC_COMPILER:-}"
+        ds="${OP_DS:-false}"
+        ntsync="${OP_NTSYNC:-false}"
+        battery_opt="${OP_BATTERY_OPT:-false}"
+        wireguard="${OP_WIREGUARD:-false}"
         optimize='${{ inputs.optimize_level }}'
         
         errors=()
@@ -241,6 +297,18 @@ runs:
           errors+=("Input 'ntsync' cannot be empty")
         elif [[ "$ntsync" != "true" && "$ntsync" != "false" ]]; then
           errors+=("Input 'ntsync' contains invalid characters. Allowed: 'true' or 'false'. Got: '$ntsync'")
+        fi
+        
+        if [[ -z "$battery_opt" ]]; then
+          errors+=("Input 'battery_opt' cannot be empty")
+        elif [[ "$battery_opt" != "true" && "$battery_opt" != "false" ]]; then
+          errors+=("Input 'battery_opt' contains invalid characters. Allowed: 'true' or 'false'. Got: '$battery_opt'")
+        fi
+        
+        if [[ -z "$wireguard" ]]; then
+          errors+=("Input 'wireguard' cannot be empty")
+        elif [[ "$wireguard" != "true" && "$wireguard" != "false" ]]; then
+          errors+=("Input 'wireguard' contains invalid characters. Allowed: 'true' or 'false'. Got: '$wireguard'")
         fi
         
         # OP_C_COMPILER currently has no checks!
@@ -1082,7 +1150,7 @@ runs:
           fi
         fi
         
-        patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
+        patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
         
         # Revert Fake kernel patch
         if [ "$fake_patched" = 1 ]; then
@@ -1257,6 +1325,32 @@ runs:
         
         
         echo "✅ Other patches applied"
+        echo "::endgroup::"
+
+    - name: Apply Battery Optimization Suite
+      shell: bash
+      if: ${{ env.OP_BATTERY_OPT == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply Battery Optimization Suite"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        BATTERY_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/battery_patches"
+        if [ -d "$BATTERY_PATCH_DIR" ]; then
+          echo "Applying 4-patch Battery Optimization Suite..."
+          for patch_name in "mem_opt.patch" "sched_efficiency.patch" "silence_logging.patch" "wakelock_reduction.patch"; do
+            patch_file="$BATTERY_PATCH_DIR/$patch_name"
+            if [ -f "$patch_file" ]; then
+              echo "Applying: $patch_name"
+              patch -p1 --forward < "$patch_file" || true
+            else
+              echo "::warning::Battery patch $patch_name missing from suite folder."
+            fi
+          done
+          echo "✅ Battery optimization suite applied"
+        else
+          echo "::warning::Battery optimization suite folder missing. Skipping."
+        fi
         echo "::endgroup::"
 
     - name: Apply Unicode Fix Patch
@@ -1462,6 +1556,34 @@ runs:
         echo "✅ NTSync patch applied cleanly"
         echo "::endgroup::"
 
+    - name: Add WireGuard Support
+      shell: bash
+      if: ${{ env.OP_WIREGUARD == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Add WireGuard Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        echo "Enabling WireGuard in gki_defconfig"
+        cat >> "arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_WIREGUARD=y
+        CONFIG_NET_UDP_TUNNEL=y
+        CONFIG_CRYPTO_CURVE25519=y
+        CONFIG_CRYPTO_CHACHA20POLY1305=y
+        EOF
+        WIREGUARD_PATCH_DIR="$GITHUB_WORKSPACE/configs/kernel_patches/wireguard_patches"
+        if [ -d "$WIREGUARD_PATCH_DIR" ]; then
+          for patch_file in "$WIREGUARD_PATCH_DIR"/*.patch; do
+            if [ -f "$patch_file" ]; then
+              echo "Applying WireGuard patch: $(basename "$patch_file")"
+              patch -p1 --forward < "$patch_file" || true
+            fi
+          done
+          echo "✅ WireGuard integrated and optimized"
+        else
+          echo "::warning::WireGuard patches not found in Repos. Skipping."
+        fi
+        echo "::endgroup::"
+
     - name: Add Build based configs
       shell: bash
       run: |
@@ -1513,6 +1635,7 @@ runs:
         mkdir -p out
         CUSTOM_LOCALVERSION="-${ANDROID_VER}-${OP_UNAME}"
         echo "CUSTOM_LOCALVERSION=$CUSTOM_LOCALVERSION" >> "$GITHUB_ENV"
+
 
     - name: Disable GPUEB
       shell: bash
@@ -1679,10 +1802,34 @@ runs:
             exit 1
             ;;
         esac
-        
+        # Fix DTC path mismatch for sun (sm8750) target if needed
+        if [[ "$OP_SOC" == "sun" ]]; then
+          echo "🔧 Aligning DTC paths for sm8750 (sun) target..."
+          mkdir -p arch/arm64/boot/dts/qcom/ || true
+          # Link vendor DTBs to common path where build system expects them
+          for dtb in arch/arm64/boot/dts/vendor/qcom/sun*.dtb; do
+            if [ -f "$dtb" ]; then
+              ln -sf "../../vendor/qcom/$(basename "$dtb")" "arch/arm64/boot/dts/qcom/$(basename "$dtb")"
+            fi
+          done
+        fi
         
         make O="$OUT" olddefconfig
-        
+
+        # Inject WireGuard directly into .config post-olddefconfig.
+        # This intentionally bypasses Kconfig dependency graph resolution,
+        # which would otherwise raise a recursive dependency error:
+        #   WIREGUARD -> KMSAN -> KASAN -> SYSFS -> CONFIGFS -> ACPI_CONFIGFS
+        #   -> ACPI -> ARCH_SUPPORTS_ACPI -> EFI -> KERNEL_MODE_NEON -> WIREGUARD
+        if [ "${WIREGUARD_DEFERRED_CONFIG:-false}" = "true" ]; then
+          echo "🔧 Injecting WireGuard config via scripts/config (post-olddefconfig, no dep-check)"
+          scripts/config --file "$OUT/.config" -e WIREGUARD
+          scripts/config --file "$OUT/.config" -e NET_UDP_TUNNEL
+          scripts/config --file "$OUT/.config" -e CRYPTO_CURVE25519
+          scripts/config --file "$OUT/.config" -e CRYPTO_CHACHA20POLY1305
+          echo "✅ WireGuard enabled in .config"
+        fi
+
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
         KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
         
@@ -1787,8 +1934,7 @@ runs:
         }' | head -n1)
         
         if [ "${CACHEABLE:-0}" -gt 0 ]; then
-          HIT_RATE=$(awk -v h="${HITS:-0
-        }" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (h/c)*100}')
+          HIT_RATE=$(awk -v h="${HITS:-0}" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (h/c)*100}')
           DIRECT_RATE=$(awk -v d="${DIRECT:-0}" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (d/c)*100}')
         else
           HIT_RATE="0.0"
@@ -1910,9 +2056,9 @@ runs:
         sed -i 's/do.check_boot_version=.*/do.check_boot_version=1/' anykernel.sh
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
-          ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+          ZIP_NAME="SKF_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
         else
-          ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
+          ZIP_NAME="SKF_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
         fi
         mkdir -p "$ARTIFACTS_FOLDER"
         
@@ -1983,6 +2129,10 @@ runs:
           echo "TTL: ${{ env.OP_TTL }}"
           echo "IP_SET & IPv6 NAT: ${{ env.OP_IP_SET }}"
           echo "Unicode Fix: ${{ env.OP_UNICODE }}"
+          echo "NTSync: ${{ env.OP_NTSYNC }}"
+          echo "Droidspaces: ${{ env.OP_DS }}"
+          echo "Battery Optimization: ${{ env.OP_BATTERY_OPT }}"
+          echo "WireGuard: ${{ env.OP_WIREGUARD }}"
           echo ""
           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
           echo "Compiler: ${CLANG_VERSION:-unknown}"
@@ -2046,6 +2196,10 @@ runs:
           echo "| **TTL** | ${{ env.OP_TTL }} |"
           echo "| **IP_SET & IPv6 NAT** | ${{ env.OP_IP_SET }} |"
           echo "| **Unicode Fix** | ${{ env.OP_UNICODE }} |"
+          echo "| **NTSync** | ${{ env.OP_NTSYNC }} |"
+          echo "| **Droidspaces** | ${{ env.OP_DS }} |"
+          echo "| **Battery Optimization** | ${{ env.OP_BATTERY_OPT }} |"
+          echo "| **WireGuard** | ${{ env.OP_WIREGUARD }} |"
           
           echo ""
           echo "### 📊 Build Metrics"

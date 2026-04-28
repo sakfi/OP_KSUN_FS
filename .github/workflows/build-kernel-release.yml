@@ -97,6 +97,21 @@ on:
         required: true
         type: string
         default: '[{"type":"ksun","hash":"551ad80473f60e052917aec08abf5323b6ab2f7c"}]'
+      enable_wireguard:
+        description: '🛂 Global Master Switch: Enable WireGuard for all models'
+        required: true
+        type: boolean
+        default: true
+      enable_battery_opt:
+        description: '🔋 Global Master Switch: Enable Battery Optimization for all models'
+        required: true
+        type: boolean
+        default: true
+      enable_ntsync:
+        description: '🕹️ Global Master Switch: Enable NTSync for all models'
+        required: true
+        type: boolean
+        default: true
       optimize_level:
         description: "Compiler optimization level"
         required: true
@@ -166,6 +181,7 @@ jobs:
           
           input="${{ github.event.inputs.op_model }}"
           ksu_options_raw='${{ github.event.inputs.ksu_options }}'
+          
           if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "KSUN" then .hash = "dev" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)' 2>&1); then
             echo "::error::ksu_options validation failed: $ksu_options_normalized"
             exit 1
@@ -571,14 +587,40 @@ jobs:
           fetch-depth: 1
 
       - name: Install Minimal Dependencies
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           echo "::group::Install dependencies"
-          sudo apt-get -o Acquire::Retries=3 update -qq
+          
+          # Wait for any background apt processes (unattended-upgrades) to finish
+          echo "Checking for apt locks..."
+          while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+            echo "Waiting for other apt processes to finish..."
+            sleep 5
+          done
+          
+          # Retry loop for apt-get update with ForceIPv4
+          MAX_RETRIES=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i: Updating apt repositories..."
+            if sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::ForceIPv4=true update; then
+              echo "✅ Apt update successful"
+              break
+            fi
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "::error::Failed to update apt after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "⚠️ Apt update failed, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "Installing packages..."
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             git curl ca-certificates build-essential clang lld flex bison \
             libelf-dev libssl-dev libncurses-dev zlib1g-dev liblz4-tool \
             libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils
+          
           sudo apt-get clean
           echo "✅ Dependencies installed"
           echo "::endgroup::"
@@ -614,6 +656,9 @@ jobs:
         uses: ./.github/actions
         with:
           op_config_json: ${{ steps.prepare_config.outputs.config_json }}
+          enable_wireguard: ${{ github.event.inputs.enable_wireguard }}
+          enable_battery_opt: ${{ github.event.inputs.enable_battery_opt }}
+          enable_ntsync: ${{ github.event.inputs.enable_ntsync }}
           ksu_type: ${{ matrix.ksu_type }}
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
@@ -832,7 +877,7 @@ jobs:
           for file in $(find downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | sort); do
             if [ -f "$file" ]; then
               zipname=$(basename "$file" .zip)
-              rest="${zipname#AK3_}"
+              rest="${zipname#SKF_}"
               IFS='_' read -ra parts <<< "$rest"
               model="${parts[0]}"
               os_version="${parts[1]}"
@@ -901,7 +946,7 @@ jobs:
             feature_flags=$(jq -r --arg MODEL "$model" '
               .[] | 
               select(.model == $MODEL) |
-              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)"
+              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)\t\(.battery_opt // false)\t\(.wireguard // true)"
             ' <<< "$JSON_BUILD_DATA")
             
             features=()
@@ -910,33 +955,31 @@ jobs:
               echo "Warning: No JSON entry found for model: $model" >&2
               features_str="N/A"
             else
-              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync <<< "$feature_flags"
+              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync_json battery_json wireguard_json <<< "$feature_flags"
               
+              # Harmonize Master Switches with JSON values
+              [[ "${{ github.event.inputs.enable_ntsync }}" == "true" ]] && ntsync="$ntsync_json" || ntsync="false"
+              [[ "${{ github.event.inputs.enable_battery_opt }}" == "true" ]] && battery_opt="$battery_json" || battery_opt="false"
+              [[ "${{ github.event.inputs.enable_wireguard }}" == "true" ]] && wireguard="$wireguard_json" || wireguard="false"
+
               # Build features string based on boolean values
               [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
-              [[ "$susfs" == "true" ]] && features+=("ඞ SusFS")
+              [[ "$susfs" == "true" ]] && features+=("🛡️ SusFS")
               [[ "$bbr" == "true" ]] && features+=("🚀 BBR")
-              [[ "$bbg" == "true" ]] && features+=("🛡️ BBG")
+              [[ "$bbg" == "true" ]] && features+=("🧱 BBG")
               [[ "$ttl" == "true" ]] && features+=("🌐 TTL")
-              [[ "$ip_set" == "true" ]] && features+=("🧱 IP_SET & IPv6 NAT")
+              [[ "$ip_set" == "true" ]] && features+=("📡 IP_SET & IPv6 NAT")
               [[ "$unicode" == "true" ]] && features+=("🔧 Unicode Fix")
               [[ "$ds" == "true" ]] && features+=("💻 Droidspaces")
-              [[ "$ntsync" == "true" ]] && features+=("🔃 NTSync")
+              [[ "$ntsync" == "true" ]] && features+=("🕹️ NTSync")
+              [[ "$battery_opt" == "true" ]] && features+=("🔋 Battery Opt")
+              [[ "$wireguard" == "true" ]] && features+=("🛂 WireGuard")
               
               if [ ${#features[@]} -eq 0 ]; then
                 features_str="N/A"
               else
-                features_str=$(printf '%s ' "${features[@]}")
-                features_str=${features_str%" "}
-                features_str=$(echo "$features_str" | awk '
-                  {
-                    for(i=1; i<=NF; i++) {
-                      printf "%s", $i
-                      if (i % 3 == 0 && i < NF) printf "<br>"
-                      else if (i < NF) printf "   "
-                    }
-                  }
-                ')
+                features_str=$(printf '%s   ' "${features[@]}")
+                features_str=${features_str%   }
               fi
             fi
             
@@ -1028,6 +1071,8 @@ jobs:
           | ✅ **LTO** | Link Time Optimization |
           | ⚡️ **TMPFS XATTR** | Extended attributes for Mountify support |
           | 🚀 **Optimization** | Memory, I/O, CPU scheduler, network tuning patches |
+          | 🔋 **Battery** | Multi-patch suite for power efficiency and wakelock reduction |
+          | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
           
           <br>
           
@@ -1045,8 +1090,6 @@ jobs:
           ### Official Manager
           - **KernelSU Next Manager**  
             → [GitHub](https://github.com/KernelSU-Next/KernelSU-Next)
-          - **Wild KernelSU Manager** (Alternative) 
-            → [GitHub](https://github.com/WildKernels/KernelSU_Action/releases)
           
           ### SusFS Module
           - **KSU SUSFS Module** (Required for SUSFS features)  
@@ -1082,16 +1125,14 @@ jobs:
           ## 📜 Changelog
           
           ### This Release
-          - Updated the kernels as per latest OnePlus updates
-          - Add OnePlus Pad 3 device support.
-          - Add OnePlus 15T device support.
-          - Add OnePlus Turbo 6V device support.
-          - Add OnePlus Turbo 6 device support.
-          - Add Oryon Optimizations for sm8750, sm8845 and sm8850 (Build using ZyC Clang 19 only for sm8750).
-          - Fix Patches updated.
-          - Workflow refactored.
-          - Added ZyC Clang support.
-          - Multi Sepolicy patch is applied.
+          $(
+            PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
+            if [ -n "$PREV_TAG" ]; then
+              git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)"
+            else
+              git log --oneline --pretty=format:"- %s (%h)" -n 15
+            fi
+          )
           
           ### Previous Releases
           See [Releases Page](https://github.com/sakfi/OP_KSUN_FS/releases)
@@ -1173,5 +1214,3 @@ jobs:
               echo "- \`$name\` (${size_mb} MB)" >> $GITHUB_STEP_SUMMARY
             fi
           done
-
-

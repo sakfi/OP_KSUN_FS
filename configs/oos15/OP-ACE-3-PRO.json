@@ -1,4 +1,4 @@
-{
+﻿{
     "model":  "OP-ACE-3-PRO",
     "soc":  "pineapple",
     "branch":  "wild/sm8650",
@@ -14,12 +14,12 @@
     "disk_cleanup":  false,
     "hmbird":  false,
     "susfs":  true,
-    "ds":  true,
     "bbg":  true,
     "bbr":  true,
     "ttl":  true,
     "ip_set":  true,
     "unicode":  true,
-    "ntsync":  true,
-    "uname":  "SakFi-OP"
+    "uname":  "SakFi-OP",
+    "ds":  true,
+    "battery_opt":  true
 }

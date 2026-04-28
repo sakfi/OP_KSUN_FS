@@ -1,4 +1,4 @@
-{
+﻿{
     "model":  "OP15r",
     "soc":  "canoe",
     "branch":  "wild/sm8845",
@@ -14,12 +14,12 @@
     "disk_cleanup":  true,
     "hmbird":  false,
     "susfs":  true,
-    "ds":  false,
     "bbg":  true,
     "bbr":  true,
     "ttl":  true,
     "ip_set":  true,
     "unicode":  true,
-    "ntsync":  true,
-    "uname":  "SakFi-OP"
+    "uname":  "SakFi-OP",
+    "ds":  true,
+    "battery_opt":  true
 }

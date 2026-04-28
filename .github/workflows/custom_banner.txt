@@ -42,23 +42,31 @@ ui_print " - SUSFS by simonpunk (gitlab) & sidex15 (github)"
 sleep 0.6
 
 ui_print " "
-ui_print "-----------------------------------------"
+ui_print "----------------------------------------------"
 sleep 0.5
 ui_print "[*] Kernels for OnePlus devices by SakFi"
 sleep 1.0
-ui_print "-----------------------------------------"
+ui_print "----------------------------------------------"
 sleep 0.5
 
 ui_print " "
 ui_print "[i] Installing Kernel..."
 sleep 2.0
 ui_print " "
-ui_print "=> Patching with Ksun: true"
+ui_print "=> Patching with KSUN: true"
 sleep 0.7
 ui_print "=> Patching with SUSFS: true"
 sleep 0.7
+ui_print "=> Patching with NTSync: true"
+sleep 0.7
+ui_print "=> Patching with DroidSpaces: true"
+sleep 0.7
 
+ui_print "=> Applying Battery Optimization"
+sleep 0.7
 ui_print "=> Finalizing and Checking"
+sleep 0.7
+ui_print "=> Applying Additional Patches"
 sleep 0.7
 ui_print " "
 ui_print "[✓] Completed"
