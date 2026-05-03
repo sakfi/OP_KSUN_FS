@@ -823,6 +823,8 @@ runs:
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Adding KernelSU Next..."
         KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
+        rm -rf common/drivers/kernelsu common/drivers/kernelsu-next || true
+        rm -rf drivers/kernelsu drivers/kernelsu-next || true
         if [ -z "$KSU_INPUT" ]; then
           curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
         else
@@ -885,6 +887,8 @@ runs:
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Adding KernelSU..."
         KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
+        rm -rf common/drivers/kernelsu common/drivers/kernelsu-next || true
+        rm -rf drivers/kernelsu drivers/kernelsu-next || true
         if [ -z "$KSU_INPUT" ]; then
           curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
         else
@@ -1007,6 +1011,12 @@ runs:
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              for patch_file in "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version"/fix_*.patch; do
+                if [ -f "$patch_file" ]; then
+                  echo "Applying specific KSUN patch: $(basename "$patch_file")"
+                  patch -p1 --forward < "$patch_file" || true
+                fi
+              done
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
                 echo "Patching file: $file with fix_$file.patch"
                 if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch" ]; then
