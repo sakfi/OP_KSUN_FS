@@ -27,6 +27,9 @@ jobs:
           if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
             echo "Tag not found. Creating backdated tag and release..."
             
+            git config --global user.email "actions@github.com"
+            git config --global user.name "GitHub Actions"
+            
             GIT_COMMITTER_DATE="2015-01-01T12:00:00" git tag -a "$TAG_NAME" -m "Internal Toolchains Cache"
             git push origin "$TAG_NAME"
             
