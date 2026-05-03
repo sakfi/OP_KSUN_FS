@@ -1009,7 +1009,12 @@ runs:
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
                 echo "Patching file: $file with fix_$file.patch"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch" || true
+                if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch" ]; then
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch" || true
+                elif [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/v2.0.0/fix_$file.patch" ]; then
+                  echo "ℹ️  Patch missing in $susfs_version, falling back to v2.0.0 version"
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/v2.0.0/fix_$file.patch" || true
+                fi
               done
               echo "Patching Hook Mode!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch" || true
