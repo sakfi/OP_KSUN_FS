@@ -57,13 +57,15 @@ jobs:
         run: |
           set -euo pipefail
           
-          echo "[" > all_configs.json
-          mapfile -t files < <(find configs/ -name "*.json")
-          for i in "${!files[@]}"; do
-            cat "${files[$i]}" >> all_configs.json
-            [[ $((i+1)) -lt ${#files[@]} ]] && echo "," >> all_configs.json
-          done
-          echo "]" >> all_configs.json
+          # Use jq to safely merge all individual JSON objects into a single array
+          jq -s '.' configs/**/*.json > all_configs.json
+          
+          # Verify the generated JSON is valid
+          if ! jq . all_configs.json > /dev/null 2>&1; then
+            echo "::error::Generated all_configs.json is invalid JSON!"
+            cat all_configs.json
+            exit 1
+          fi
 
       - name: Resolve Unique Projects
         id: set-matrix
