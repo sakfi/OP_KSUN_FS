@@ -20,15 +20,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Set Git Identity
+          export GIT_AUTHOR_NAME="github-actions[bot]"
+          export GIT_AUTHOR_EMAIL="github-actions[bot]@users.noreply.github.com"
+          export GIT_COMMITTER_NAME="github-actions[bot]"
+          export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
+
           # Check if the release already exists
           TARGET_REPO="${{ github.repository }}"
           TAG_NAME="toolchain-cache"
           
           if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
             echo "Tag not found. Creating backdated tag and release..."
-            
-            git config --global user.email "actions@github.com"
-            git config --global user.name "GitHub Actions"
             
             GIT_COMMITTER_DATE="2015-01-01T12:00:00" git tag -a "$TAG_NAME" -m "Internal Toolchains Cache"
             git push origin "$TAG_NAME"
