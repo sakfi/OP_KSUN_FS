@@ -1010,13 +1010,27 @@ runs:
           "v2.1.0")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
-              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              for patch_file in "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version"/fix_*.patch; do
+              echo "Implementing KernelSU-Next SUSFS integration (v2.1.0)..."
+              
+              # Copy susfs.c directly into KSUN kernel folder for local compilation
+              cp "$SUSFS_FOLDER/fs/susfs.c" "kernel/"
+              
+              # Manually add SUSFS to Kbuild instead of using broken base patch
+              # This avoids creating a ghost ksu.c file that causes build errors
+              printf "\n# SUSFS Integration\n" >> kernel/Kbuild
+              printf "kernelsu-objs += susfs.o\n" >> kernel/Kbuild
+              printf "ccflags-y += -DCONFIG_KSU_SUSFS\n" >> kernel/Kbuild
+              
+              # Apply ALL v2.1.0 fix patches from WildKernels (this includes core files, Kbuild, etc.)
+              for patch_file in "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version"/*.patch; do
                 if [ -f "$patch_file" ]; then
-                  echo "Applying specific KSUN patch: $(basename "$patch_file")"
+                  echo "Applying KSUN fix patch: $(basename "$patch_file")"
                   patch -p1 --forward < "$patch_file" || true
                 fi
               done
+            else
+              cd "$KSU_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
                 echo "Patching file: $file with fix_$file.patch"
                 if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch" ]; then
@@ -1038,9 +1052,6 @@ runs:
                 echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
                 patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
               fi
-            else
-              cd "$KSU_FOLDER"
-              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             fi
             ;;
           *)
