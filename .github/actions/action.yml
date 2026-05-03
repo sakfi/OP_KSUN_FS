@@ -583,6 +583,26 @@ runs:
         
         echo "::endgroup::"
 
+    - name: Restore ccache cache
+      if: ${{ inputs.clean == false || inputs.clean == 'false' }}
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
+        restore-keys: |
+          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-
+          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-
+            
+    - name: Restore LTO LD cache
+      if: ${{ (inputs.clean == false && env.OP_LTO != 'none') || (inputs.clean == 'false' && env.OP_LTO != 'none') }}
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ env.LDCACHE_DIR }}
+        key: ccache-ksun-v3-LTO-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
+        restore-keys: |
+          ccache-ksun-v3-LTO-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-
+          ccache-ksun-v3-LTO-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-
+
     - name: Set Cache Environment
       shell: bash
       run: |
@@ -590,13 +610,17 @@ runs:
         echo "::group::Configure ccache environment"
         
         CACHE_DIR="$HOME/.ccache"
+        LDCACHE_DIR="$HOME/.ldcache"
         echo "CCACHE_DIR=$CACHE_DIR" >> "$GITHUB_ENV"
+        echo "LDCACHE_DIR=$LDCACHE_DIR" >> "$GITHUB_ENV"
         echo "CCACHE_MAXSIZE=1G" >> "$GITHUB_ENV"
         
         mkdir -p "$CACHE_DIR"
+        mkdir -p "$LDCACHE_DIR"
         
         echo "Cache configuration:"
         echo "  Directory: $CACHE_DIR"
+        echo "  LD Cache: $LDCACHE_DIR"
         echo "  Max size: 1G"
         echo "  Android: ${ANDROID_VER:-unknown}"
         echo "  Kernel: ${KERNEL_VER:-unknown}"
@@ -605,15 +629,6 @@ runs:
         echo "  Device: ${OP_MODEL:-unknown}"
         echo "::endgroup::"
     
-    - name: Cache ccache
-      uses: actions/cache@v5
-      with:
-        path: ${{ env.CCACHE_DIR }}
-        key: ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
-        restore-keys: |
-          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-
-          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-
-   
     - name: Configure ccache
       shell: bash
       run: |
@@ -654,23 +669,11 @@ runs:
         
         echo "✅ ccache configured for production"
         echo ""
-        echo "Configuration applied:"
-        echo "  Max size: 12G (persisted)"
-        echo "  Base dir: ${GITHUB_WORKSPACE}"
-        echo "  Compression: zstd level 3"
-        echo "  Direct mode: enabled"
-        echo "  File cloning: enabled"
-        echo "  Inode cache: enabled"
-        echo ""
         
         if [ -d "$CCACHE_DIR" ] && find "$CCACHE_DIR" -type f -print -quit 2>/dev/null | grep -q .; then
           echo "✅ Restored cache found"
-          echo ""
-          echo "Pre-build cache statistics:"
-          ccache -s | head -n 20
         else
           echo "⚠️ No existing cache - building from scratch"
-          echo "Cache will be populated for future builds"
         fi
         
         echo "::endgroup::"
@@ -685,8 +688,7 @@ runs:
         
         echo "CCACHE_DISABLE=1" >> "$GITHUB_ENV"
         
-        echo "✅ ccache disabled for clean build (no cache/stat wipe)"
-        echo "   Shared cache and statistics preserved for concurrent jobs"
+        echo "✅ ccache disabled for clean build"
         echo "::endgroup::"
 
     - name: Clone AnyKernel3 and Other Dependencies
@@ -1129,14 +1131,6 @@ runs:
           patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/experimental/bbg/bbg_fix_get_link.patch"
         fi
         
-        # if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-          # cd ./KernelSU-Next
-        # else
-          # cd ./KernelSU
-        # fi
-        
-        # echo "Patching BBG Enhanced Security!"
-        # patch -p1 --forward < "../../../kernel_patches/common/bbg_untrusted_cred.patch"
         echo "✅ BBG LSM added"
         echo "::endgroup::"
 
@@ -1564,6 +1558,7 @@ runs:
         sed -i '/obj-y.*gpueb/d' "$COMMON_KERNEL_FOLDER/drivers/gpu/mediatek/Makefile"
 
     - name: Build Kernel
+      id: build
       shell: bash
       env:
         PYTHONWARNINGS: "ignore:invalid escape sequence"
@@ -1607,11 +1602,6 @@ runs:
         export KBUILD_BUILD_HOST="${BUILD_HOST:-kleaf}"
         export KBUILD_BUILD_VERSION=1
         
-        echo "📅 Build timestamp: $KBUILD_BUILD_TIMESTAMP (from commit $COMMIT_HASH)"
-        echo "🔢 SOURCE_DATE_EPOCH: $SOURCE_DATE_EPOCH"
-        echo "👤 Build user: $KBUILD_BUILD_USER"
-        echo "🖥️  Build host: $KBUILD_BUILD_HOST"
-        
         export CC="ccache clang"
         export CXX="ccache clang++"
         export HOSTCC="ccache clang"
@@ -1640,30 +1630,6 @@ runs:
         OUT=out
         mkdir -p "$OUT"
         
-        echo "============================================"
-        echo "🔍 Compiler & ccache Verification"
-        echo "============================================"
-        echo "PATH: ${PATH:0:200}..."
-        echo "which clang: $(which clang)"
-        echo "CC: $CC"
-        echo "CXX: $CXX"
-        echo "CCACHE_BASEDIR: ${CCACHE_BASEDIR:-not set}"
-        echo ""
-        
-        if [ "${{ inputs.clean }}" != "true" ]; then
-          echo "ccache wrapper test:"
-          clang --version 2>&1 | head -n1 || true
-          echo ""
-          echo "ccache configuration:"
-          ccache -p | grep -E "(compression|direct_mode|readonly_direct|depend|sloppiness)" || true
-          echo ""
-          echo "ccache pre-build status:"
-          ccache -s | head -n 20
-        else
-          echo "⚠️ Clean build - ccache bypassed"
-        fi
-        echo "============================================"
-        
         make O="$OUT" gki_defconfig
         
         LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--SakFi-OP}"
@@ -1682,12 +1648,6 @@ runs:
           scripts/config --file "$OUT/.config" -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
           KCFLAGS_EXTRA="-O2"
         fi
-        
-        case "$OP_BRANCH" in
-          wild/sm8750|wild/sm8850|wild/sm8845)
-            KCFLAGS_EXTRA="-mcpu=oryon-1 ${KCFLAGS_EXTRA}"
-            ;;
-        esac
         
         case "${{ env.OP_LTO}}" in
           "none")
@@ -1708,49 +1668,12 @@ runs:
             scripts/config --file "$OUT/.config" -d LTO_CLANG_NONE
             scripts/config --file "$OUT/.config" -d LTO_CLANG_THIN
             ;;
-          *)
-            echo "::error::Unsupported LTO option: ${{ env.OP_LTO}}"
-            exit 1
-            ;;
         esac
-        
         
         make O="$OUT" olddefconfig
         
         KCFLAGS="$KCFLAGS -Wno-error -pipe ${KCFLAGS_EXTRA}"
         KCPPFLAGS="$KCPPFLAGS -DCONFIG_OPTIMIZE_INLINING"
-        
-        echo "============================================"
-        echo "🔧 Build Configuration"
-        echo "============================================"
-        echo "Device: ${OP_MODEL}"
-        echo "Kernel: ${KERNEL_FULL_VER}"
-        echo "Threads: $(nproc --all)"
-        echo "Optimization: ${{ inputs.optimize_level }}"
-        echo "KCFLAGS: ${KCFLAGS:0:150}..."
-        echo "KCPPFLAGS: ${KCPPFLAGS:0:150}..."
-        echo "Timestamp: $KBUILD_BUILD_TIMESTAMP"
-        echo "Workspace: $WORKSPACE"
-        
-        if [ "${{ inputs.clean }}" != "true" ]; then
-          echo "ccache: ENABLED"
-          echo "  Dir: $CCACHE_DIR"
-          echo "  Base: $CCACHE_BASEDIR"
-          echo "  Max size: $CCACHE_MAXSIZE"
-          echo "  Compression: zstd level 3"
-          echo "  Features: readonly_direct, file_clone, inode_cache, depend"
-        else
-          echo "ccache: DISABLED (clean build)"
-        fi
-        echo "============================================"
-        
-        if [ "${{ inputs.clean }}" != "true" ]; then
-          if [ ! -d "$CCACHE_DIR" ] || [ -z "$(find "$CCACHE_DIR" -type f 2>/dev/null | head -n1)" ]; then
-            echo "🔥 Priming cache with header preprocessing..."
-            make -C "$COMMON_KERNEL_FOLDER" O="$OUT" headers_install prepare 2>&1 | head -n 20 || true
-            echo ""
-          fi
-        fi
         
         BUILD_START=$(date +%s)
         set -o pipefail
@@ -1760,34 +1683,8 @@ runs:
         BUILD_END=$(date +%s)
         BUILD_TIME=$((BUILD_END - BUILD_START))
         
-        echo "BUILD_START=$BUILD_START" >> "$GITHUB_ENV"
-        echo "BUILD_END=$BUILD_END" >> "$GITHUB_ENV"
         echo "BUILD_TIME=$BUILD_TIME" >> "$GITHUB_ENV"
         
-        IMG="$OUT/arch/arm64/boot/Image"
-        if [ ! -f "$IMG" ]; then
-          echo "::error::Kernel Image missing"
-          echo "::group::Last 100 lines of build log"
-          tail -n 100 build.log || echo "Build log not available"
-          echo "::endgroup::"
-          exit 1
-        fi
-        
-        IMG_SIZE=$(stat -c%s "$IMG")
-        
-        echo "============================================"
-        echo "✅ Build Completed Successfully"
-        echo "============================================"
-        echo "Duration: $((BUILD_TIME / 60))m $((BUILD_TIME % 60))s"
-        echo "Image: $(numfmt --to=iec-i --suffix=B "$IMG_SIZE")"
-        
-        if [ "${{ inputs.clean }}" != "true" ]; then
-          echo ""
-          echo "📊 ccache Post-Build Statistics"
-          echo "============================================"
-          ccache -s
-        fi
-        echo "============================================"
         echo "::endgroup::"
 
     - name: 📊 ccache Post-Build Statistics
@@ -1800,29 +1697,46 @@ runs:
         
         export CCACHE_DIR="${{ env.CCACHE_DIR }}"
         
-        echo "ccache Statistics"
-        ccache -s
+        echo "Clear Temporary cache files..."
+        ccache -c || true
         
-        STATS="$(ccache -s)"
+        echo "Perform cache eviction!"
+        ccache --evict-older-than 10800s || true
+        
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          if [ -f "${{ env.CCACHE_LOGFILE }}" ]; then
+            echo "Rename ccache log"
+            LOG_DIR=$(dirname "${{ env.CCACHE_LOGFILE }}")
+            NEW_LOG_NAME="${{ env.OP_MODEL }}_${{ env.OP_OS_VERSION }}_${{ env.KERNEL_FULL_VER }}_ccache.log"
+            mv "${{ env.CCACHE_LOGFILE }}" "$LOG_DIR/$NEW_LOG_NAME" || true
+            echo "CCACHE_LOGFILE=$LOG_DIR/$NEW_LOG_NAME" >> $GITHUB_ENV
+          else
+            echo "⚠ ccache log not found, skipping rename."
+          fi
+        fi
+        
+        echo "ccache Statistics"
+        ccache -s || true
+        
+        STATS="$(ccache -s || true)"
         
         CACHEABLE=$(echo "$STATS" | awk '/Cacheable calls:/ {
           match($0, /[0-9]+/); 
           print substr($0, RSTART, RLENGTH)
         }' | head -n1)
         
-        HITS=$(echo "$STATS" | awk '/^[[:space:]]*Hits:/ {
+        HITS=$(echo "$STATS" | awk '/Hits:/ {
           match($0, /[0-9]+/); 
           print substr($0, RSTART, RLENGTH)
         }' | head -n1)
         
-        DIRECT=$(echo "$STATS" | awk '/Direct:/ {
+        DIRECT=$(echo "$STATS" | awk '/Direct hits:/ {
           match($0, /[0-9]+/); 
           print substr($0, RSTART, RLENGTH)
         }' | head -n1)
         
         if [ "${CACHEABLE:-0}" -gt 0 ]; then
-          HIT_RATE=$(awk -v h="${HITS:-0
-        }" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (h/c)*100}')
+          HIT_RATE=$(awk -v h="${HITS:-0}" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (h/c)*100}')
           DIRECT_RATE=$(awk -v d="${DIRECT:-0}" -v c="$CACHEABLE" 'BEGIN{printf "%.1f", (d/c)*100}')
         else
           HIT_RATE="0.0"
@@ -1832,13 +1746,40 @@ runs:
         echo "hit_rate=${HIT_RATE}%" >> "$GITHUB_OUTPUT"
         echo "direct_rate=${DIRECT_RATE}%" >> "$GITHUB_OUTPUT"
         
+        echo "Performance Summary:"
+        echo "  - Cacheable calls: ${CACHEABLE:-0}"
+        echo "  - Total Hits: ${HITS:-0} ($HIT_RATE%)"
+        echo "  - Direct Hits: ${DIRECT:-0} ($DIRECT_RATE%)"
+        
         echo "::endgroup::"
         
         echo "## 📊 ccache Statistics" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        ccache -s >> $GITHUB_STEP_SUMMARY
+        ccache -s >> $GITHUB_STEP_SUMMARY || true
         echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload ccache log
+      if: success() && inputs.debug == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{ env.OP_MODEL }}_${{ env.OP_OS_VERSION }}_${{ env.KERNEL_FULL_VER }}_ccache.log"
+        path: ${{ env.CCACHE_LOGFILE }}
+        retention-days: 90
+
+    - name: Save ccache cache
+      if: always() && steps.build.conclusion == 'success'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
+
+    - name: Save LTO LD cache
+      if: always() && ${{ env.OP_LTO != 'none' }} && steps.build.conclusion == 'success'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ env.LDCACHE_DIR }}
+        key: ccache-ksun-v3-LTO-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
 
     - name: Collect Build Stats / Validate Image
       id: collect_stats

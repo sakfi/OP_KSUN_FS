@@ -92,6 +92,16 @@ on:
           - android15-6.6
           - android16-6.12
         default: All
+      debug:
+        description: 'Enable debug mode: dumping debug related artifacts and show some debug logs'
+        required: false
+        type: boolean
+        default: false
+      mirror_toolchains:
+        description: 'Do you want to sync toolchains before build? [99% runs not required]'
+        required: false
+        type: boolean
+        default: false
       ksu_options:
         description: 'Enter KernelSU build json'
         required: true
@@ -437,6 +447,8 @@ jobs:
             cat << 'EOF'
           - Optimization: ${{ inputs.optimize_level }}
           - Clean Build/No Ccache: ${{ inputs.clean_build && '✅ Yes' || '❌ No' }}
+          - Create Debug Artifacts: ${{ inputs.debug && '✅ Yes' || '❌ No' }}
+          - Sync toolchains: ${{ inputs.mirror_toolchains && '✅ Yes' || '❌ No' }}
           
           **SUSFS Configuration:**
           EOF
@@ -488,9 +500,19 @@ jobs:
             echo "> **⚠️ Android-Kernel Filter:** Only OOS15 and OOS16 devices will be built for \`${{ inputs.op_model }}\`" >> $GITHUB_STEP_SUMMARY
           fi
 
+  mirror_toolchain:
+    needs: set-op-model
+    if: ${{ inputs.mirror_toolchains }}
+    uses: ./.github/workflows/mirror-toolchains.yml
+    secrets: inherit
+
   build:
     name: build (${{ matrix.model }}, ${{ matrix.soc }}, ${{ matrix.branch }}, ${{ matrix.manifest }}, ${{ matrix.android_version }}, ${{ matrix.kernel_version }}, ${{ matrix.os_version }}, ${{ matrix.ksu_type }})
-    needs: set-op-model
+    needs: [set-op-model, mirror_toolchain]
+    if: |
+      !cancelled() &&
+      needs.set-op-model.result == 'success' &&
+      (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -499,41 +521,14 @@ jobs:
       ksun_ver: ${{ steps.build-stat.outputs.ksu_version }}
       ksu_ver: ${{ steps.build-stat.outputs.ksu_version }}
     steps:
-      - name: 🧹 Emergency Disk Cleanup
-        if: ${{ matrix.disk_cleanup }}
-        run: |
-          echo "::group::Disk Usage Before Cleanup"
-          df -h
-          echo "::endgroup::"
-          
-          echo "::group::Removing Unnecessary Software"
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo apt-get clean
-          if command -v docker >/dev/null 2>&1; then
-            docker rmi $(docker images -q) 2>/dev/null || true
-          fi
-          echo "::endgroup::"
-          
-          echo "::group::Disk Usage After Cleanup"
-          df -h
-          AVAIL=$(df -h / | awk 'NR==2 {print $4}')
-          echo "✅ Available space: $AVAIL"
-          echo "::endgroup::"
-
-      - name: Download Apache Arrow's util_free_space.sh
-        if: ${{ matrix.disk_cleanup }}
-        run: |
-          curl -L -o util_free_space.sh https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh
-          chmod +x util_free_space.sh
-          ./util_free_space.sh
-
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
+
+      - name: 🧹 Emergency Disk Cleanup
+        if: ${{ matrix.disk_cleanup }}
+        uses: ./.github/actions/disk-cleanup
 
       - name: Install Minimal Dependencies
         timeout-minutes: 10
@@ -548,51 +543,82 @@ jobs:
             sleep 5
           done
           
-          # Retry loop for apt-get update with ForceIPv4
-          MAX_RETRIES=5
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Attempt $i: Updating apt repositories..."
-            if sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=3 -o Acquire::ForceIPv4=true update; then
-              echo "✅ Apt update successful"
-              break
-            fi
-            if [ $i -eq $MAX_RETRIES ]; then
-              echo "::error::Failed to update apt after $MAX_RETRIES attempts"
-              exit 1
-            fi
-            echo "⚠️ Apt update failed, retrying in 10s..."
-            sleep 10
-          done
-
           echo "Installing packages..."
+          sudo apt-get -o Acquire::Retries=3 update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             git curl ca-certificates build-essential clang lld flex bison \
             libelf-dev libssl-dev libncurses-dev zlib1g-dev liblz4-tool \
-            libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils
+            libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils pigz
           
           sudo apt-get clean
           echo "✅ Dependencies installed"
           echo "::endgroup::"
-
-      - name: 📦 Disk usage (pre-build)
+  
+      - name: Install ccache with ECS by cctv18
         run: |
-          echo "::group::Disk usage pre-build"
-          df -h /
-          du -sh "$GITHUB_WORKSPACE" 2>/dev/null || true
-          sudo rm -rf /tmp/* || true
+          # Install ccache with ECS by cctv18
+          set -euo pipefail
+          echo "::group::Install ccache with ECS"
+          curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache
+          sudo cp -f ./ccache /usr/bin/ccache
+          sudo chmod +x /usr/bin/ccache
+          rm -f ./ccache
+          
+          echo "[DEBUG] Ccache version : $(ccache --version)"
           echo "::endgroup::"
 
-      - name: ♻️ Configure ccache (bounded)
+      - name: ♻️ Configure ccache & LTO cache (bounded)
         if: ${{ inputs.clean_build != true }}
         run: |
+          echo "::group::Configure ccache environment"
+          set -euo pipefail
           if command -v ccache >/dev/null 2>&1; then
-            echo "::group::ccache configuration"
-            ccache -o max_size=1.0G
-            ccache -o compression=true
-            ccache -o compression_level=3
-            ccache -s
-            echo "::endgroup::"
+            CACHE_DIR="${{ github.workspace }}/.ccache"
+            LDCACHE_DIR="${{ github.workspace }}/.ld_cache"
+            CCACHE_LOG="${{ github.workspace }}/ccache.log"
+            mkdir -p "$CACHE_DIR"
+            mkdir -p "$LDCACHE_DIR"
+            
+            SETTINGS=(
+              "CCACHE_DIR=$CACHE_DIR"
+              "LDCACHE_DIR=$LDCACHE_DIR"
+              "CCACHE_MAXSIZE=12G"
+              "CCACHE_COMPILERCHECK=content"
+              "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
+              "CCACHE_NOHASHDIR=true"
+              "CCACHE_IGNOREOPTIONS=--sysroot*"
+              "CCACHE_COMPRESSION=true"
+              "CCACHE_COMPRESSION_LEVEL=3"
+              "CCACHE_DIRECT=true"
+              "CCACHE_FILE_CLONE=true"
+              "CCACHE_INODE_CACHE=true"
+              "CCACHE_IS_KERNEL_COMPILING=true"
+              "CCACHE_UMASK=002"
+              "CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
+            )
+            
+            for setting in "${SETTINGS[@]}"; do
+              export "$setting"
+              echo "$setting" >> "$GITHUB_ENV"
+            done
+            
+            if [ "${{ inputs.debug }}" == "true" ]; then
+              export "CCACHE_LOGFILE=$CCACHE_LOG"
+              echo "CCACHE_LOGFILE=$CCACHE_LOG" >> "$GITHUB_ENV"
+            fi
+            
+            if ccache --help 2>&1 | grep -q 'depend_mode'; then
+              export CCACHE_DEPEND=true
+              echo "CCACHE_DEPEND=true" >> "$GITHUB_ENV"
+            fi
+            
+            echo "✅ ccache configured successfully"
+            echo "Current ccache configuration:"
+            ccache -p
+          else
+            echo "ccache not found, skipping configuration."
           fi
+          echo "::endgroup::"
 
       - name: 🧹 Prepare op_config_json (without KSU fields, with extras)
         id: prepare_config

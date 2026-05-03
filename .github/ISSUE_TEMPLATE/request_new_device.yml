@@ -1,0 +1,76 @@
+name: Request New Device (OnePlus)
+description: Request support for a new OnePlus device
+title: "[device]: "
+labels: ["device"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > This form is for **OnePlus devices only** with official OnePlus kernel sources.
+        > Kernels are built from **OnePlus official sources** and target **Stock ROMs only**.
+        > If you want to add a **non-OnePlus device** to the compatibility list, use the [Compatibility List Request](request_compatibility.yml) form instead.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have searched existing issues to confirm this request is not a duplicate.
+          required: true
+        - label: I understand that only **Stock ROMs** (OOS/ColorOS) are supported.
+          required: true
+        - label: This is a **OnePlus** device with official kernel sources.
+          required: true
+
+  - type: input
+    id: device_name
+    attributes:
+      label: Device Name & Model Number
+      description: Full commercial name and model number.
+      placeholder: "e.g. OnePlus 13T — PHC110"
+    validations:
+      required: true
+
+  - type: input
+    id: soc
+    attributes:
+      label: SoC (Chipset)
+      placeholder: "e.g. Snapdragon 8 Elite"
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Current Android / ROM Version
+      description: Android version and OEM firmware version the device shipped with or is currently running.
+      placeholder: "e.g. Android 15 — OxygenOS 15.0"
+    validations:
+      required: true
+
+  - type: input
+    id: kmi
+    attributes:
+      label: Kernel KMI
+      description: |
+        Find it with `uname -r` in a terminal or ADB (`adb shell uname -r`).
+        Format: `androidXX-Y.ZZ.AAA` (e.g. `android15-6.6.75`).
+      placeholder: "e.g. android15-6.6.75"
+    validations:
+      required: true
+
+  - type: textarea
+    id: device_info
+    attributes:
+      label: Kernel Source / Specs Links
+      description: Link to official kernel sources or specs page. This speeds up evaluation significantly.
+      placeholder: |
+        - Kernel source: https://...
+        - Specs: https://...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, links to XDA threads, Telegram discussions, etc.

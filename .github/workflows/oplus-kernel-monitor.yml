@@ -1,0 +1,375 @@
+name: OnePlusOSS Kernel Monitor
+
+on:
+  schedule:
+    - cron: '0 */12 * * *' # Execute every 12 Hrs
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      actions: write
+
+    env:
+      ORG: "OnePlusOSS"
+      STATE_FILE: "old_state.json"
+      GH_TOKEN: ${{ github.token }}
+      GH_HTTP_TIMEOUT: 600
+
+    steps:
+      - name: Checkout Main
+        uses: actions/checkout@v6
+        with:
+          path: main
+
+      - name: Configure Blacklist
+        id: blacklist_config
+        run: |
+          cat >> $GITHUB_ENV <<EOF
+          BLACKLIST_REPOS<<BLOCK
+          android_kernel_oneplus_one
+          android_kernel_oneplus_msm8974
+          android_kernel_oneplus_msm8994
+          android_kernel_oneplus_msm8996
+          android_kernel_oneplus_msm8998
+          android_kernel_oneplus_sm6350
+          android_kernel_oneplus_sm4250
+          android_kernel_oneplus_sm7250
+          android_kernel_oneplus_sdm845
+          android_kernel_oneplus_sm8150
+          android_kernel_4.19_oneplus_mt6765
+          android_kernel_oneplus_sm8250
+          android_kernel_oneplus_mt6893
+          android_kernel_oneplus_sm4350
+          android_kernel_msm-5.4_oneplus_sm6375
+          android_kernel_oneplus_mt6877
+          android_kernel_oneplus_sm7325
+          android_kernel_oneplus_sm8350
+          android_kernel_oneplus_sw5100
+          android_kernel_oneplus_sm7225
+          BLOCK
+          EOF
+
+      - name: Prepare Persistence from Status Branch
+        run: |
+          git clone --branch status-page https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} status_repo || mkdir status_repo
+          cd status_repo
+          if [ -f "$STATE_FILE" ]; then
+            cp "$STATE_FILE" ../main/
+            echo "✅ Existing state loaded from status-page branch."
+          else
+            echo "{}" > ../main/"$STATE_FILE"
+            echo "init" > .gitignore # Ensure we can track files if orphan
+            echo "ℹ️ No existing state found. Starting fresh."
+          fi
+
+      - name: Process Repositories
+        id: scanner
+        run: |
+          cd main
+          if [ ! -f "$STATE_FILE" ] || [ ! -s "$STATE_FILE" ]; then echo "{}" > "$STATE_FILE"; fi
+          echo "{}" > new_state.json
+          
+          NEW_REPOS=""
+          NEW_BRANCHES=""
+          UPDATED_BRANCHES=""
+          DELETED_ITEMS=""
+          CHANGES_DETECTED="false"
+          
+          # Desktop Summary Table Header
+          echo "### 📊 Branch Status & Kernel Versions" >> $GITHUB_STEP_SUMMARY
+          echo "| Repo | Branch | Latest Commit | Kernel | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          
+          # Initialize README Buffer
+          echo "### 📓 Kernel Manifests Report" > ../manifest_summary.md
+          echo "### 🛠 Kernel Trees Report" > ../local_summary.md
+          
+          # Auto filter repos: Ignore Repos not related to android_kernel and ignore android_kernel_modules or any modules or techpack
+          REPOS=$(gh repo list $ORG --limit 1000 --json name --jq '.[] | select((.name | startswith("android_kernel_") or . == "kernel_manifest") and (.name | contains("modules") or contains("techpack") | not)) | .name')
+          
+          echo "🔍 Found $(echo "$REPOS" | wc -w) repositories to scan."
+          
+          for repo in $REPOS; do
+            # Check against multiline blacklist
+            if echo "$BLACKLIST_REPOS" | grep -qxw "$repo"; then
+              echo "🚫 Skipping blacklisted repo: $repo"
+              continue
+            fi
+            
+            echo "📂 Processing: $repo"
+            
+            if ! jq -e ".\"$repo\"" "$STATE_FILE" > /dev/null; then
+               NEW_REPOS+="- 🆕 $repo\n"
+               CHANGES_DETECTED="true"
+            fi
+            
+            QUERY='query($name: String!, $owner: String!) {
+              repository(name: $name, owner: $owner) {
+                refs(refPrefix: "refs/heads/", first: 100, orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {
+                  nodes {
+                    name
+                    target {
+                      ... on Commit {
+                        oid
+                        message
+                        file(path: "Makefile") {
+                          ... on TreeEntry {
+                            object { ... on Blob { text } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }'
+            
+            KERNEL_MANIFEST_QUERY='query($name: String!, $owner: String!) {
+              repository(name: $name, owner: $owner) {
+                refs(refPrefix: "refs/heads/", first: 100) {
+                  nodes {
+                    name
+                    target {
+                      ... on Commit {
+                        oid
+                        message
+                        tree {
+                          entries {
+                            name
+                            oid
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }'
+            
+            [ "$repo" == "kernel_manifest" ] && ACTIVE_QUERY="$KERNEL_MANIFEST_QUERY" || ACTIVE_QUERY="$QUERY"
+            [ "$repo" == "kernel_manifest" ] && TARGET_BUF="../manifest_summary.md" || TARGET_BUF="../local_summary.md"
+            
+            RETRY_COUNT=0; MAX_RETRIES=3; BRANCH_DATA=""
+            until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
+              BRANCH_DATA=$(gh api graphql -f query="$ACTIVE_QUERY" -f owner="$ORG" -f name="$repo" --jq '.data.repository.refs.nodes[]' 2>/dev/null)
+              [ $? -eq 0 ] && [ -n "$BRANCH_DATA" ] && break
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "⚠️ API failed for $repo. Retry $RETRY_COUNT/$MAX_RETRIES..."
+              sleep 5
+            done
+            
+            if [ ! -z "$BRANCH_DATA" ]; then
+              echo "<details><summary><b>$repo</b></summary>" >> "$TARGET_BUF"
+              echo "" >> "$TARGET_BUF"
+            
+              while read -r row; do
+                [ -z "$row" ] && continue
+                BRANCH_NAME=$(echo "$row" | jq -r '.name')
+                SHA=$(echo "$row" | jq -r '.target.oid')
+                MSG=$(echo "$row" | jq -r '.target.message' | head -n 1 | cut -c1-200 | sed 's/[|`]/ /g')
+                
+                OLD_VAL=$(jq -r ".\"$repo\".\"$BRANCH_NAME\" // \"NONE\"" "$STATE_FILE")
+                STATUS="✅"
+                KERNEL="N/A"
+                DIFF_LOG=""
+                
+                if [ "$repo" == "kernel_manifest" ]; then
+                  FILES_JSON=$(echo "$row" | jq -c '.target.tree.entries | reduce .[] as $item ({}; .[$item.name] = $item.oid)')
+                  CURRENT_VAL="$SHA|$FILES_JSON"
+                  
+                  if [ "$OLD_VAL" = "NONE" ]; then
+                    STATUS="🆕"
+                  elif [ "$OLD_VAL" != "$CURRENT_VAL" ]; then
+                    STATUS="🔄 Updated"
+                  else
+                    STATUS="✅"
+                  fi
+                  
+                  if [ "$STATUS" != "✅" ]; then
+                    # Loop through current files
+                    while IFS="|" read -r fname foid; do
+                      # If it's a brand new branch, every file is "Added"
+                      # If it's updated, only files not in OLD_VAL are "Added"
+                      OLD_OID="NONE"
+                      if [ "$OLD_VAL" != "NONE" ]; then
+                        OLD_OID=$(echo "$OLD_VAL" | cut -d'|' -f2- | jq -r ".\"$fname\" // \"NONE\"" 2>/dev/null || echo "NONE")
+                      fi
+                      
+                      if [ "$OLD_OID" == "NONE" ]; then
+                        DIFF_LOG+="  - 🆕 Added: \\\`$fname\\\`\n"
+                      elif [ "$OLD_OID" != "$foid" ]; then
+                        DIFF_LOG+="  - 📝 Modified: \\\`$fname\\\`\n"
+                      fi
+                    done <<< "$(echo "$FILES_JSON" | jq -r 'to_entries[] | "\(.key)|\(.value)"')"
+                    
+                    # Check for deletions only if the branch already existed
+                    if [ "$OLD_VAL" != "NONE" ]; then
+                      while read -r old_fname; do
+                        if ! echo "$FILES_JSON" | jq -e ".\"$old_fname\"" > /dev/null; then
+                          DIFF_LOG+="  - 🗑️ Deleted: \\\`$old_fname\\\`\n"
+                        fi
+                      done <<< "$(echo "$OLD_VAL" | cut -d'|' -f2- | jq -r 'keys[]' 2>/dev/null)"
+                    fi
+                  fi
+                  
+                  {
+                    printf '#### Branch: `%s` %s\n' "$BRANCH_NAME" "$STATUS"
+                    printf '* **Latest Commit:** `%s`\n\n' "${SHA:0:7}"
+                    printf '| File Name | Status |\n'
+                    printf '| :--- | :--- |\n'
+                    
+                    while IFS=$'\t' read -r fname foid; do
+                      F_STATUS="✅"
+                      OLD_OID="NONE"
+                      if [ "$OLD_VAL" != "NONE" ]; then
+                        OLD_OID=$(echo "$OLD_VAL" | cut -d'|' -f2- | jq -r --arg f "$fname" '.[$f] // "NONE"' 2>/dev/null || echo "NONE")
+                      fi
+                      [ "$OLD_OID" = "NONE" ] && F_STATUS="🆕 New"
+                      printf '| %s | %s |\n' "$fname" "$F_STATUS"
+                    done < <(echo "$FILES_JSON" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
+                    
+                    printf '\n---\n'
+                  } >> $TARGET_BUF
+                  KERNEL="MANIFEST"
+                  
+                  if [ "$STATUS" != "✅" ]; then
+                    [ "$STATUS" == "🆕" ] && NEW_BRANCHES+="- ✨ $repo ($BRANCH_NAME)\n$DIFF_LOG" || UPDATED_BRANCHES+="- 🔄 $repo ($BRANCH_NAME)\n$DIFF_LOG"
+                  fi
+                  
+                  echo "  ↳ 🌿 Branch: $BRANCH_NAME"
+                  
+                else
+                  MAKEFILE_TEXT=$(echo "$row" | jq -r '.target.file.object.text // empty')
+                  
+                  KERNEL="N/A"
+                  if [ -n "$MAKEFILE_TEXT" ]; then
+                    KERNEL_RAW=$(printf '%s\n' "$MAKEFILE_TEXT" | grep -oE '(VERSION|PATCHLEVEL|SUBLEVEL)[[:space:]]*=[[:space:]]*[0-9]+' | cut -d'=' -f2 | tr -d ' ' || true)
+                    [ -n "$KERNEL_RAW" ] && KERNEL=$(printf '%s\n' "$KERNEL_RAW" | paste -sd '.' -)
+                  fi
+                  [ -z "$KERNEL" ] && KERNEL="N/A"
+                
+                  echo "  ↳ 🌿 Branch: $BRANCH_NAME ($KERNEL)"
+                  CURRENT_VAL="$SHA|$KERNEL"
+                  if [ "$OLD_VAL" = "NONE" ]; then
+                    STATUS="🆕"
+                  elif [ "$OLD_VAL" != "$CURRENT_VAL" ]; then
+                    STATUS="🔄 Updated"
+                  else
+                    STATUS="✅"
+                  fi
+                  
+                  {
+                    echo "#### Branch: \`$BRANCH_NAME\` $STATUS"
+                    echo "* **Kernel Version:** \`$KERNEL\`"
+                    echo "* **Commit SHA:** \`${SHA:0:7}\`"
+                    echo "* **Message:** $MSG"
+                    echo "---"
+                  } >> "$TARGET_BUF"
+                  
+                  if [ "$STATUS" != "✅" ]; then
+                    [ "$STATUS" == "🆕" ] && NEW_BRANCHES+="- ✨ $repo ($BRANCH_NAME)\n" || UPDATED_BRANCHES+="- 🔄 $repo ($BRANCH_NAME) → $KERNEL\n"
+                  fi
+                fi
+                
+                [ "$STATUS" != "✅" ] && CHANGES_DETECTED="true"
+                echo "| $repo | $BRANCH_NAME | \`${SHA:0:7}\` | $KERNEL | $STATUS |" >> $GITHUB_STEP_SUMMARY
+                
+                jq --arg repo "$repo" --arg branch "$BRANCH_NAME" --arg val "$CURRENT_VAL" '.[$repo][$branch] = $val' new_state.json > tmp.json && mv tmp.json new_state.json
+              done <<< "$BRANCH_DATA"
+              
+              echo "</details>" >> "$TARGET_BUF"
+            else
+              # 🛑 API returned no branches. Let's verify why.
+              echo "❓ No branch data for $repo. Verifying if repo exists..."
+              
+              if gh repo view "$ORG/$repo" > /dev/null 2>&1; then
+                # ✅ Repo EXISTS, but API failed to give branches (Timeout/Jitter)
+                echo "⚠️ API Jitter detected for $repo. Preserving state."
+                OLD_REPO_STATE=$(jq -c ".\"$repo\" // {}" "$STATE_FILE")
+                jq --argjson old "$OLD_REPO_STATE" ".\"$repo\" = \$old" new_state.json > tmp.json && mv tmp.json new_state.json
+              else
+                # 🗑️ Repo is actually GONE (404)
+                echo "🗑️ Confirmation: $repo has been deleted from GitHub."
+                CHANGES_DETECTED="true"
+                DELETED_ITEMS+="- 🗑️ **Repo Deleted**: $repo\n"
+              fi
+            fi
+          done
+          
+          while read -r old_repo; do
+            [ -z "$old_repo" ] && continue
+            
+            # If the repo still exists in the new state, check its branches
+            if jq -e ".\"$old_repo\"" new_state.json > /dev/null 2>&1; then
+              while read -r old_branch; do
+                [ -z "$old_branch" ] && continue
+                if ! jq -e ".\"$old_repo\".\"$old_branch\"" new_state.json > /dev/null; then
+                  DELETED_ITEMS+="- 🗑️ **Branch Deleted**: $old_repo ($old_branch)\n"
+                  CHANGES_DETECTED="true"
+                fi
+              done <<< "$(jq -r ".\"$old_repo\" | keys[]" "$STATE_FILE")"
+            fi
+          done <<< "$(jq -r 'keys[]' "$STATE_FILE")"
+          
+          mv new_state.json "$STATE_FILE"
+          echo "changes_found=$CHANGES_DETECTED" >> $GITHUB_OUTPUT
+          
+          FINAL_LOG=""
+          [ ! -z "$NEW_REPOS" ] && FINAL_LOG+="### 📂 New Repositories\n$NEW_REPOS\n"
+          [ ! -z "$NEW_BRANCHES" ] && FINAL_LOG+="### ✨ New Branches\n$NEW_BRANCHES\n"
+          [ ! -z "$UPDATED_BRANCHES" ] && FINAL_LOG+="### 🔄 Updated Branches\n$UPDATED_BRANCHES\n"
+          [ ! -z "$DELETED_ITEMS" ] && FINAL_LOG+="### 🗑️ Deleted Items\n$DELETED_ITEMS\n"
+          
+          echo "log_content<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$FINAL_LOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Manage Notification Issue
+        if: steps.scanner.outputs.changes_found == 'true'
+        run: |
+          gh label create "notification" --color "BFD4F2" --repo ${{ github.repository }} --force || true
+          DATE_TITLE="Kernel Updates - $(date +'%Y-%m-%d')"
+          ISSUE_NUMBER=$(gh issue list --repo ${{ github.repository }} --label "notification" --state "open" --search "$DATE_TITLE" --json number --jq '.[0].number')
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          if [[ "${{ github.repository_owner }}" != "WildKernels" ]]; then
+            TARGET="@${{ github.repository_owner }}"
+          else
+            TARGET="@${{ github.repository_owner }}/oneplus-kernel-devs"
+          fi
+          
+          if [ -z "$ISSUE_NUMBER" ]; then
+            BODY=$(printf "Hi $TARGET,\n\nTracker for today.\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n🔗 [View Action Summary]($RUN_URL)")
+            gh issue create --repo ${{ github.repository }} --title "$DATE_TITLE" --body "$BODY" --label "notification"
+          else
+            BODY=$(printf "### 🔄 New Activity Detected ($(date -u +'%H:%M') UTC)\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n🔗 [View Action Summary]($RUN_URL)")
+            gh issue comment $ISSUE_NUMBER --repo ${{ github.repository }} --body "$BODY"
+          fi
+
+      - name: Update Status Branch README
+        if: success()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} status_repo_final
+          cd status_repo_final
+          if git ls-remote --exit-code --heads origin status-page; then
+            git fetch origin status-page && git checkout status-page
+          else
+            git checkout --orphan status-page && git rm -rf .
+          fi
+          echo "# 📱 OnePlusOSS Kernel Tracker" > README.md
+          echo "> **Last Update:** $(date -u) (UTC)" >> README.md
+          echo "Daily automated report for OnePlus Kernel branches." >> README.md
+          cat ../manifest_summary.md >> README.md
+          echo -e "\n" >> README.md
+          cat ../local_summary.md >> README.md
+          
+          cp "../main/${{ env.STATE_FILE }}" .
+          git add README.md "${{ env.STATE_FILE }}"
+          
+          git diff --staged --quiet || (git commit -m "docs: sync kernel status [skip ci]" && git push origin status-page)
