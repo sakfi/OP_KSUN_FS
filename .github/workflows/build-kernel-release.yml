@@ -546,9 +546,8 @@ jobs:
           echo "Installing packages..."
           sudo apt-get -o Acquire::Retries=3 update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            git curl ca-certificates build-essential clang lld flex bison \
-            libelf-dev libssl-dev libncurses-dev zlib1g-dev liblz4-tool \
-            libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils pigz
+            flex bison libelf-dev libssl-dev libncurses-dev liblz4-tool \
+            libxml2-utils dwarves bc kmod libdw-dev elfutils
           
           sudo apt-get clean
           echo "✅ Dependencies installed"
@@ -566,6 +565,15 @@ jobs:
           
           echo "[DEBUG] Ccache version : $(ccache --version)"
           echo "::endgroup::"
+
+      - name: Restore ccache from actions/cache
+        if: ${{ inputs.clean_build != true }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ matrix.device_id }}-${{ inputs.optimize_level }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.device_id }}-${{ inputs.optimize_level }}-
 
       - name: ♻️ Configure ccache & LTO cache (bounded)
         if: ${{ inputs.clean_build != true }}
