@@ -9,15 +9,15 @@ on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: 'Branch to scan for toolchain configs'
-        required: true
-        default: 'Testing'
+        description: 'Branch to scan (Leave empty to scan ALL branches)'
+        required: false
+        default: ''
         type: string
   workflow_call:
     inputs:
       target_branch:
         required: false
-        default: 'Testing'
+        default: ''
         type: string
 
 jobs:
@@ -29,11 +29,13 @@ jobs:
       - name: Set target branches
         id: set-branches
         run: |
-          if [ "${{ github.event_name }}" == "schedule" ]; then
+          # If it's a schedule OR manual run with empty input, scan all branches
+          INPUT_BRANCH="${{ github.event.inputs.target_branch || inputs.target_branch }}"
+          
+          if [ "${{ github.event_name }}" == "schedule" ] || [ -z "$INPUT_BRANCH" ]; then
             echo "branches=[\"main\", \"Testing\", \"Beta-2\"]" >> "$GITHUB_OUTPUT"
           else
-            BRANCH="${{ github.event.inputs.target_branch || inputs.target_branch || github.ref_name }}"
-            echo "branches=[\"$BRANCH\"]" >> "$GITHUB_OUTPUT"
+            echo "branches=[\"$INPUT_BRANCH\"]" >> "$GITHUB_OUTPUT"
           fi
 
   prepare-release:
