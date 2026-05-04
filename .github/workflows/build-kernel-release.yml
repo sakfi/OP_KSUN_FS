@@ -341,6 +341,7 @@ jobs:
             ["android12-5.10"]="gki-android12-5.10"
             ["android13-5.15"]="gki-android13-5.15"
             ["android14-6.1"]="gki-android14-6.1"
+            ["android15-6.1"]="gki-android14-6.1"
             ["android15-6.6"]="gki-android15-6.6"
             ["android16-6.12"]="gki-android16-6.12"
           )
@@ -349,6 +350,7 @@ jobs:
             ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
             ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
             ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
+            ["android15-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
             ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
             ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
           )
@@ -431,6 +433,7 @@ jobs:
           echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android15_6_1=${susfs_hashes[android15-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
           
@@ -467,12 +470,14 @@ jobs:
             --arg a12 "${susfs_hashes[android12-5.10]:-unknown}" \
             --arg a13 "${susfs_hashes[android13-5.15]:-unknown}" \
             --arg a14 "${susfs_hashes[android14-6.1]:-unknown}" \
+            --arg a15_6_1 "${susfs_hashes[android15-6.1]:-unknown}" \
             --arg a15 "${susfs_hashes[android15-6.6]:-unknown}" \
             --arg a16 "${susfs_hashes[android16-6.12]:-unknown}" \
             '{
               "android12-5.10": $a12,
               "android13-5.15": $a13,
               "android14-6.1":  $a14,
+              "android15-6.1":  $a15_6_1,
               "android15-6.6":  $a15,
               "android16-6.12": $a16
             }')
@@ -552,6 +557,7 @@ jobs:
             ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
             ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
             ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
+            ["android15-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
             ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
             ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
           )
@@ -560,6 +566,7 @@ jobs:
             ["android12-5.10"]="${{ steps.set-matrix.outputs.susfs_hash_android12_5_10 }}"
             ["android13-5.15"]="${{ steps.set-matrix.outputs.susfs_hash_android13_5_15 }}"
             ["android14-6.1"]="${{ steps.set-matrix.outputs.susfs_hash_android14_6_1 }}"
+            ["android15-6.1"]="${{ steps.set-matrix.outputs.susfs_hash_android15_6_1 }}"
             ["android15-6.6"]="${{ steps.set-matrix.outputs.susfs_hash_android15_6_6 }}"
             ["android16-6.12"]="${{ steps.set-matrix.outputs.susfs_hash_android16_6_12 }}"
           )
