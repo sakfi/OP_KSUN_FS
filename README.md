@@ -1,12 +1,21 @@
 <div align="center">
 
-# 🔥 Wild Kernels for OnePlus (Oppo/Realme)
+# 🔥 OP_KSUN_FS 🔥
 
+[![Build Kernel](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml/badge.svg)](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/sakfi/OP_KSUN_FS?style=flat-square&color=blue)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
+[![Forks](https://img.shields.io/github/forks/sakfi/OP_KSUN_FS?style=flat-square&color=orange)](https://github.com/sakfi/OP_KSUN_FS/network/members)
+[![Stars](https://img.shields.io/github/stars/sakfi/OP_KSUN_FS?style=flat-square&color=yellow)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
+
+<a href="https://github.com/sakfi/OP_KSUN_FS">
+  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=An+Open+Source+Kernel;Integrated+With+KernelSU-Next+%2B+SUSFS;For+OnePlus+Devices;Maintained+by+SakFi" alt="Typing SVG" />
+</a>
+
+[![KernelSU-Next](https://img.shields.io/badge/KernelSU_Next-Supported-green)](https://kernelsu-next.github.io/webpage/)
 [![KernelSU](https://img.shields.io/badge/KernelSU-Supported-green)](https://kernelsu.org/)
-[![KernelSU-Next](https://img.shields.io/badge/KernelSU-Supported-green)](https://kernelsu-next.github.io/webpage/)
-[![SUSFS](https://img.shields.io/badge/SUSFS-Integrated-orange)](https://gitlab.com/simonpunk/susfs4ksu)
-[![KernelSU](https://img.shields.io/badge/KernelSU-Supported-green)](https://kernelsu.org/)
-[![OnePlusOSS Tracking Status](https://img.shields.io/badge/OnePlusOSS--Tracker-active-green)](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS/blob/status-page/README.md)
+[![SUSFS](https://img.shields.io/badge/SUSFS-Integrated-orange?logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu)
+
+> **Forked from [WildKernels/OnePlus_KernelSU_SUSFS](https://github.com/WildKernels/OnePlus_KernelSU_SUSFS)**
 
 </div>
 
@@ -130,10 +139,14 @@ If you encounter any issues or need help, feel free to:
 
 <div align="center">
   
-[![Telegram](https://img.shields.io/badge/Telegram-fatalcoder524-blue?logo=telegram)](https://t.me/anonymous_yolo)
-[![Telegram Group](https://img.shields.io/badge/Telegram-WildKernels-blue?logo=telegram)](https://t.me/WildKernelsTG)
+[![Telegram](https://img.shields.io/badge/Telegram-SakFi-blue?logo=telegram)](http://t.me/SakFi)
+[![GitHub](https://img.shields.io/badge/GitHub-SakFi-blue?logo=github)](https://github.com/sakfi)
 
 </div>
+
+<p align="center">
+  <img src="https://komarev.com/ghpvc/?username=sakfi&label=Profile%20Views&color=ff007f&style=for-the-badge" alt="sakfi" />
+</p>
 
 ---
 

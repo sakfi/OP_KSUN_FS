@@ -12,6 +12,11 @@ on:
         required: true
         type: boolean
         default: false
+      custom_release_tag:
+        description: 'Provide a custom release tag (e.g., v2.0.0). Leave empty to auto-generate.'
+        required: false
+        type: string
+        default: ''
       op_model:
         description: 'Select the OnePlus kernels to build'
         required: true
@@ -795,7 +800,7 @@ jobs:
       REPO_NAME: ${{ github.event.repository.name }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SUSFS_BASE_VERSION: ${{ needs.set-op-model.outputs.susfs_base_version }}
-      RELEASE_NAME: '*TEST BUILD* OnePlus Kernels With KernelSU Next & SUSFS ${{ needs.set-op-model.outputs.susfs_base_version }} *TEST BUILD*'
+      RELEASE_NAME: 'OnePlus Kernels With KSUN & SUSFS integrated — SakFi'
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v6
@@ -804,18 +809,24 @@ jobs:
 
       - name: 🏷️ Generate and Create New Tag
         run: |
-          # Only search for tags starting with this SUSFS version
-          LATEST_MATCHING_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags \
-            --jq "[.[] | select(.name | startswith(\"${SUSFS_BASE_VERSION}-r\"))] \
-                  | sort_by(.name | split(\"-r\")[1] | tonumber) \
-                  | last | .name // empty")
-          
-          if [ -z "$LATEST_MATCHING_TAG" ]; then
-            # No existing release for this version SUSFS → first release
-            NEW_TAG="${SUSFS_BASE_VERSION}-r1"
+          if [ -n "${{ github.event.inputs.custom_release_tag }}" ]; then
+            NEW_TAG="${{ github.event.inputs.custom_release_tag }}"
+            echo "✅ Using custom tag: $NEW_TAG"
           else
-            # Only increment the -r* suffix of the latest release for this version
-            NEW_TAG=$(echo "$LATEST_MATCHING_TAG" | awk -F'-r' '{printf "%s-r%d", $1, $2+1}')
+            # Only search for tags starting with this SUSFS version
+            LATEST_MATCHING_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags \
+              --jq "[.[] | select(.name | startswith(\"${SUSFS_BASE_VERSION}-r\"))] \
+                    | sort_by(.name | split(\"-r\")[1] | tonumber) \
+                    | last | .name // empty")
+            
+            if [ -z "$LATEST_MATCHING_TAG" ]; then
+              # No existing release for this version SUSFS → first release
+              NEW_TAG="${SUSFS_BASE_VERSION}-r1"
+            else
+              # Only increment the -r* suffix of the latest release for this version
+              NEW_TAG=$(echo "$LATEST_MATCHING_TAG" | awk -F'-r' '{printf "%s-r%d", $1, $2+1}')
+            fi
+            echo "Auto-generated tag: $NEW_TAG"
           fi
           
           echo "New tag: $NEW_TAG"
@@ -843,7 +854,7 @@ jobs:
           for file in $(find downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | sort); do
             if [ -f "$file" ]; then
               zipname=$(basename "$file" .zip)
-              rest="${zipname#AK3_}"
+              rest="${zipname#SKF_}"
               IFS='_' read -ra parts <<< "$rest"
               model="${parts[0]}"
               os_version="${parts[1]}"
@@ -881,6 +892,10 @@ jobs:
             <<< "${{ needs.set-op-model.outputs.active_gki_keys }}"
           
           cat << EOF > release_notes.md
+          <div align="center">
+            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
+          </div>
+          
           # 🎯 OnePlus Kernels with KernelSU Next & SUSFS $SUSFS_BASE_VERSION
           
           > **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')  
@@ -1146,15 +1161,34 @@ jobs:
           
           ## 🙏 Credits
           
-          - **KernelSU Next Team** - Root solution
-          - **KernelSU Team** - Root solution
-          - **simonpunk** - SUSFS development
-          - **OnePlus** - Kernel source code
-          - **Community Contributors** - Testing and feedback
+          <div align="center">
+          
+          | 🔧 Project/Role | 👨‍💻 Developer | 🔗 Link |
+          |:---:|:---:|:---:|
+          | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
+          | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
+          | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
+          | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
+          | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
+          | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
+          | **Optimization Patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
+          
+          </div>
           
           ---
           
-          **⚡ Built with ❤️ by the community**
+          ## 💬 Support & Connect
+          
+          <div align="center">
+          
+          [![Telegram](https://img.shields.io/badge/Telegram-SakFi-blue?logo=telegram)](http://t.me/SakFi)
+          [![GitHub](https://img.shields.io/badge/GitHub-SakFi-blue?logo=github)](https://github.com/sakfi)
+          
+          <br>
+          
+          **🚀 Built with ❤️ by [sakfi](https://github.com/sakfi)**
+          
+          </div>
           
           EOF
           
@@ -1166,8 +1200,7 @@ jobs:
           gh release create "${{ env.NEW_TAG }}" \
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
-            --notes-file release_notes.md \
-            --draft
+            --notes-file release_notes.md
 
       - name: 📤 Upload Release Assets Dynamically
         run: |
