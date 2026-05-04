@@ -468,6 +468,8 @@ jobs:
               fi
             done
             
+            # Ensure v prefix for standardized versioning
+            [[ "$susfs_base_version" != v* ]] && susfs_base_version="v$susfs_base_version"
             echo "susfs_base_version=$susfs_base_version" >> "$GITHUB_OUTPUT"
           fi
           
@@ -892,18 +894,35 @@ jobs:
             NEW_TAG="${{ github.event.inputs.custom_release_tag }}"
             echo "✅ Using custom tag: $NEW_TAG"
           else
-            # Only search for tags starting with this SUSFS version
-            LATEST_MATCHING_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags \
-              --jq "[.[] | select(.name | startswith(\"${SUSFS_BASE_VERSION}-r\"))] \
-                    | sort_by(.name | split(\"-r\")[1] | tonumber) \
-                    | last | .name // empty")
+            # Get the absolute latest tag from the repository
+            LATEST_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
             
-            if [ -z "$LATEST_MATCHING_TAG" ]; then
-              # No existing release for this version SUSFS → first release
+            if [ -z "$LATEST_TAG" ]; then
+              # No existing tags → start at -r1 for the current version
               NEW_TAG="${SUSFS_BASE_VERSION}-r1"
             else
-              # Only increment the -r* suffix of the latest release for this version
-              NEW_TAG=$(echo "$LATEST_MATCHING_TAG" | awk -F'-r' '{printf "%s-r%d", $1, $2+1}')
+              echo "ℹ️ Last release tag: $LATEST_TAG"
+              # Check if the last tag contains our current base SUSFS version
+              if [[ "$LATEST_TAG" == *"$SUSFS_BASE_VERSION"* ]]; then
+                if [[ "$LATEST_TAG" == *-r* ]]; then
+                  # Increment Revision: v2.1.0-r1 -> v2.1.0-r2
+                  BASE=$(echo "$LATEST_TAG" | awk -F'-r' '{print $1}')
+                  REV=$(echo "$LATEST_TAG" | awk -F'-r' '{print $2}')
+                  # Ensure REV is a number before incrementing
+                  if [[ "$REV" =~ ^[0-9]+$ ]]; then
+                    NEW_TAG="${BASE}-r$((REV + 1))"
+                  else
+                    NEW_TAG="${LATEST_TAG}-r1"
+                  fi
+                else
+                  # Standard to Revision: v2.1.0 -> v2.1.0-r1
+                  NEW_TAG="${LATEST_TAG}-r1"
+                fi
+              else
+                # New SUSFS version or different base detected, reset to -r1
+                NEW_TAG="${SUSFS_BASE_VERSION}-r1"
+                echo "ℹ️ New version base detected, starting at -r1"
+              fi
             fi
             echo "Auto-generated tag: $NEW_TAG"
           fi
