@@ -122,6 +122,20 @@ on:
         description: 'Clean build (no ccache)'
         type: boolean
         default: false
+      debug:
+        description: 'Enable debug mode: dumping debug related artifacts and show some debug logs'
+        required: false
+        type: boolean
+        default: false
+      mirror_toolchains:
+        description: 'Do you want to sync toolchains before build? [99% runs not required]'
+        required: false
+        type: boolean
+        default: false
+      make_release:
+        description: 'Create a GitHub Release'
+        type: boolean
+        default: false
       build_timestamp:
         description: 'Custom kernel build timestamp for uname -a (e.g. "Tue Feb 10 10:01:02 UTC 2026"). Leave empty for current time.'
         type: string
@@ -440,16 +454,23 @@ jobs:
           # Recalculate wrapped with updated matrix and write output
           wrapped=$(jq -n --argjson items "$merged_matrix" '{ include: $items }')
           echo "matrix=$(jq -c . <<< "$wrapped")" >> "$GITHUB_OUTPUT"
+
+          # Standardize SUSFS_BASE_VERSION output for versioning
+          susfs_base_version=$(echo "$merged_matrix" | jq -r '.[0].android_version' | grep -oP '\d+' | head -n1 || echo "0")
+          # If we have multiple, just pick the first one's version (standard behavior)
+          susfs_base_version="v2.1.0" # Default base for auto-incrementing logic
+          
+          # Try to find if there is a more accurate base version from the config or upstream
+          # For now, we standardize to v2.1.0 to match the repo's release pattern
+          echo "susfs_base_version=$susfs_base_version" >> "$GITHUB_OUTPUT"
           
           echo "::endgroup::"
 
       - name: Upload build matrix
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: build-matrix
           path: matrix.json
-          archive: false
-          retention-days: 7
 
       - name: 📊 Build plan summary
         run: |
@@ -538,6 +559,13 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "> **⚠️ Android-Kernel Filter:** Only OOS15 and OOS16 devices will be built for \`${{ inputs.op_model }}\`" >> $GITHUB_STEP_SUMMARY
           fi
+  mirror_toolchain:
+    needs: set-op-model
+    if: ${{ inputs.mirror_toolchains }}
+    uses: ./.github/workflows/mirror-toolchains.yml
+    with:
+      target_branch: ${{ github.ref_name }}
+    secrets: inherit
 
   build:
     name: build (${{ matrix.model }}, ${{ matrix.soc }}, ${{ matrix.branch }}, ${{ matrix.manifest }}, ${{ matrix.android_version }}, ${{ matrix.kernel_version }}, ${{ matrix.os_version }}, ${{ matrix.ksu_type }})
@@ -804,13 +832,14 @@ jobs:
   trigger-release:
     needs: [set-op-model, build]
     runs-on: ubuntu-latest
+    if: ${{ inputs.make_release }}
     environment: Production-Release
     env:
       REPO_OWNER: ${{ github.repository_owner }}
       REPO_NAME: ${{ github.event.repository.name }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SUSFS_BASE_VERSION: ${{ needs.set-op-model.outputs.susfs_base_version }}
       RELEASE_NAME: 'OnePlus Kernels With KSUN & SUSFS integrated — SakFi'
-      SUSFS_BASE_VERSION: 'v2.1.0'
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v6
@@ -819,43 +848,48 @@ jobs:
 
       - name: 🏷️ Generate and Create New Tag
         run: |
-          if [ -n "${{ inputs.custom_release_tag }}" ]; then
-            TAG_TO_USE="${{ inputs.custom_release_tag }}"
-            echo "✅ Using custom tag: $TAG_TO_USE"
-            echo "NEW_TAG=${TAG_TO_USE}" >> $GITHUB_ENV
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "${{ github.event.inputs.custom_release_tag }}" ]; then
+            NEW_TAG="${{ github.event.inputs.custom_release_tag }}"
+            echo "✅ Using custom tag: $NEW_TAG"
           else
-            LATEST_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[].name' 2>/dev/null | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+            # Get the absolute latest tag from the repository
+            LATEST_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
+            
             if [ -z "$LATEST_TAG" ]; then
-              BASE_TAG="v1.0.1"
+              # No existing tags → start at -r1 for the current version
+              NEW_TAG="${SUSFS_BASE_VERSION}-r1"
             else
-              MAJOR=$(echo "$LATEST_TAG" | awk -F. '{print $1}')
-              MINOR=$(echo "$LATEST_TAG" | awk -F. '{print $2}')
-              PATCH=$(echo "$LATEST_TAG" | awk -F. '{print $3}')
-              PATCH=$((PATCH + 1))
-              BASE_TAG="$MAJOR.$MINOR.$PATCH"
+              echo "ℹ️ Last release tag: $LATEST_TAG"
+              # Check if the last tag contains our current base SUSFS version
+              if [[ "$LATEST_TAG" == *"$SUSFS_BASE_VERSION"* ]]; then
+                if [[ "$LATEST_TAG" == *-r* ]]; then
+                  # Increment Revision: v2.1.0-r1 -> v2.1.0-r2
+                  BASE=$(echo "$LATEST_TAG" | awk -F'-r' '{print $1}')
+                  REV=$(echo "$LATEST_TAG" | awk -F'-r' '{print $2}')
+                  # Ensure REV is a number before incrementing
+                  if [[ "$REV" =~ ^[0-9]+$ ]]; then
+                    NEW_TAG="${BASE}-r$((REV + 1))"
+                  else
+                    NEW_TAG="${LATEST_TAG}-r1"
+                  fi
+                else
+                  # Standard to Revision: v2.1.0 -> v2.1.0-r1
+                  NEW_TAG="${LATEST_TAG}-r1"
+                fi
+              else
+                # New SUSFS version or different base detected, reset to -r1
+                NEW_TAG="${SUSFS_BASE_VERSION}-r1"
+                echo "ℹ️ New version base detected, starting at -r1"
+              fi
             fi
-            
-            # Ensure tag uniqueness by checking against remote
-            TAG_TO_USE="$BASE_TAG"
-            while gh api "repos/$REPO_OWNER/$REPO_NAME/git/ref/tags/$TAG_TO_USE" --silent 2>/dev/null; do
-              echo "⚠️ Tag $TAG_TO_USE already exists. Incrementing patch version..."
-              MAJOR=$(echo "$TAG_TO_USE" | awk -F. '{print $1}')
-              MINOR=$(echo "$TAG_TO_USE" | awk -F. '{print $2}')
-              PATCH=$(echo "$TAG_TO_USE" | awk -F. '{print $3}')
-              PATCH=$((PATCH + 1))
-              TAG_TO_USE="$MAJOR.$MINOR.$PATCH"
-            done
-            
-            echo "✅ Final unique tag: $TAG_TO_USE"
-            echo "NEW_TAG=${TAG_TO_USE}" >> $GITHUB_ENV
-            
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            # We no longer git tag and push here. 
-            # gh release create will automatically generate the tag using the GitHub API!
+            echo "Auto-generated tag: $NEW_TAG"
           fi
+          
+          # Set for subsequent steps
+          echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v8
