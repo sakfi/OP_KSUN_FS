@@ -1,0 +1,37 @@
+## ============================================================
+## SakFi AnyKernel3 Flash Output Lines
+## Edit the TEXT between the markers - do not remove the markers.
+## ============================================================
+
+
+## ---- SECTION 1: Header / Banner Lines (shown at top of flash) ----
+## Each line = one ui_print line on screen.
+
+LINE_BANNER_1=*****************************************
+LINE_BANNER_2=*___________SakFi OP Kernel_____________*
+LINE_BANNER_3=*_______________________________________*
+LINE_BANNER_4=*________Powered by KSUN and SUSFS_______*
+LINE_BANNER_5=*****************************************
+
+## ---- SECTION 2: Author / Credit Lines ----
+
+LINE_AUTHOR=SakFi OP Kernels by sakfi
+LINE_AK3_CREDIT=AnyKernel3 by osm0sis @ xda-developers
+LINE_CREDIT_1=Wild Kernels by TheWildJames
+LINE_CREDIT_2=OnePlus KernelSU and SUSFS by fatalcoder524
+LINE_CREDIT_3=SUSFS by sidex15 and simonpunk
+
+
+## ---- SECTION 3: Device Check Line ----
+## Format on screen: "  -> <LABEL>: true"
+
+LINE_SUPPORTED_LABEL=SakFi OP Kernels Supported
+
+
+## ---- SECTION 4: ASCII Art (shown just before Done!) ----
+## Leave empty = no ASCII art.
+
+
+## ---- SECTION 5: Closing Message ----
+
+LINE_DONE=Flashing Done! Good Luck with your new Kernel!!

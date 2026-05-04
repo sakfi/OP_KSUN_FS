@@ -13,22 +13,79 @@ on:
         type: boolean
         default: false
       op_model:
-        description: 'Select the OnePlus kernels to build'
+        description: 'Select the OnePlus model'
         required: true
         type: choice
         options:
-          - OOS14+15+16
-          - OOS15+16
-          - OOS14+15
-          - OOS16
-          - OOS15
-          - OOS14
-          - android16-6.12
-          - android15-6.6
-          - android14-6.1
-          - android13-5.15
+          - All
+          - OP-ACE
+          - OP-ACE-2
+          - OP-ACE-2-PRO
+          - OP-ACE-2V
+          - OP-ACE-3
+          - OP-ACE-3-PRO
+          - OP-ACE-3V
+          - OP-ACE-5
+          - OP-ACE-5-PRO
+          - OP-ACE-5-RACE
+          - OP-ACE-5-ULTRA
+          - OP-ACE-6
+          - OP-ACE-6T
+          - OP-ACE-RACE
+          - OP-NORD-3
+          - OP-NORD-4
+          - OP-NORD-4-CE
+          - OP-NORD-5
+          - OP-NORD-CE-5
+          - OP-NORD-CE4-LITE
+          - OP-OPEN
+          - OP-PAD
+          - OP-PAD-2
+          - OP-PAD-2-PRO
+          - OP-PAD-3
+          - OP-PAD-LITE
+          - OP-PAD-PRO
+          - OP10pro
+          - OP10r
+          - OP10t
+          - OP11
+          - OP11r
+          - OP12
+          - OP12r
+          - OP13
+          - OP13-CPH
+          - OP13-PJZ
+          - OP13S
+          - OP13T
+          - OP13r
+          - OP15
+          - OP15r
+        default: All
+      android_version_filter:
+        description: 'Select the Android Version'
+        required: true
+        type: choice
+        options:
+          - All
+          - oos14
+          - oos15
+          - oos16
+          - oos14+oos15
+          - oos15+oos16
+          - oos14+oos16
+        default: All
+      kernel_version_filter:
+        description: 'Select the Kernel Version to build'
+        required: true
+        type: choice
+        options:
+          - All
           - android12-5.10
-        default: OOS14+15+16
+          - android13-5.15
+          - android14-6.1
+          - android15-6.6
+          - android16-6.12
+        default: All
       ksu_options:
         description: 'Enter KernelSU build json'
         required: true
@@ -137,40 +194,54 @@ jobs:
           jq_filter="."
           
           case "$input" in
-            OOS14+15+16)
-              ;;
-            OOS15+16)
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))"
-              ;;
-            OOS14+15)
-              jq_filter="map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))"
-              ;;
-            OOS16)
-              jq_filter="map(select(.os_version == \"OOS16\"))"
-              ;;
-            OOS15)
-              jq_filter="map(select(.os_version == \"OOS15\"))"
-              ;;
-            OOS14)
-              jq_filter="map(select(.os_version == \"OOS14\"))"
-              ;;
-            android*-*.*)
-              # Extract android version and kernel version
-              IFS='-' read -r av kv <<< "$input"
-              
-              # Build android*-* only for OOS15 and OOS16
-              jq_filter="map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\")) | map(select(.android_version == \"$av\" and .kernel_version == \"$kv\"))"
-              
-              echo "ℹ️  Android-Kernel filter applied: $av-$kv"
-              echo "   Restricted to: OOS15 and OOS16 only"
+            All)
               ;;
             *)
-              echo "::warning::Unknown input '$input'. Using empty filter."
-              jq_filter="map(select(false))"
+              echo "ℹ️  Device-specific filter applied: $input"
+              jq_filter="map(select(.model == \"$input\"))"
               ;;
           esac
           
-          filtered=$(jq -c "$jq_filter" matrix.json)
+          android_input="${{ github.event.inputs.android_version_filter }}"
+          android_jq_filter=""
+          
+          case "$android_input" in
+            "All")
+              ;;
+            "oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\"))"
+              ;;
+            "oos15")
+              android_jq_filter=" | map(select(.os_version == \"OOS15\"))"
+              ;;
+            "oos16")
+              android_jq_filter=" | map(select(.os_version == \"OOS16\"))"
+              ;;
+            "oos14+oos15" | "oos15+oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS15\"))"
+              ;;
+            "oos15+oos16" | "oos16+oos15")
+              android_jq_filter=" | map(select(.os_version == \"OOS15\" or .os_version == \"OOS16\"))"
+              ;;
+            "oos14+oos16" | "oos16+oos14")
+              android_jq_filter=" | map(select(.os_version == \"OOS14\" or .os_version == \"OOS16\"))"
+              ;;
+            *)
+              echo "::warning::Unknown Android version filter '$android_input'."
+              ;;
+          esac
+
+          kernel_input="${{ github.event.inputs.kernel_version_filter }}"
+          kernel_jq_filter=""
+          
+          if [[ "$kernel_input" != "All" ]]; then
+            IFS='-' read -r ak_android ak_kernel <<< "$kernel_input"
+            kernel_jq_filter=" | map(select(.android_version == \"$ak_android\" and .kernel_version == \"$ak_kernel\"))"
+            echo "ℹ️  Kernel version filter applied: $kernel_input"
+          fi
+
+          combined_filter="${jq_filter}${android_jq_filter}${kernel_jq_filter}"
+          filtered=$(jq -c "$combined_filter" matrix.json)
           count=$(jq 'length' <<<"$filtered")
           
           filtered=$(echo "$filtered" | jq '
@@ -795,7 +866,7 @@ jobs:
       REPO_NAME: ${{ github.event.repository.name }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SUSFS_BASE_VERSION: ${{ needs.set-op-model.outputs.susfs_base_version }}
-      RELEASE_NAME: '*TEST BUILD* OnePlus Kernels With KernelSU Next & SUSFS ${{ needs.set-op-model.outputs.susfs_base_version }} *TEST BUILD*'
+      RELEASE_NAME: 'OnePlus Kernels With KSUN & SUSFS integrated — SakFi'
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v6
@@ -843,7 +914,7 @@ jobs:
           for file in $(find downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | sort); do
             if [ -f "$file" ]; then
               zipname=$(basename "$file" .zip)
-              rest="${zipname#AK3_}"
+              rest="${zipname#SKF_}"
               IFS='_' read -ra parts <<< "$rest"
               model="${parts[0]}"
               os_version="${parts[1]}"
@@ -881,6 +952,10 @@ jobs:
             <<< "${{ needs.set-op-model.outputs.active_gki_keys }}"
           
           cat << EOF > release_notes.md
+          <div align="center">
+            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
+          </div>
+          
           # 🎯 OnePlus Kernels with KernelSU Next & SUSFS $SUSFS_BASE_VERSION
           
           > **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')  
@@ -1144,17 +1219,42 @@ jobs:
           
           ---
           
-          ## 🙏 Credits
-          
-          - **KernelSU Next Team** - Root solution
-          - **KernelSU Team** - Root solution
-          - **simonpunk** - SUSFS development
-          - **OnePlus** - Kernel source code
-          - **Community Contributors** - Testing and feedback
+          cat << EOF >> release_notes.md
           
           ---
           
-          **⚡ Built with ❤️ by the community**
+          ## 🌟 Special Thanks
+          
+          These amazing people help make this project possible! ❤️
+          
+          <div align="center">
+          
+          | 🔧 Project/Role | 👨‍💻 Developer | 🔗 Link |
+          |:---:|:---:|:---:|
+          | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
+          | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
+          | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
+          | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
+          | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
+          | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
+          | **Optimization Patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
+          
+          </div>
+          
+          ---
+          
+          ## 💬 Support & Connect
+          
+          <div align="center">
+          
+          [![Telegram](https://img.shields.io/badge/Telegram-SakFi-blue?logo=telegram)](http://t.me/SakFi)
+          [![GitHub](https://img.shields.io/badge/GitHub-SakFi-blue?logo=github)](https://github.com/sakfi)
+          
+          <br>
+          
+          **⚡ Built with ❤️ by [sakfi](https://github.com/sakfi)**
+          
+          </div>
           
           EOF
           
@@ -1166,8 +1266,7 @@ jobs:
           gh release create "${{ env.NEW_TAG }}" \
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
-            --notes-file release_notes.md \
-            --draft
+            --notes-file release_notes.md
 
       - name: 📤 Upload Release Assets Dynamically
         run: |

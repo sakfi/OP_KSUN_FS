@@ -1,0 +1,232 @@
+name: 🆕 Check for New OnePlus Devices
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — only report, do not open issue'
+        required: false
+        default: 'false'
+        type: boolean
+      upstream_repo:
+        description: 'Upstream repo to compare against'
+        required: false
+        default: 'WildKernels/OnePlus_KernelSU_SUSFS'
+
+jobs:
+  check-new-devices:
+    name: 🔍 Detect new device configs from upstream
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      UPSTREAM: ${{ inputs.upstream_repo || 'WildKernels/OnePlus_KernelSU_SUSFS' }}
+
+    steps:
+      - name: 📥 Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: 📡 Fetch upstream config listing
+        id: fetch-upstream
+        run: |
+          echo "::group::Fetching upstream config file list from $UPSTREAM"
+
+          # Fetch list of all JSON configs from upstream via GitHub API
+          UPSTREAM_FILES=$(gh api \
+            "repos/$UPSTREAM/git/trees/main?recursive=1" \
+            --jq '.tree[] | select(.path | startswith("configs/") and endswith(".json")) | .path' \
+            2>/dev/null || echo "")
+
+          if [ -z "$UPSTREAM_FILES" ]; then
+            echo "::warning::Could not fetch upstream file list. Repo may be private or unavailable."
+            echo "upstream_available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "upstream_available=true" >> "$GITHUB_OUTPUT"
+            echo "$UPSTREAM_FILES" > /tmp/upstream_files.txt
+            echo "Found $(wc -l < /tmp/upstream_files.txt) configs in upstream"
+          fi
+          echo "::endgroup::"
+
+      - name: 🔍 Compare configs — detect new devices
+        id: compare
+        if: steps.fetch-upstream.outputs.upstream_available == 'true'
+        run: |
+          echo "::group::Comparing upstream vs local configs"
+
+          NEW_DEVICES=""
+          NEW_COUNT=0
+
+          while IFS= read -r upstream_path; do
+            filename=$(basename "$upstream_path")
+            # Check if this file exists locally (in any OOS subfolder)
+            LOCAL_MATCH=$(find configs/ -name "$filename" 2>/dev/null | head -n1)
+            if [ -z "$LOCAL_MATCH" ]; then
+              echo "🆕 New device found: $upstream_path"
+              NEW_DEVICES="$NEW_DEVICES\n$upstream_path"
+              NEW_COUNT=$((NEW_COUNT + 1))
+            fi
+          done < /tmp/upstream_files.txt
+
+          echo "new_count=$NEW_COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$NEW_COUNT" -gt 0 ]; then
+            echo "new_found=true" >> "$GITHUB_OUTPUT"
+            printf '%b' "$NEW_DEVICES" > /tmp/new_devices.txt
+            echo "--- New devices found ---"
+            cat /tmp/new_devices.txt
+          else
+            echo "new_found=false" >> "$GITHUB_OUTPUT"
+            echo "✅ No new devices found — you are up to date with upstream"
+          fi
+          echo "::endgroup::"
+
+      - name: 📋 Fetch config content for new devices
+        id: fetch-configs
+        if: steps.compare.outputs.new_found == 'true'
+        run: |
+          echo "::group::Fetching config content for new devices"
+
+          ISSUE_BODY="## 🆕 New OnePlus Devices Detected\n\n"
+          ISSUE_BODY+="The following device config(s) exist in **[$UPSTREAM](https://github.com/$UPSTREAM)** "
+          ISSUE_BODY+="but are **not yet in this repository**.\n\n"
+          ISSUE_BODY+="> Auto-detected on: $(date -u '+%Y-%m-%d %H:%M UTC')\n\n"
+          ISSUE_BODY+="---\n\n"
+
+          while IFS= read -r device_path; do
+            [ -z "$device_path" ] && continue
+
+            filename=$(basename "$device_path")
+            os_folder=$(echo "$device_path" | cut -d'/' -f2)
+            device_name="${filename%.json}"
+
+            echo "Fetching: $device_path"
+
+            # Fetch the JSON content from upstream
+            CONFIG_JSON=$(gh api \
+              "repos/$UPSTREAM/contents/$device_path" \
+              --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+
+            if [ -n "$CONFIG_JSON" ]; then
+              # Parse key fields
+              SOC=$(echo "$CONFIG_JSON" | jq -r '.soc // "unknown"')
+              KERNEL=$(echo "$CONFIG_JSON" | jq -r '.kernel_version // "unknown"')
+              ANDROID=$(echo "$CONFIG_JSON" | jq -r '.android_version // "unknown"')
+              OS_VER=$(echo "$CONFIG_JSON" | jq -r '.os_version // "unknown"')
+              LTO=$(echo "$CONFIG_JSON" | jq -r '.lto // "thin"')
+              BRANCH=$(echo "$CONFIG_JSON" | jq -r '.kernel_branch // "unknown"')
+
+              # Determine recommended O3 based on SOC
+              case "$SOC" in
+                sun|pineapple|kalama) RECOMMENDED_OPT="O3" ;;
+                *) RECOMMENDED_OPT="O2" ;;
+              esac
+
+              # Determine recommended LTO based on SOC
+              case "$SOC" in
+                sun) RECOMMENDED_LTO="full" ;;
+                *) RECOMMENDED_LTO="thin" ;;
+              esac
+
+              ISSUE_BODY+="### 📱 \`$device_name\` (\`$os_folder\`)\n\n"
+              ISSUE_BODY+="| Field | Value |\n"
+              ISSUE_BODY+="|---|---|\n"
+              ISSUE_BODY+="| **SoC** | \`$SOC\` |\n"
+              ISSUE_BODY+="| **Kernel** | \`$KERNEL\` |\n"
+              ISSUE_BODY+="| **Android** | \`$ANDROID\` |\n"
+              ISSUE_BODY+="| **OS Version** | \`$OS_VER\` |\n"
+              ISSUE_BODY+="| **Upstream LTO** | \`$LTO\` |\n"
+              ISSUE_BODY+="| **Kernel branch** | \`$BRANCH\` |\n"
+              ISSUE_BODY+="| **Recommended optimize** | \`$RECOMMENDED_OPT\` (based on SoC family) |\n"
+              ISSUE_BODY+="| **Recommended LTO** | \`$RECOMMENDED_LTO\` |\n\n"
+              ISSUE_BODY+="<details><summary>📄 Suggested config (with SakFi improvements)</summary>\n\n"
+              ISSUE_BODY+="\`\`\`json\n"
+
+              # Build suggested config with SakFi improvements applied
+              SUGGESTED=$(echo "$CONFIG_JSON" | jq \
+                --arg opt "$RECOMMENDED_OPT" \
+                --arg lto "$RECOMMENDED_LTO" \
+                --arg uname "SakFi-OP" \
+                '. + {optimize: $opt, lto: $lto, uname: $uname}')
+
+              ISSUE_BODY+="$SUGGESTED"
+              ISSUE_BODY+="\n\`\`\`\n</details>\n\n"
+              ISSUE_BODY+="**Action:** Copy the config above to \`configs/$os_folder/$filename\` and review before triggering a build.\n\n"
+              ISSUE_BODY+="---\n\n"
+            else
+              ISSUE_BODY+="### 📱 \`$device_name\` (\`$os_folder\`)\n"
+              ISSUE_BODY+="> _Could not fetch config content — check upstream manually._\n\n"
+              ISSUE_BODY+="---\n\n"
+            fi
+          done < /tmp/new_devices.txt
+
+          ISSUE_BODY+="### 📌 Steps to add a new device\n"
+          ISSUE_BODY+="1. Copy the suggested config above into the correct \`configs/\` subfolder\n"
+          ISSUE_BODY+="2. Verify \`kernel_branch\` and \`manifest\` are correct\n"
+          ISSUE_BODY+="3. Adjust \`optimize\` / \`lto\` if needed\n"
+          ISSUE_BODY+="4. Test a single-device build via \`workflow_dispatch\` before adding to the full matrix\n"
+          ISSUE_BODY+="5. Close this issue once the device is successfully building\n\n"
+          ISSUE_BODY+="_Auto-detected by [New Device Checker](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_"
+
+          # Save to file for issue creation
+          printf '%b' "$ISSUE_BODY" > /tmp/issue_body.md
+          echo "::endgroup::"
+
+      - name: 📢 Open GitHub Issue for new devices
+        if: steps.compare.outputs.new_found == 'true' && inputs.dry_run != 'true'
+        run: |
+          COUNT="${{ steps.compare.outputs.new_count }}"
+          TITLE="🆕 New OnePlus Device(s) Detected: $COUNT device(s) not yet added"
+
+          # Check if issue already open for this batch (avoid duplicates)
+          DEVICE_LIST=$(cat /tmp/new_devices.txt | xargs -I{} basename {} .json | tr '\n' ', ' | sed 's/,$//')
+          EXISTING=$(gh issue list --state open --label "new-device" \
+            --json title --jq '.[].title' | grep -c "New OnePlus" || true)
+
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "ℹ️  An open new-device issue already exists — adding a comment instead"
+            ISSUE_NUMBER=$(gh issue list --state open --label "new-device" \
+              --json number --jq '.[0].number')
+            gh issue comment "$ISSUE_NUMBER" \
+              --body "$(cat /tmp/issue_body.md)"
+            echo "💬 Comment added to existing issue #$ISSUE_NUMBER"
+          else
+            gh issue create \
+              --title "$TITLE" \
+              --body-file /tmp/issue_body.md \
+              --label "enhancement,new-device"
+            echo "📢 New issue created for $COUNT device(s): $DEVICE_LIST"
+          fi
+
+      - name: 📊 Summary
+        if: always()
+        run: |
+          UPSTREAM_OK="${{ steps.fetch-upstream.outputs.upstream_available }}"
+          NEW_FOUND="${{ steps.compare.outputs.new_found }}"
+          COUNT="${{ steps.compare.outputs.new_count }}"
+
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+
+          ## 🆕 New Device Check Results
+
+          | | |
+          |---|---|
+          | Upstream repo | \`$UPSTREAM\` |
+          | Upstream reachable | $UPSTREAM_OK |
+          | New devices found | ${COUNT:-0} |
+          | Issue opened | $([ "$NEW_FOUND" = "true" ] && [ "${{ inputs.dry_run }}" != "true" ] && echo "✅ Yes" || echo "⏭️ No") |
+          | Mode | $([ "${{ inputs.dry_run }}" = "true" ] && echo "🔍 Dry run" || echo "🚀 Live") |
+
+          EOF
+
+          if [ "${NEW_FOUND:-false}" = "true" ]; then
+            echo "### New devices:" >> "$GITHUB_STEP_SUMMARY"
+            while IFS= read -r path; do
+              [ -z "$path" ] && continue
+              echo "- \`$(basename "$path" .json)\` (\`$(echo "$path" | cut -d'/' -f2)\`)" >> "$GITHUB_STEP_SUMMARY"
+            done < /tmp/new_devices.txt 2>/dev/null || true
+          fi

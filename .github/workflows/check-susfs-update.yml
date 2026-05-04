@@ -1,0 +1,132 @@
+name: 🔍 Check SUSFS Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      current_susfs_version:
+        description: 'Currently used SUSFS version (e.g. v2.0.0)'
+        required: true
+        default: 'v2.0.0'
+      dry_run:
+        description: 'Dry run — report only, do not open GitHub issue'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  check-susfs:
+    name: 🔍 Check for new SUSFS version
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔍 Fetch latest SUSFS tag from GitLab
+        id: fetch
+        run: |
+          # simonpunk/susfs4ksu lives on GitLab — use GitLab API
+          LATEST_TAG=$(curl -sf \
+            "https://gitlab.com/api/v4/projects/simonpunk%2Fsusfs4ksu/repository/tags" \
+            | jq -r '.[0].name // empty')
+
+          CURRENT="${{ inputs.current_susfs_version }}"
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "::warning::Could not fetch latest SUSFS tag from GitLab"
+            echo "latest_tag=unknown" >> "$GITHUB_OUTPUT"
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Current SUSFS version : $CURRENT"
+          echo "Latest SUSFS version  : $LATEST_TAG"
+          echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+
+          if [ "$LATEST_TAG" != "$CURRENT" ]; then
+            echo "update_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ✅ Already up to date
+        if: steps.fetch.outputs.update_available == 'false'
+        run: |
+          echo "✅ Already on the latest SUSFS version: ${{ steps.fetch.outputs.current }}"
+
+      - name: 🏷️ Ensure labels exist
+        if: steps.fetch.outputs.update_available == 'true' && inputs.dry_run != 'true'
+        run: |
+          gh label create "susfs-update" --color "0075ca" --description "SUSFS version update available" --force || true
+          gh label create "enhancement" --color "a2eeef" --description "New feature or request" --force || true
+
+      - name: 📢 Open GitHub Issue
+        if: steps.fetch.outputs.update_available == 'true' && inputs.dry_run != 'true'
+        run: |
+          CURRENT="${{ steps.fetch.outputs.current }}"
+          LATEST="${{ steps.fetch.outputs.latest_tag }}"
+          TITLE="⬆️ SUSFS Update Available: $CURRENT → $LATEST"
+
+          BODY="### SUSFS Update Detected
+
+          | Field | Value |
+          |---|---|
+          | **Current version** | \`$CURRENT\` |
+          | **Latest version** | \`$LATEST\` |
+          | **Upstream repo** | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
+          | **Tags page** | [View tags](https://gitlab.com/simonpunk/susfs4ksu/-/tags) |
+
+          ### Action Required
+          1. Review the changelog for \`$LATEST\` in the upstream GitLab repo.
+          2. Update \`SUSFS_BASE_VERSION\` in \`build-kernel-release.yml\`.
+          3. Update the SUSFS branch map in \`action.yml\` if a new branch was added.
+          4. Test with one device before rolling out to all configs.
+
+          *Auto-detected by the [SUSFS update checker](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+
+          # Avoid duplicate issues
+          EXISTING=$(gh issue list --state open --label "susfs-update" \
+            --json title --jq '.[].title' | grep -Fc "$LATEST" || true)
+
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "ℹ️  Issue for $LATEST already exists — skipping"
+          else
+            gh issue create \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --label "susfs-update,enhancement"
+            echo "📢 Issue created for SUSFS $LATEST"
+          fi
+
+      - name: 📊 Summary
+        if: always()
+        run: |
+          LATEST="${{ steps.fetch.outputs.latest_tag }}"
+          CURRENT="${{ steps.fetch.outputs.current }}"
+          UPDATE="${{ steps.fetch.outputs.update_available }}"
+          DRY="${{ inputs.dry_run }}"
+
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+
+          ## 🔍 SUSFS Update Check
+
+          | | |
+          |---|---|
+          | Current version | \`$CURRENT\` |
+          | Latest upstream  | \`$LATEST\` |
+          | Update available | $UPDATE |
+          | Mode | $([ "$DRY" = "true" ] && echo "🔍 Dry run (no issue opened)" || echo "🚀 Live") |
+
+          EOF
+
+          if [ "$UPDATE" = "true" ]; then
+            echo "> ⚠️ **Update available:** \`$CURRENT\` → \`$LATEST\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "> ✅ **Up to date** — no action needed" >> "$GITHUB_STEP_SUMMARY"
+          fi
