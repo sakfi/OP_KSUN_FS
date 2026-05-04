@@ -122,14 +122,6 @@ on:
         description: 'Clean build (no ccache)'
         type: boolean
         default: false
-      build_timestamp:
-        description: 'Custom kernel build timestamp for uname -a (e.g. "Tue Feb 10 10:01:02 UTC 2026"). Leave empty for current time.'
-        type: string
-        default: ''
-      make_release:
-        description: 'Create a GitHub Release'
-        type: boolean
-        default: false
       debug:
         description: 'Enable debug mode: dumping debug related artifacts and show some debug logs'
         required: false
@@ -138,6 +130,10 @@ on:
       mirror_toolchains:
         description: 'Do you want to sync toolchains before build? [99% runs not required]'
         required: false
+        type: boolean
+        default: false
+      make_release:
+        description: 'Create a GitHub Release'
         type: boolean
         default: false
       build_timestamp:
