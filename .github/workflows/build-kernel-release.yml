@@ -12,6 +12,11 @@ on:
         required: true
         type: boolean
         default: false
+      custom_release_tag:
+        description: 'Provide a custom release tag (e.g., v2.0.0). Leave empty to auto-generate.'
+        required: false
+        type: string
+        default: ''
       op_model:
         description: 'Select the OnePlus model'
         required: true
@@ -882,18 +887,24 @@ jobs:
 
       - name: 🏷️ Generate and Create New Tag
         run: |
-          # Only search for tags starting with this SUSFS version
-          LATEST_MATCHING_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags \
-            --jq "[.[] | select(.name | startswith(\"${SUSFS_BASE_VERSION}-r\"))] \
-                  | sort_by(.name | split(\"-r\")[1] | tonumber) \
-                  | last | .name // empty")
-          
-          if [ -z "$LATEST_MATCHING_TAG" ]; then
-            # No existing release for this version SUSFS → first release
-            NEW_TAG="${SUSFS_BASE_VERSION}-r1"
+          if [ -n "${{ inputs.custom_release_tag }}" ]; then
+            NEW_TAG="${{ inputs.custom_release_tag }}"
+            echo "✅ Using custom tag: $NEW_TAG"
           else
-            # Only increment the -r* suffix of the latest release for this version
-            NEW_TAG=$(echo "$LATEST_MATCHING_TAG" | awk -F'-r' '{printf "%s-r%d", $1, $2+1}')
+            # Only search for tags starting with this SUSFS version
+            LATEST_MATCHING_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags \
+              --jq "[.[] | select(.name | startswith(\"${SUSFS_BASE_VERSION}-r\"))] \
+                    | sort_by(.name | split(\"-r\")[1] | tonumber) \
+                    | last | .name // empty")
+            
+            if [ -z "$LATEST_MATCHING_TAG" ]; then
+              # No existing release for this version SUSFS → first release
+              NEW_TAG="${SUSFS_BASE_VERSION}-r1"
+            else
+              # Only increment the -r* suffix of the latest release for this version
+              NEW_TAG=$(echo "$LATEST_MATCHING_TAG" | awk -F'-r' '{printf "%s-r%d", $1, $2+1}')
+            fi
+            echo "Auto-generated tag: $NEW_TAG"
           fi
           
           echo "New tag: $NEW_TAG"
