@@ -440,6 +440,74 @@ runs:
         echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
         echo "KSUN_FOLDER=$KSUN_DIR" >> "$GITHUB_ENV"
 
+    - name: 🛠️ Restore Toolchains from SakFi Cache
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        set -euo pipefail
+        echo "::group::Restore toolchains from cache"
+        
+        # 1. Parse the manifest for toolchain revisions
+        MANIFEST_PATH="$CONFIG_FOLDER/.repo/manifests/temp_manifest.xml"
+        if [ ! -f "$MANIFEST_PATH" ]; then
+          # Fallback to default manifest if temp one isn't found (unlikely)
+          MANIFEST_PATH="$CONFIG_FOLDER/.repo/manifest.xml"
+        fi
+        
+        echo "📂 Parsing manifest: $MANIFEST_PATH"
+        
+        # Mapping of project name fragments to labels
+        declare -A TOOLCHAIN_MAP=(
+          ["clang/host/linux-x86"]="clang"
+          ["prebuilts/rust"]="rust"
+          ["prebuilts/clang-tools"]="clang-tools"
+          ["prebuilts/build-tools"]="build-tools"
+        )
+        
+        # Extract projects and revisions using a simple grep/sed for speed
+        # Format in manifest: <project name="..." revision="..." />
+        projects=$(grep "<project " "$MANIFEST_PATH" | sed -n 's/.*name="\([^"]*\)".*revision="\([^"]*\)".*/\1|\2/p')
+        
+        for p in $projects; do
+          NAME=$(echo "$p" | cut -d'|' -f1)
+          REV=$(echo "$p" | cut -d'|' -f2)
+          LABEL=""
+          
+          for key in "${!TOOLCHAIN_MAP[@]}"; do
+            if [[ "$NAME" == *"$key"* ]]; then
+              LABEL="${TOOLCHAIN_MAP[$key]}"
+              break
+            fi
+          done
+          
+          if [ -z "$LABEL" ]; then continue; fi
+          
+          FILENAME="${LABEL}-${REV}.tar.gz"
+          TARGET_DIR="$KERNEL_PLATFORM_FOLDER/prebuilts/$LABEL/host/linux-x86/$REV"
+          [ "$LABEL" == "rust" ] && TARGET_DIR="$KERNEL_PLATFORM_FOLDER/prebuilts/rust/linux-x86/$REV"
+          
+          echo "🔍 Checking cache for $LABEL ($REV)..."
+          
+          if gh release download "toolchain-cache" -p "$FILENAME*" --repo "${{ github.repository }}" --dir /tmp 2>/dev/null; then
+            echo "✅ Cache hit! Extracting $FILENAME..."
+            mkdir -p "$TARGET_DIR"
+            
+            # Handle split files if any
+            if [ -f "/tmp/${FILENAME}.partaa" ]; then
+              cat /tmp/${FILENAME}.part* > "/tmp/$FILENAME"
+              rm /tmp/${FILENAME}.part*
+            fi
+            
+            tar -xzf "/tmp/$FILENAME" -C "$TARGET_DIR" --strip-components=1 2>/dev/null || tar -xzf "/tmp/$FILENAME" -C "$TARGET_DIR" 2>/dev/null
+            rm "/tmp/$FILENAME"
+          else
+            echo "⚠️ Cache miss for $LABEL ($REV). Will fallback to upstream sync."
+          fi
+        done
+        
+        echo "::endgroup::"
+
     - name: Get Kernel Version Info
       shell: bash
       run: |

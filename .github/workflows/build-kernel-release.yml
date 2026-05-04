@@ -127,11 +127,6 @@ on:
         required: false
         type: boolean
         default: false
-      mirror_toolchains:
-        description: 'Do you want to sync toolchains before build? [99% runs not required]'
-        required: false
-        type: boolean
-        default: false
       make_release:
         description: 'Create a GitHub Release'
         type: boolean
@@ -559,13 +554,6 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "> **⚠️ Android-Kernel Filter:** Only OOS15 and OOS16 devices will be built for \`${{ inputs.op_model }}\`" >> $GITHUB_STEP_SUMMARY
           fi
-  mirror_toolchain:
-    needs: set-op-model
-    if: ${{ inputs.mirror_toolchains }}
-    uses: ./.github/workflows/mirror-toolchains.yml
-    with:
-      target_branch: ${{ github.ref_name }}
-    secrets: inherit
 
   build:
     name: build (${{ matrix.model }}, ${{ matrix.soc }}, ${{ matrix.branch }}, ${{ matrix.manifest }}, ${{ matrix.android_version }}, ${{ matrix.kernel_version }}, ${{ matrix.os_version }}, ${{ matrix.ksu_type }})
