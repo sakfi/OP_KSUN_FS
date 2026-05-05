@@ -1,0 +1,35 @@
+name: 🚀 Cache Warmer
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight
+  workflow_dispatch: # Allow manual warming
+
+jobs:
+  warm-cache:
+    name: Warm ccache (OP12 / OOS15)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v6
+
+      - name: 🔨 Warm Build
+        uses: ./.github/actions/build-kernel
+        with:
+          op_config_json: |
+            {
+              "model": "OP12",
+              "soc": "SM8650",
+              "branch": "oneplus_v",
+              "manifest": "oneplus_v.xml",
+              "android_version": "android15",
+              "kernel_version": "6.6",
+              "os_version": "OOS15",
+              "disk_cleanup": true,
+              "susfs": true
+            }
+          ksu_type: "KSUN"
+          ksu_branch_or_hash: "dev"
+          susfs_commit_hash_or_branch: "85bcfac5edc8ba7808581e8d0a3ca9c7deca78e4"
+          optimize_level: "O2"
+          github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -161,6 +161,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix_oos14: ${{ steps.set-matrix.outputs.matrix_oos14 }}
+      matrix_oos15: ${{ steps.set-matrix.outputs.matrix_oos15 }}
+      matrix_oos16: ${{ steps.set-matrix.outputs.matrix_oos16 }}
       device_count: ${{ steps.set-matrix.outputs.count }}
       active_gki_keys: ${{ steps.set-matrix.outputs.active_gki_keys }}
       susfs_hash_android12_5_10: ${{ steps.set-matrix.outputs.susfs_hash_android12_5_10 }}
@@ -508,7 +511,16 @@ jobs:
             )
           ')
           
-          # Recalculate wrapped with updated matrix and write output
+          # Split matrix by OOS version for better parallelism
+          matrix_oos16=$(echo "$merged_matrix" | jq -c 'map(select(.os_version == "OOS16")) | {include: .}')
+          matrix_oos15=$(echo "$merged_matrix" | jq -c 'map(select(.os_version == "OOS15")) | {include: .}')
+          matrix_oos14=$(echo "$merged_matrix" | jq -c 'map(select(.os_version == "OOS14")) | {include: .}')
+          
+          echo "matrix_oos16=$matrix_oos16" >> "$GITHUB_OUTPUT"
+          echo "matrix_oos15=$matrix_oos15" >> "$GITHUB_OUTPUT"
+          echo "matrix_oos14=$matrix_oos14" >> "$GITHUB_OUTPUT"
+          
+          # Maintain compatibility for existing job
           wrapped=$(jq -n --argjson items "$merged_matrix" '{ include: $items }')
           echo "matrix=$(jq -c . <<< "$wrapped")" >> "$GITHUB_OUTPUT"
           
@@ -771,121 +783,24 @@ jobs:
             echo "> **⚠️ Android-Kernel Filter:** Only OOS15 and OOS16 devices will be built for \`${{ inputs.op_model }}\`" >> $GITHUB_STEP_SUMMARY
           fi
 
-  build:
-    name: build (${{ matrix.model }}, ${{ matrix.soc }}, ${{ matrix.branch }}, ${{ matrix.manifest }}, ${{ matrix.android_version }}, ${{ matrix.kernel_version }}, ${{ matrix.os_version }}, ${{ matrix.ksu_type }})
+  build-oos16:
+    name: build-oos16 (${{ matrix.model }}, ${{ matrix.ksu_type }})
     needs: [set-op-model]
     if: |
       !cancelled() &&
-      needs.set-op-model.result == 'success'
+      needs.set-op-model.result == 'success' &&
+      fromJSON(needs.set-op-model.outputs.matrix_oos16).include != []
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.set-op-model.outputs.matrix) }}
-    outputs:
-      ksun_ver: ${{ steps.build-stat.outputs.ksu_version }}
-      ksu_ver: ${{ steps.build-stat.outputs.ksu_version }}
+      matrix: ${{ fromJSON(needs.set-op-model.outputs.matrix_oos16) }}
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-
-      - name: 🧹 Emergency Disk Cleanup
-        if: ${{ matrix.disk_cleanup }}
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Install Minimal Dependencies
-        run: |
-          set -euo pipefail
-          echo "::group::Install dependencies"
-          sudo apt-get -o Acquire::Retries=3 update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            git curl ca-certificates build-essential clang lld flex bison \
-            libelf-dev libssl-dev libncurses-dev zlib1g-dev liblz4-tool \
-            libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils pigz
-          sudo apt-get clean
-          echo "✅ Dependencies installed"
-          echo "::endgroup::"
-
-      - name: Install ccache with ECS by cctv18
-        run: |
-          # Install ccache with ECS by cctv18
-          set -euo pipefail
-          echo "::group::Install ccache with ECS"
-          curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache
-          sudo cp -f ./ccache /usr/bin/ccache
-          sudo chmod +x /usr/bin/ccache
-          rm -f ./ccache
-          
-          echo "[DEBUG] Ccache version : $(ccache --version)"
-          echo "::endgroup::"
-
-      - name: ♻️ Configure ccache & LTO cache (bounded)
-        run: |
-          echo "::group::Configure ccache environment"
-          set -euo pipefail
-          if command -v ccache >/dev/null 2>&1; then
-            CACHE_DIR="${{ github.workspace }}/.ccache"
-            LDCACHE_DIR="${{ github.workspace }}/.ld_cache"
-            CCACHE_LOG="${{ github.workspace }}/ccache.log"
-            mkdir -p "$CACHE_DIR"
-            mkdir -p "$LDCACHE_DIR"
-            
-            SETTINGS=(
-              "CCACHE_DIR=$CACHE_DIR"
-              "LDCACHE_DIR=$LDCACHE_DIR"
-              "CCACHE_MAXSIZE=12G"
-              "CCACHE_COMPILERCHECK=content"
-              "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
-              "CCACHE_NOHASHDIR=true"
-              "CCACHE_IGNOREOPTIONS=--sysroot*"
-              "CCACHE_COMPRESSION=true"
-              "CCACHE_COMPRESSION_LEVEL=3"
-              "CCACHE_DIRECT=true"
-              "CCACHE_FILE_CLONE=true"
-              "CCACHE_INODE_CACHE=true"
-              "CCACHE_IS_KERNEL_COMPILING=true"
-              "CCACHE_UMASK=002"
-              "CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime,pch_defines,system_headers,locale"
-            )
-            
-            for setting in "${SETTINGS[@]}"; do
-              export "$setting"
-              echo "$setting" >> "$GITHUB_ENV"
-            done
-            
-            if [ "${{ inputs.debug }}" == "true" ]; then
-              export "CCACHE_LOGFILE=$CCACHE_LOG"
-              echo "CCACHE_LOGFILE=$CCACHE_LOG" >> "$GITHUB_ENV"
-            fi
-            
-            if ccache --help 2>&1 | grep -q 'depend_mode'; then
-              export CCACHE_DEPEND=true
-              echo "CCACHE_DEPEND=true" >> "$GITHUB_ENV"
-            fi
-            
-            echo "✅ ccache configured successfully"
-            echo "Current ccache configuration:"
-            ccache -p
-          else
-            echo "ccache not found, skipping configuration."
-          fi
-          echo "::endgroup::"
-
-      - name: 🧹 Prepare op_config_json (without KSU fields)
-        id: prepare_config
-        shell: bash
-        run: |
-          echo "config_json=$(jq -nc --argjson m '${{ toJSON(matrix) }}' '$m | del(.ksu_type, .ksu_hash, .ksu_resolved_hash)')" >> "$GITHUB_OUTPUT"
-
       - name: 🔨 Build Kernel
-        id: build
         uses: ./.github/actions/build-kernel
         with:
-          op_config_json: ${{ steps.prepare_config.outputs.config_json }}
-          enable_wireguard: ${{ github.event.inputs.enable_wireguard }}
-          enable_battery_opt: ${{ github.event.inputs.enable_battery_opt }}
-          enable_ntsync: ${{ github.event.inputs.enable_ntsync }}
+          op_config_json: ${{ toJSON(matrix) }}
           ksu_type: ${{ matrix.ksu_type }}
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
@@ -895,147 +810,65 @@ jobs:
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📊 Build statistics
-        id: build-stat
-        if: always()
-        run: |
-          echo "::group::Build Statistics"
-          
-          echo "Device: ${{ matrix.model }}"
-          echo "OS Version: ${{ matrix.os_version }}"
-          echo "Kernel: ${{ matrix.android_version }}-${{ matrix.kernel_version }}"
-          if [ "${{ matrix.susfs }}" = true ]; then
-            echo "SUSFS Hash: ${{ matrix.susfs_resolved_hash }}"
-          fi
-          echo "Status: ${{ job.status }}"
-          
-          if [ "${{ steps.build.outcome }}" = "success" ]; then
-            echo ""
-            echo "✅ Build completed successfully"
-            echo ""
-            echo "Outputs:"
-            echo "  - Kernel: ${{ steps.build.outputs.kernel_version }}"
-            if [ "${{ matrix.ksu_type }}" = "KSUN" ]; then
-              echo "  - KSU Next: v${{ steps.build.outputs.ksu_version }}"
-              echo "ksun_ver=${{ steps.build.outputs.ksu_version }}" >> "$GITHUB_OUTPUT"
-              echo "ksu_ver=" >> "$GITHUB_OUTPUT"
-            else
-              echo "  - KSU: v${{ steps.build.outputs.ksu_version }}"
-              echo "ksun_ver=" >> "$GITHUB_OUTPUT"
-              echo "ksu_ver=${{ steps.build.outputs.ksu_version }}" >> "$GITHUB_OUTPUT"
-            fi
-            if [ "${{ matrix.susfs }}" = true ]; then
-              echo "  - SUSFS: ${{ steps.build.outputs.susfs_version }}"
-            fi
-            echo "  - Build time: ${{ steps.build.outputs.build_time }}s"
-            
-            if [ "${{ inputs.clean_build }}" != "true" ]; then
-              echo "  - ccache hit rate: ${{ steps.build.outputs.ccache_hit_rate }}"
-              echo "  - ccache direct rate: ${{ steps.build.outputs.ccache_direct_rate }}"
-            else
-              echo "  - ccache: disabled (clean build)"
-            fi
-            
-            if [ -n "${{ steps.build.outputs.warnings }}" ]; then
-              echo "  - Warnings: ${{ steps.build.outputs.warnings }}"
-            fi
-          else
-            echo "❌ Build failed"
-          fi
-          
-          echo "::endgroup::"
+  build-oos15:
+    name: build-oos15 (${{ matrix.model }}, ${{ matrix.ksu_type }})
+    needs: [set-op-model]
+    if: |
+      !cancelled() &&
+      needs.set-op-model.result == 'success' &&
+      fromJSON(needs.set-op-model.outputs.matrix_oos15).include != []
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.set-op-model.outputs.matrix_oos15) }}
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v6
+      - name: 🔨 Build Kernel
+        uses: ./.github/actions/build-kernel
+        with:
+          op_config_json: ${{ toJSON(matrix) }}
+          ksu_type: ${{ matrix.ksu_type }}
+          ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
+          susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
+          optimize_level: ${{ inputs.optimize_level }}
+          build_timestamp: ${{ inputs.build_timestamp }}
+          clean: ${{ inputs.clean_build }}
+          debug: ${{ inputs.debug }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📝 Job summary
-        if: always()
-        run: |
-          cat >> $GITHUB_STEP_SUMMARY << EOF
-          
-          ### ${{ matrix.model }} (${{ matrix.os_version }}) - ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }}
-          
-          **Kernel:** ${{ matrix.android_version }}-${{ matrix.kernel_version }}
-          EOF
-          
-          if [ "${{ matrix.susfs }}" = true ]; then
-            cat >> $GITHUB_STEP_SUMMARY << EOF
-          **SUSFS Hash:** \`${{ matrix.susfs_resolved_hash }}\`
-          EOF
-          fi
-          
-          if [ "${{ steps.build.outcome }}" = "success" ]; then
-            cat >> $GITHUB_STEP_SUMMARY << EOF
-          | Metric | Value |
-          |--------|-------|
-          | **Kernel** | ${{ steps.build.outputs.kernel_version }} |
-          EOF
-            if [ "${{ matrix.ksu_type }}" = "KSUN" ]; then
-              cat >> $GITHUB_STEP_SUMMARY << EOF
-          | **KSU Next** | v${{ steps.build.outputs.ksu_version }} |
-          EOF
-            else
-              cat >> $GITHUB_STEP_SUMMARY << EOF
-          | **KSU** | v${{ steps.build.outputs.ksu_version }} |
-          EOF
-            fi
-            
-            if [ "${{ matrix.susfs }}" = true ]; then
-              cat >> $GITHUB_STEP_SUMMARY << EOF
-          | **SUSFS** | ${{ steps.build.outputs.susfs_version }} |
-          EOF
-            fi
-          cat >> $GITHUB_STEP_SUMMARY << EOF
-          | **Build Time** | ${{ steps.build.outputs.build_time }}s |
-          EOF
-            
-            if [ "${{ inputs.clean_build }}" != "true" ]; then
-              cat >> $GITHUB_STEP_SUMMARY << EOF
-          | **ccache Hit Rate** | ${{ steps.build.outputs.ccache_hit_rate }} |
-          | **ccache Direct Rate** | ${{ steps.build.outputs.ccache_direct_rate }} |
-          EOF
-            fi
-            
-            if [ -n "${{ steps.build.outputs.warnings }}" ]; then
-              echo "| **Warnings** | ${{ steps.build.outputs.warnings }} |" >> $GITHUB_STEP_SUMMARY
-            fi
-            
-            cat >> $GITHUB_STEP_SUMMARY << EOF
-          
-          **Image SHA256:** \`${{ steps.build.outputs.image_sha256 }}\`
-          **AnyKernel3 Zip SHA256:** \`${{ steps.build.outputs.zip_sha256 }}\`
-          EOF
-          fi
-
-      - name: 🧹 Final cleanup and space report
-        if: always()
-        run: |
-          echo "::group::Cleanup"
-          
-          # Remove build artifacts but PRESERVE ccache
-          sudo rm -rf "$GITHUB_WORKSPACE/out" || true
-          sudo rm -rf "$GITHUB_WORKSPACE/build" || true
-          sudo rm -rf "$GITHUB_WORKSPACE/kernel/out" || true
-          sudo rm -rf "$GITHUB_WORKSPACE/.repo" || true
-          sudo rm -rf /tmp/* || true
-          
-          # Show ccache stats (don't clear it!)
-          if command -v ccache >/dev/null 2>&1; then
-            echo ""
-            echo "📊 ccache statistics after build:"
-            ccache -s
-            echo ""
-            echo "💾 ccache preserved for next build"
-          fi
-          
-          echo ""
-          echo "💽 Final disk usage:"
-          df -h /
-          
-          echo "::endgroup::"
+  build-oos14:
+    name: build-oos14 (${{ matrix.model }}, ${{ matrix.ksu_type }})
+    needs: [set-op-model]
+    if: |
+      !cancelled() &&
+      needs.set-op-model.result == 'success' &&
+      fromJSON(needs.set-op-model.outputs.matrix_oos14).include != []
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.set-op-model.outputs.matrix_oos14) }}
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v6
+      - name: 🔨 Build Kernel
+        uses: ./.github/actions/build-kernel
+        with:
+          op_config_json: ${{ toJSON(matrix) }}
+          ksu_type: ${{ matrix.ksu_type }}
+          ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
+          susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
+          optimize_level: ${{ inputs.optimize_level }}
+          build_timestamp: ${{ inputs.build_timestamp }}
+          clean: ${{ inputs.clean_build }}
+          debug: ${{ inputs.debug }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   trigger-release:
-    needs: [set-op-model, build]
+    needs: [set-op-model, build-oos16, build-oos15, build-oos14]
     runs-on: ubuntu-latest
-    if: ${{ inputs.make_release }}
-    environment: Production-Release
+    if: ${{ always() && inputs.make_release && !cancelled() && !failed() }}
+    environment: ${{ (github.ref_name == 'main' && 'Production-Release') || '' }}
     env:
       REPO_OWNER: ${{ github.repository_owner }}
       REPO_NAME: ${{ github.event.repository.name }}
@@ -1089,6 +922,8 @@ jobs:
           
           echo "New tag: $NEW_TAG"
           echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag $NEW_TAG
           git push origin $NEW_TAG
 
@@ -1098,6 +933,22 @@ jobs:
           path: ./downloaded-artifacts
           merge-multiple: true
           skip-decompress: true
+
+      - name: 🚀 Create GitHub Release
+        run: |
+          gh release create "${{ env.NEW_TAG }}" \
+            --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
+            --title "${{ env.RELEASE_NAME }}" \
+            --generate-notes
+
+      - name: 📤 Upload Release Assets Dynamically
+        run: |
+          for file in ./downloaded-artifacts/*.zip; do
+            if [ -f "$file" ]; then
+              echo "Uploading $file..."
+              gh release upload "${{ env.NEW_TAG }}" "$file" --clobber
+            fi
+          done
 
       - name: 📝 Generate Device List and Final Release Notes
         id: generate-notes
