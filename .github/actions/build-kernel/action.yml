@@ -2003,11 +2003,6 @@ runs:
           cp "${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt" "$AK3_FOLDER/banner"
           echo "✅ Applied custom SakFi banner"
         fi
-        
-        if [ -f "${GITHUB_WORKSPACE}/.github/workflows/flash_output.txt" ]; then
-          cp "${GITHUB_WORKSPACE}/.github/workflows/flash_output.txt" "$AK3_FOLDER/flash_output.txt"
-          echo "✅ Applied custom flash output notes"
-        fi
 
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
         cd "$AK3_FOLDER"
