@@ -159,6 +159,15 @@ runs:
         echo "Full Device Config:"
         jq '.' /tmp/config.json
 
+    - name: 📥 Install System Dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Install system dependencies"
+        sudo apt-get update
+        sudo apt-get install -y dos2unix libelf-dev bc cpio
+        echo "::endgroup::"
+
     - name: Validate Inputs
       shell: bash
       run: |
@@ -840,11 +849,6 @@ runs:
       run: |
         echo "::group::Check ccache"
         set -euo pipefail
-        
-        if ! command -v ccache \u0026\u003e/dev/null; then
-          echo "Installing fallback ccache..."
-          sudo apt-get update \u0026\u0026 sudo apt-get install -y ccache
-        fi
         
         echo "Current ccache configuration:"
         ccache -p

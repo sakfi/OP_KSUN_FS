@@ -27,6 +27,8 @@ runs:
     - name: 📥 Restore and Extract
       id: restore
       shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
       run: |
         set -euo pipefail
         
