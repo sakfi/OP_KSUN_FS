@@ -398,6 +398,20 @@ runs:
         echo "SUSFS_FOLDER=$SUSFS_DIR" >> "$GITHUB_ENV"
         echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
         echo "KSUN_FOLDER=$KSUN_DIR" >> "$GITHUB_ENV"
+        
+        # Define Cache Directories (Level 3 optimization)
+        CCACHE_DIR="$GITHUB_WORKSPACE/ccache"
+        LDCACHE_DIR="$GITHUB_WORKSPACE/lto_cache"
+        mkdir -p "$CCACHE_DIR"
+        mkdir -p "$LDCACHE_DIR"
+        echo "CCACHE_DIR=$CCACHE_DIR" >> "$GITHUB_ENV"
+        echo "LDCACHE_DIR=$LDCACHE_DIR" >> "$GITHUB_ENV"
+        
+        # ccache Config
+        echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
+        echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+        echo "CCACHE_MAXSIZE=10G" >> "$GITHUB_ENV"
+        echo "CCACHE_SLOPPINESS=file_macro,locale,time_macros,include_file_mtime,include_file_ctime,file_stat_matches" >> "$GITHUB_ENV"
 
     - name: 🛠️ Restore Toolchains from SakFi Cache
       shell: bash
@@ -473,6 +487,26 @@ runs:
         
         DEBUG_ZIP_NAME="debug_${OP_MODEL}_${OP_OS_VERSION}.zip"
         echo "DEBUG_ZIP_NAME=$DEBUG_ZIP_NAME" >> "$GITHUB_ENV"
+
+    - name: 🚀 Install ccache-ECS and setup Staging RAM Disk
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Install ccache-ECS and setup RAM Disk"
+        
+        # 1. Install ccache-ECS (Optimized for Kernel Builds)
+        CCACHE_VERSION="4.10.2"
+        CCACHE_URL="https://github.com/cctv18/ccache/releases/download/v${CCACHE_VERSION}/ccache-linux-x86_64"
+        echo "Downloading ccache-ECS v${CCACHE_VERSION}..."
+        sudo curl -L "$CCACHE_URL" -o /usr/local/bin/ccache
+        sudo chmod +x /usr/local/bin/ccache
+        ccache --version
+        
+        # 2. Redirect ccache staging to RAM to shave off microseconds
+        mkdir -p /dev/shm/ccache_tmp
+        echo "CCACHE_TEMPDIR=/dev/shm/ccache_tmp" >> "$GITHUB_ENV"
+        
+        echo "::endgroup::"
 
     - name: Set Kernel build-tools to Path
       shell: bash
@@ -998,6 +1032,16 @@ runs:
         fi
         
         KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
+        
+        # Level 3 Fix for Android 16 (6.12) KSU Build
+        if [ "${{ env.ANDROID_VER }}" = "android16" ] && [ "${{ env.KERNEL_VER }}" = "6.12" ]; then
+          echo "Applying Android 16 (6.12) KSU Kbuild fix..."
+          cd KernelSU-Next
+          sed -i 's/$(srctree)\/$(src)/$(abspath $(src))/g' kernel/Kbuild
+          sed -i 's/$(srctree)\/$(src)\/uapi/$(abspath $(src))\/uapi/g' kernel/Kbuild
+          sed -i 's/-I$(srctree)\/$(src)/-I$(abspath $(src))/g' kernel/Kbuild
+          cd ..
+        fi
         sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile
         
         if [ -f ksu.c ]; then
