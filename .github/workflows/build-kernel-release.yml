@@ -937,22 +937,6 @@ jobs:
           merge-multiple: true
           skip-decompress: true
 
-      - name: 🚀 Create GitHub Release
-        run: |
-          gh release create "${{ env.NEW_TAG }}" \
-            --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
-            --title "${{ env.RELEASE_NAME }}" \
-            --generate-notes
-
-      - name: 📤 Upload Release Assets Dynamically
-        run: |
-          for file in ./downloaded-artifacts/*.zip; do
-            if [ -f "$file" ]; then
-              echo "Uploading $file..."
-              gh release upload "${{ env.NEW_TAG }}" "$file" --clobber
-            fi
-          done
-
       - name: 📝 Generate Device List and Final Release Notes
         id: generate-notes
         run: |
@@ -961,26 +945,29 @@ jobs:
           # Collect build metadata
           declare -A device_info
           
-          JSON_BUILD_DATA=$(jq -c '.' ./downloaded-artifacts/matrix.json)
+          # Check if matrix.json exists
+          if [ -f "./downloaded-artifacts/matrix.json" ]; then
+            JSON_BUILD_DATA=$(cat ./downloaded-artifacts/matrix.json)
+          else
+            JSON_BUILD_DATA="[]"
+          fi
           
           for file in $(find downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | sort); do
-            if [ -f "$file" ]; then
-              zipname=$(basename "$file" .zip)
-              rest="${zipname#SKF_}"
-              IFS='_' read -ra parts <<< "$rest"
-              model="${parts[0]}"
-              os_version="${parts[1]}"
-              kernel_version="${parts[2]}"
-              ksu_type="${parts[3]}"
-              ksu_ver="${parts[4]}"
-              if [ "${parts[5]:-}" = "SuSFS" ]; then
-                susfs_ver="${parts[6]:-unknown}"
-              else
-                susfs_ver="none"
-              fi
-              full_model="${model}_${os_version}"
-              device_info["$full_model"]="$model|$os_version|$kernel_version|$ksu_type|$ksu_ver|$susfs_ver"
+            zipname=$(basename "$file" .zip)
+            rest="${zipname#SKF_}"
+            IFS='_' read -ra parts <<< "$rest"
+            model="${parts[0]:-unknown}"
+            os_version="${parts[1]:-unknown}"
+            kernel_version="${parts[2]:-unknown}"
+            ksu_type="${parts[3]:-unknown}"
+            ksu_ver="${parts[4]:-unknown}"
+            if [ "${parts[5]:-}" = "SuSFS" ]; then
+              susfs_ver="${parts[6]:-unknown}"
+            else
+              susfs_ver="none"
             fi
+            full_model="${model}_${os_version}"
+            device_info["$full_model"]="$model|$os_ver|$kernel_ver|$ksu_type|$ksu_ver|$susfs_ver"
           done
           
           ksu_type="${{ fromJSON(needs.set-op-model.outputs.ksu_options_normalized)[0].type }}"
@@ -1041,11 +1028,11 @@ jobs:
           $(for full_key in $(printf '%s\n' "${!device_info[@]}" | sort); do
             IFS='|' read -r model os_ver kernel_ver _ _ _ <<< "${device_info[$full_key]}"
             
-            feature_flags=$(jq -r --arg MODEL "$model" '
+            feature_flags=$(echo "$JSON_BUILD_DATA" | jq -r --arg MODEL "$model" '
               .[] | 
               select(.model == $MODEL) |
               "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)"
-            ' <<< "$JSON_BUILD_DATA")
+            ' | head -n 1)
             
             features=()
             if [[ -n "$feature_flags" ]]; then
@@ -1062,7 +1049,7 @@ jobs:
             fi
             
             features_str=$(IFS=' '; echo "${features[*]:-N/A}")
-            printf "| %-13s | %-10s | %-16s | %-48s |\n" "$model" "$os_ver" "$kernel_ver" "$features_str"
+            printf "| %-13s | %-10s | %-16s | %-48s |\n" "$model" "$os_ver" "$kernel_ver" "$features_str" >> release_notes.md
           done)
           
           </details>
