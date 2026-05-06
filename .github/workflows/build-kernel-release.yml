@@ -1002,7 +1002,7 @@ jobs:
             <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
           </div>
           
-          # 🎯 OnePlus Kernels with KernelSU Next & SUSFS $SUSFS_BASE_VERSION
+          <div align="center">
           
           # 🔥 OnePlus Kernels Release 🔥
           
@@ -1010,13 +1010,21 @@ jobs:
           [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${{ env.NEW_TAG }}/total?style=flat-square&color=green)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})
           [![Workflow](https://img.shields.io/badge/Workflow-Build--Kernel-orange?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           
-          <a href="${{ github.server_url }}/${{ github.repository }}">
-            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
-          </a>
+          <br>
           
-          > **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC') | **Build ID:** \`${{ github.run_id }}\`
+          > **📅 Build Date:** $(date -u '+%A, %d %B %Y') | **🆔 Build ID:** \`${{ github.run_id }}\`
           
           </div>
+          
+          ---
+          
+          <div align="center">
+          
+          ### 📦 Built Devices (${#device_info[@]} total)
+          
+          | Model | OS Version | Kernel Version | Features |
+          | :--- | :--- | :--- | :--- |
+          EOF
           
           ---
           
@@ -1165,23 +1173,11 @@ jobs:
           
           ---
           
-          ## 🌟 Special Thanks
-          
-          These amazing people help make this project possible! ❤️
-          
-          <div align="center">
-          
-          | 🔧 Project/Role | 👨‍💻 Developer | 🔗 Link |
-          |:---:|:---:|:---:|
-          | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
-          | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
-          | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
-          | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
-          | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
-          | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
-          | **Optimization Patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
-          
           </div>
+          
+          EOF
+          echo "--- Final Release Notes Created ---"
+          cat release_notes.md >> $GITHUB_STEP_SUMMARY
           
           ---
           
@@ -1201,12 +1197,13 @@ jobs:
           echo "--- Final Release Notes ---"
           cat release_notes.md
 
-      - name: 🚀 Create GitHub Release
+      - name: 🚀 Create GitHub Release (Draft)
         run: |
           gh release create "${{ env.NEW_TAG }}" \
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
-            --notes-file release_notes.md
+            --notes-file release_notes.md \
+            --draft
 
       - name: 📤 Upload Release Assets Dynamically
         run: |
@@ -1224,8 +1221,12 @@ jobs:
           
           ---
           
-          ## 🎉 Release Created Successfully
+          ## 📝 Release Created as DRAFT
           
+          > [!IMPORTANT]
+          > The release has been created as a **Draft**. Please review the changelog, make any manual edits, and then **Publish** it to make it public.
+          
+          **Draft URL:** [Edit Release](${{ github.server_url }}/${{ github.repository }}/releases/edit/${{ env.NEW_TAG }})  
           **Tag:** [\`${{ env.NEW_TAG }}\`](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})  
           **Kernels:** $(find ./downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | wc -l)
           
