@@ -944,6 +944,12 @@ jobs:
             echo "Auto-generated tag: $NEW_TAG"
           fi
           
+          # 3. Ensure NEW_TAG always starts with 'v' for consistency with Shields.io
+          if [[ ! "$NEW_TAG" =~ ^v ]]; then
+            echo "ℹ️ Adding missing 'v' prefix to tag: $NEW_TAG -> v$NEW_TAG"
+            NEW_TAG="v$NEW_TAG"
+          fi
+
           echo "New tag: $NEW_TAG"
           echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
           git config user.name "github-actions[bot]"
@@ -1030,7 +1036,7 @@ jobs:
           # 🔥 OnePlus Kernels Release 🔥
           
           [![Release](https://img.shields.io/github/v/release/${{ github.repository }}?style=flat-square&color=blue)](${{ github.server_url }}/${{ github.repository }}/releases/latest)
-          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${{ env.NEW_TAG }}/total?style=flat-square&color=green)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})
+          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/total?style=flat-square&color=green)](${{ github.server_url }}/${{ github.repository }}/releases/latest)
           [![Workflow](https://img.shields.io/badge/Workflow-Build--Kernel-orange?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           
           <br>
