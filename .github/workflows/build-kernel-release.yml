@@ -135,6 +135,24 @@ on:
         description: 'Custom kernel build timestamp for uname -a (e.g. "Tue Feb 10 10:01:02 UTC 2026"). Leave empty for current time.'
         type: string
         default: ''
+      workflow_mode:
+        description: 'Select the workflow mode'
+        required: true
+        type: choice
+        options:
+          - 'Build & Release'
+          - 'Release Only'
+        default: 'Build & Release'
+      run_id_to_release:
+        description: 'Run ID to pull artifacts from (Only for "Release Only" mode)'
+        required: false
+        type: string
+        default: ''
+      custom_changelog:
+        description: 'Custom changelog for the release (Optional, overrides auto-gen)'
+        required: false
+        type: string
+        default: ''
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
@@ -789,6 +807,7 @@ jobs:
     if: |
       !cancelled() &&
       needs.set-op-model.result == 'success' &&
+      inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_oos16).include[0] != null
     runs-on: ubuntu-latest
     strategy:
@@ -817,6 +836,7 @@ jobs:
     if: |
       !cancelled() &&
       needs.set-op-model.result == 'success' &&
+      inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_oos15).include[0] != null
     runs-on: ubuntu-latest
     strategy:
@@ -845,6 +865,7 @@ jobs:
     if: |
       !cancelled() &&
       needs.set-op-model.result == 'success' &&
+      inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_oos14).include[0] != null
     runs-on: ubuntu-latest
     strategy:
@@ -870,8 +891,8 @@ jobs:
   trigger-release:
     needs: [set-op-model, build-oos16, build-oos15, build-oos14]
     runs-on: ubuntu-latest
-    if: ${{ always() && inputs.make_release && !cancelled() && !failure() }}
-    environment: ${{ (github.ref_name == 'main' && 'Production-Release') || '' }}
+    if: ${{ always() && inputs.make_release && !cancelled() && (inputs.workflow_mode == 'Release Only' || !failure()) }}
+    environment: ${{ (github.ref_name == 'main' || github.ref_name == 'Beta-2') && 'Production-Release' || '' }}
     env:
       REPO_OWNER: ${{ github.repository_owner }}
       REPO_NAME: ${{ github.event.repository.name }}
@@ -936,6 +957,8 @@ jobs:
           path: ./downloaded-artifacts
           merge-multiple: true
           skip-decompress: true
+          run-id: ${{ inputs.workflow_mode == 'Release Only' && inputs.run_id_to_release || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📝 Generate Device List and Final Release Notes
         id: generate-notes
@@ -1160,16 +1183,40 @@ jobs:
           
           ### This Release
           $(
-            PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
-            if [ -n "$PREV_TAG" ]; then
-              git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)"
+            if [ -n "${{ inputs.custom_changelog }}" ]; then
+              echo "${{ inputs.custom_changelog }}"
             else
-              git log --oneline --pretty=format:"- %s (%h)" -n 15
+              PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
+              if [ -n "$PREV_TAG" ]; then
+                git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)"
+              else
+                git log --oneline --pretty=format:"- %s (%h)" -n 15
+              fi
             fi
           )
           
           ### Previous Releases
           See [Releases Page](https://github.com/sakfi/OP_KSUN_FS/releases)
+          
+          ---
+          
+          ## 🌟 Special Thanks
+          
+          These amazing people help make this project possible! ❤️
+          
+          <div align="center">
+          
+          | 🔧 Project/Role | 👨‍💻 Developer | 🔗 Link |
+          |:---:|:---:|:---:|
+          | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
+          | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
+          | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
+          | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
+          | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
+          | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
+          | **Optimization Patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
+          
+          </div>
           
           ---
           
