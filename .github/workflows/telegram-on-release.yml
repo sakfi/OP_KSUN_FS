@@ -28,9 +28,10 @@ jobs:
             STATUS="Release Notes Updated"
           fi
 
-          # Clean up changelog for Telegram (limit length)
-          BODY=$(echo "$REL_BODY" | head -c 1000)
-          if [[ ${#REL_BODY} -gt 1000 ]]; then BODY="${BODY}..."; fi
+          # Clean up changelog for Telegram (strip HTML tags and limit length)
+          # We use sed to remove anything between < and > to prevent Telegram parse errors
+          CLEAN_BODY=$(echo "$REL_BODY" | sed 's/<[^>]*>//g' | head -c 1000)
+          if [[ ${#REL_BODY} -gt 1000 ]]; then CLEAN_BODY="${CLEAN_BODY}..."; fi
 
           # Build message (HTML formatted)
           MESSAGE=$(cat <<EOF
@@ -41,7 +42,7 @@ jobs:
           <b>Title:</b> $REL_NAME
           
           <b>Changelog:</b>
-          <pre>$BODY</pre>
+          <pre>$CLEAN_BODY</pre>
           
           🔗 <a href="$REL_URL">View on GitHub</a>
           EOF
