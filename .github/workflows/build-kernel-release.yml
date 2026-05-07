@@ -1049,14 +1049,7 @@ jobs:
           | :--- | :--- | :--- | :--- |
           EOF
           
-          ---
-          
-          <details>
-          <summary><b>📦 View Built Devices (${#device_info[@]} total)</b></summary>
-          
-          | Model | OS Version | Kernel Version | Features |
-          |-------|------------|----------------|----------|
-          $(for full_key in $(printf '%s\n' "${!device_info[@]}" | sort); do
+          for full_key in $(printf '%s\n' "${!device_info[@]}" | sort); do
             IFS='|' read -r model os_ver kernel_ver _ _ _ <<< "${device_info[$full_key]}"
             
             feature_flags=$(echo "$JSON_BUILD_DATA" | jq -r --arg MODEL "$model" '
@@ -1081,9 +1074,11 @@ jobs:
             
             features_str=$(IFS=' '; echo "${features[*]:-N/A}")
             printf "| %-13s | %-10s | %-16s | %-48s |\n" "$model" "$os_ver" "$kernel_ver" "$features_str" >> release_notes.md
-          done)
+          done
           
-          </details>
+          cat << EOF >> release_notes.md
+          
+          </div>
           
           ---
           
@@ -1102,13 +1097,15 @@ jobs:
           
           | Kernel Version | SUSFS Commit |
           |----------------|--------------|
-          $(for key in "${active_gki_keys[@]}"; do
-            echo "| $key | \`${susfs_map[$key]:-unknown}\` |"
-          done)
+          EOF
           
+          for key in "${active_gki_keys[@]}"; do
+            echo "| $key | \`${susfs_map[$key]:-unknown}\` |" >> release_notes.md
+          done
+          
+          cat << 'EOF' >> release_notes.md
           </details>
           
-          </details>
           ---
           
           ## ✨ Features & Capabilities
@@ -1182,18 +1179,20 @@ jobs:
           ## 📜 Changelog
           
           ### This Release
-          $(
-            if [ -n "${{ inputs.custom_changelog }}" ]; then
-              echo "${{ inputs.custom_changelog }}"
+          EOF
+          
+          if [ -n "${{ inputs.custom_changelog }}" ]; then
+            echo "${{ inputs.custom_changelog }}" >> release_notes.md
+          else
+            PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
+            if [ -n "$PREV_TAG" ]; then
+              git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)" >> release_notes.md
             else
-              PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
-              if [ -n "$PREV_TAG" ]; then
-                git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)"
-              else
-                git log --oneline --pretty=format:"- %s (%h)" -n 15
-              fi
+              git log --oneline --pretty=format:"- %s (%h)" -n 15 >> release_notes.md
             fi
-          )
+          fi
+          
+          cat << 'EOF' >> release_notes.md
           
           ### Previous Releases
           See [Releases Page](https://github.com/sakfi/OP_KSUN_FS/releases)
@@ -1220,14 +1219,6 @@ jobs:
           
           ---
           
-          </div>
-          
-          EOF
-          echo "--- Final Release Notes Created ---"
-          cat release_notes.md >> $GITHUB_STEP_SUMMARY
-          
-          ---
-          
           ## 💬 Support & Connect
           
           <div align="center">
@@ -1241,6 +1232,9 @@ jobs:
           
           </div>
           EOF
+          
+          echo "--- Final Release Notes Created ---"
+          cat release_notes.md >> $GITHUB_STEP_SUMMARY
           echo "--- Final Release Notes ---"
           cat release_notes.md
 
