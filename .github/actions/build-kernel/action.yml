@@ -1146,17 +1146,10 @@ runs:
               cd "$KSUN_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1); do
-                patch_file="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
-                if [ -f "$patch_file" ]; then
-                  echo "Patching file: $file.c with fix_$file.c.patch"
-                  patch -p1 --forward < "$patch_file" || true
-                else
-                  echo "Warning: $patch_file not found, skipping."
-                fi
+                echo "Patching file: $file.c with fix_$file.c.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
               done
-              if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch" ]; then
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch" || true
-              fi
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
@@ -1167,13 +1160,8 @@ runs:
               cd "$KSUN_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-                patch_file="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
-                if [ -f "$patch_file" ]; then
-                  echo "Patching file: $file with fix_$file.patch"
-                  patch -p1 --forward < "$patch_file" || true
-                else
-                  echo "Warning: $patch_file not found, skipping."
-                fi
+                echo "Patching file: $file with fix_$file.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
               done
               echo "Patching Hook Mode!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
@@ -1186,21 +1174,6 @@ runs:
               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
                 echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
                 patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
-              fi
-              echo "Repairing KSUN missing declarations..."
-              if [ -f "./kernel/core/init.c" ]; then
-                if grep -q "ksu_lsm_hook_init();" "./kernel/core/init.c" && ! grep -q "ksu_lsm_hook_init(void);" "./kernel/core/init.c"; then
-                  sed -i '/#include "ksu.h"/a extern void __init ksu_lsm_hook_init(void);' "./kernel/core/init.c"
-                fi
-                if grep -q "ksu_syscall_hook_manager_init();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_init(void);" "./kernel/core/init.c"; then
-                  sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_init(void);' "./kernel/core/init.c"
-                fi
-                if grep -q "ksu_syscall_hook_manager_exit();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_exit(void);" "./kernel/core/init.c"; then
-                  sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_exit(void);' "./kernel/core/init.c"
-                fi
-                if grep -q "if (ksu_late_loaded)" "./kernel/core/init.c" && ! grep -q "bool ksu_late_loaded;" "./kernel/core/init.c"; then
-                  sed -i '/struct cred \*ksu_cred;/a extern bool ksu_late_loaded;' "./kernel/core/init.c"
-                fi
               fi
             else
               cd "$KSU_FOLDER"
@@ -1211,23 +1184,9 @@ runs:
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              
-              # Restore Kbuild because 10_enable_susfs_for_ksu.patch (made for KSU) deletes crucial KSUN hooking mechanisms
-              git checkout kernel/Kbuild
-              
-              # Fix static fake_state which causes a linker error when linked against vmlinux
-              if [ -f "kernel/feature/selinux_hide.c" ]; then
-                sed -i 's/static struct selinux_state fake_state;/struct selinux_state fake_state;/' kernel/feature/selinux_hide.c
-              fi
-
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-                patch_file="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
-                if [ -f "$patch_file" ]; then
-                  echo "Patching file: $file with fix_$file.patch"
-                  patch -p1 --forward < "$patch_file" || true
-                else
-                  echo "Warning: $patch_file not found, skipping."
-                fi
+                echo "Patching file: $file with fix_$file.patch"
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
               done
               echo "Patching Hook Mode!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
@@ -1240,21 +1199,6 @@ runs:
               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
                 echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
                 patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
-              fi
-              echo "Repairing KSUN missing declarations..."
-              if [ -f "./kernel/core/init.c" ]; then
-                if grep -q "ksu_lsm_hook_init();" "./kernel/core/init.c" && ! grep -q "ksu_lsm_hook_init(void);" "./kernel/core/init.c"; then
-                  sed -i '/#include "ksu.h"/a extern void __init ksu_lsm_hook_init(void);' "./kernel/core/init.c"
-                fi
-                if grep -q "ksu_syscall_hook_manager_init();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_init(void);" "./kernel/core/init.c"; then
-                  sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_init(void);' "./kernel/core/init.c"
-                fi
-                if grep -q "ksu_syscall_hook_manager_exit();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_exit(void);" "./kernel/core/init.c"; then
-                  sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_exit(void);' "./kernel/core/init.c"
-                fi
-                if grep -q "if (ksu_late_loaded)" "./kernel/core/init.c" && ! grep -q "bool ksu_late_loaded;" "./kernel/core/init.c"; then
-                  sed -i '/struct cred \*ksu_cred;/a extern bool ksu_late_loaded;' "./kernel/core/init.c"
-                fi
               fi
             else
               cd "$KSU_FOLDER"
