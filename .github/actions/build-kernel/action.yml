@@ -473,81 +473,6 @@ runs:
         echo "CCACHE_MAXSIZE=10G" >> "$GITHUB_ENV"
         echo "CCACHE_SLOPPINESS=file_macro,locale,time_macros,include_file_mtime,include_file_ctime,file_stat_matches" >> "$GITHUB_ENV"
 
-    - name: 🛠️ Restore Toolchains from SakFi Cache
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-      run: |
-        set -euo pipefail
-        echo "::group::Restore toolchains from cache"
-        
-        # 1. Dynamically find the manifest file
-        # We search in the CONFIG_FOLDER for any manifest.xml or temp_manifest.xml
-        echo "🔍 Searching for manifest in $CONFIG_FOLDER ..."
-        MANIFEST_PATH=$(find "$CONFIG_FOLDER" -name "temp_manifest.xml" -o -name "manifest.xml" | head -n 1)
-        
-        if [ -z "$MANIFEST_PATH" ] || [ ! -f "$MANIFEST_PATH" ]; then
-          echo "⚠️ Manifest not found in $CONFIG_FOLDER. Skipping cache restoration and falling back to sync."
-          echo "::endgroup::"
-          exit 0
-        fi
-        
-        echo "📂 Parsing manifest: $MANIFEST_PATH"
-        
-        # Mapping of project name fragments to labels
-        declare -A TOOLCHAIN_MAP=(
-          ["clang/host/linux-x86"]="clang"
-          ["prebuilts/rust"]="rust"
-          ["prebuilts/clang-tools"]="clang-tools"
-          ["prebuilts/build-tools"]="build-tools"
-        )
-        
-        # Extract projects and revisions
-        # Using a more robust sed to handle various manifest formats
-        projects=$(grep "<project " "$MANIFEST_PATH" | sed -n 's/.*name="\([^"]*\)".*revision="\([^"]*\)".*/\1|\2/p' || true)
-        
-        for p in $projects; do
-          NAME=$(echo "$p" | cut -d'|' -f1)
-          REV=$(echo "$p" | cut -d'|' -f2)
-          LABEL=""
-          
-          for key in "${!TOOLCHAIN_MAP[@]}"; do
-            if [[ "$NAME" == *"$key"* ]]; then
-              LABEL="${TOOLCHAIN_MAP[$key]}"
-              break
-            fi
-          done
-          
-          if [ -z "$LABEL" ]; then continue; fi
-          
-          FILENAME="${LABEL}-${REV}.tar.gz"
-          TARGET_DIR="$KERNEL_PLATFORM_FOLDER/prebuilts/$LABEL/host/linux-x86/$REV"
-          [ "$LABEL" == "rust" ] && TARGET_DIR="$KERNEL_PLATFORM_FOLDER/prebuilts/rust/linux-x86/$REV"
-          
-          echo "🔍 Checking cache for $LABEL ($REV)..."
-          
-          if gh release download "toolchain-cache" -p "$FILENAME*" --repo "${{ github.repository }}" --dir /tmp 2>/dev/null; then
-            echo "✅ Cache hit! Extracting $FILENAME..."
-            mkdir -p "$TARGET_DIR"
-            
-            # Handle split files if any
-            if [ -f "/tmp/${FILENAME}.partaa" ]; then
-              cat /tmp/${FILENAME}.part* > "/tmp/$FILENAME"
-              rm /tmp/${FILENAME}.part*
-            fi
-            
-            tar -xzf "/tmp/$FILENAME" -C "$TARGET_DIR" --strip-components=1 2>/dev/null || tar -xzf "/tmp/$FILENAME" -C "$TARGET_DIR" 2>/dev/null
-            rm "/tmp/$FILENAME"
-          else
-            echo "⚠️ Cache miss for $LABEL ($REV). Will fallback to upstream sync."
-          fi
-        done
-        
-        echo "::endgroup::"
-        
-        DEBUG_ZIP_NAME="debug_${OP_MODEL}_${OP_OS_VERSION}.zip"
-        echo "DEBUG_ZIP_NAME=$DEBUG_ZIP_NAME" >> "$GITHUB_ENV"
-
     - name: 🚀 Install ccache‑ECS and setup Staging RAM Disk
       if: ${{ inputs.install_ccache_ecs == 'true' }}
       shell: bash
@@ -1315,7 +1240,7 @@ runs:
           
           if grep -qF 'if (vma->vm_end > last_vma_end)' ./fs/proc/task_mmu.c && ! grep -qxF 'SUSFS_IS_INODE_SUS_MAP' ./fs/proc/task_mmu.c; then
             echo "Temporarily expand the `last_vma_end` `if` block to fix a matching issue."
-            perl -i -0pe 's/\t\t\tif \(vma->vm_end > last_vma_end\)\n\t\t\t\tsmap_gather_stats\(vma, &mss, last_vma_end\);/\t\t\tif (vma->vm_end > last_vma_end) {\n\t\t\t\tsmap_gather_stats(vma, \&mss, last_vma_end);\n\t\t\t\tlast_vma_end = vma->vm_end;\n\t\t\t}/' ./fs/proc/task_mmu.c
+            perl -i -0pe 's/\t\t\tif \(vma->vm_end > last_vma_end\)\n\t\t\t\tsmap_gather_stats\(vma, &mss, last_vma_end\);/\t\t\tif (vma->vm_end > last_vma_end) {\n\t\t\t\tsmap_gather_stats(vma, &mss, last_vma_end);\n\t\t\t\tlast_vma_end = vma->vm_end;\n\t\t\t}/' ./fs/proc/task_mmu.c
             fake_patched_expand=1
           fi
         fi
@@ -1356,7 +1281,7 @@ runs:
         if [ "$fake_patched_expand" = 1 ]; then
           if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
             if grep -qF 'if (vma->vm_end > last_vma_end) {' ./fs/proc/task_mmu.c && ! grep -qxF 'SUSFS_IS_INODE_SUS_MAP' ./fs/proc/task_mmu.c; then
-              perl -i -0pe 's/\t\t\tif \(vma->vm_end > last_vma_end\) \{\n\t\t\t\tsmap_gather_stats\(vma, &mss, last_vma_end\);\n\t\t\t\tlast_vma_end = vma->vm_end;\n\t\t\t\}/\t\t\tif (vma->vm_end > last_vma_end)\n\t\t\t\tsmap_gather_stats(vma, \&mss, last_vma_end);/' ./fs/proc/task_mmu.c
+              perl -i -0pe 's/\t\t\tif \(vma->vm_end > last_vma_end\) \{\n\t\t\t\tsmap_gather_stats\(vma, &mss, last_vma_end\);\n\t\t\t\tlast_vma_end = vma->vm_end;\n\t\t\t\}/\t\t\tif (vma->vm_end > last_vma_end)\n\t\t\t\tsmap_gather_stats(vma, &mss, last_vma_end);/' ./fs/proc/task_mmu.c
             fi
           fi
         fi
