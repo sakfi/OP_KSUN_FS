@@ -1195,6 +1195,9 @@ runs:
                 if grep -q "ksu_syscall_hook_manager_init();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_init(void);" "./kernel/core/init.c"; then
                   sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_init(void);' "./kernel/core/init.c"
                 fi
+                if grep -q "ksu_syscall_hook_manager_exit();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_exit(void);" "./kernel/core/init.c"; then
+                  sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_exit(void);' "./kernel/core/init.c"
+                fi
                 if grep -q "if (ksu_late_loaded)" "./kernel/core/init.c" && ! grep -q "bool ksu_late_loaded;" "./kernel/core/init.c"; then
                   sed -i '/struct cred \*ksu_cred;/a extern bool ksu_late_loaded;' "./kernel/core/init.c"
                 fi
@@ -1236,6 +1239,9 @@ runs:
                 fi
                 if grep -q "ksu_syscall_hook_manager_init();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_init(void);" "./kernel/core/init.c"; then
                   sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_init(void);' "./kernel/core/init.c"
+                fi
+                if grep -q "ksu_syscall_hook_manager_exit();" "./kernel/core/init.c" && ! grep -q "ksu_syscall_hook_manager_exit(void);" "./kernel/core/init.c"; then
+                  sed -i '/#include "ksu.h"/a extern void ksu_syscall_hook_manager_exit(void);' "./kernel/core/init.c"
                 fi
                 if grep -q "if (ksu_late_loaded)" "./kernel/core/init.c" && ! grep -q "bool ksu_late_loaded;" "./kernel/core/init.c"; then
                   sed -i '/struct cred \*ksu_cred;/a extern bool ksu_late_loaded;' "./kernel/core/init.c"
