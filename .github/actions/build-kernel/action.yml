@@ -1144,12 +1144,29 @@ runs:
           "v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
+              
+              # Inject dummy symbol resolver context to satisfy fix_init.c.patch if it is a pinned commit that doesn't have it
+              if [ -f "kernel/core/init.c" ]; then
+                if ! grep -q "infra/symbol_resolver.h" "kernel/core/init.c"; then
+                  echo "Injecting dummy symbol resolver context into init.c to satisfy fix_init.c.patch..."
+                  sed -i '/#include "feature\/selinux_hide.h"/a #include "infra\/symbol_resolver.h"' kernel/core/init.c
+                  sed -i 's/ksu_syscall_hook_init();/ksu_init_symbol_resolver();\n\tksu_syscall_hook_init();/' kernel/core/init.c
+                fi
+              fi
+
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1); do
-                echo "Patching file: $file.c with fix_$file.c.patch"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
+                patch_file="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
+                if [ -f "$patch_file" ]; then
+                  echo "Patching file: $file.c with fix_$file.c.patch"
+                  patch -p1 --forward < "$patch_file"
+                else
+                  echo "Warning: $patch_file not found, skipping."
+                fi
               done
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
+              if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch" ]; then
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
+              fi
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
@@ -1158,22 +1175,45 @@ runs:
           "v2.0.0")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
+              
+              # Inject dummy symbol resolver context to satisfy fix_init.c.patch if it is a pinned commit that doesn't have it
+              if [ -f "kernel/core/init.c" ]; then
+                if ! grep -q "infra/symbol_resolver.h" "kernel/core/init.c"; then
+                  echo "Injecting dummy symbol resolver context into init.c to satisfy fix_init.c.patch..."
+                  sed -i '/#include "feature\/selinux_hide.h"/a #include "infra\/symbol_resolver.h"' kernel/core/init.c
+                  sed -i 's/ksu_syscall_hook_init();/ksu_init_symbol_resolver();\n\tksu_syscall_hook_init();/' kernel/core/init.c
+                fi
+              fi
+
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-                echo "Patching file: $file with fix_$file.patch"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                patch_file="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                if [ -f "$patch_file" ]; then
+                  echo "Patching file: $file with fix_$file.patch"
+                  patch -p1 --forward < "$patch_file"
+                else
+                  echo "Warning: $patch_file not found, skipping."
+                fi
               done
               echo "Patching Hook Mode!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch" ]; then
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              fi
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch" ]; then
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              fi
               if [ "$KSUVER" -le 33095 ]; then
                 echo "Patching Multi-manager Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+                if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch" ]; then
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+                fi
               fi
               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
                 echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
+                if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch" ]; then
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
+                fi
               fi
             else
               cd "$KSU_FOLDER"
@@ -1183,22 +1223,45 @@ runs:
           "v2.1.0")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
+              
+              # Inject dummy symbol resolver context to satisfy fix_init.c.patch if it is a pinned commit that doesn't have it
+              if [ -f "kernel/core/init.c" ]; then
+                if ! grep -q "infra/symbol_resolver.h" "kernel/core/init.c"; then
+                  echo "Injecting dummy symbol resolver context into init.c to satisfy fix_init.c.patch..."
+                  sed -i '/#include "feature\/selinux_hide.h"/a #include "infra\/symbol_resolver.h"' kernel/core/init.c
+                  sed -i 's/ksu_syscall_hook_init();/ksu_init_symbol_resolver();\n\tksu_syscall_hook_init();/' kernel/core/init.c
+                fi
+              fi
+
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-                echo "Patching file: $file with fix_$file.patch"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                patch_file="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                if [ -f "$patch_file" ]; then
+                  echo "Patching file: $file with fix_$file.patch"
+                  patch -p1 --forward < "$patch_file"
+                else
+                  echo "Warning: $patch_file not found, skipping."
+                fi
               done
               echo "Patching Hook Mode!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch" ]; then
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              fi
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch" ]; then
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              fi
               if [ "$KSUVER" -le 33095 ]; then
                 echo "Patching Multi-manager Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+                if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch" ]; then
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+                fi
               fi
               if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
                 echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
+                if [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch" ]; then
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
+                fi
               fi
             else
               cd "$KSU_FOLDER"
