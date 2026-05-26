@@ -156,23 +156,23 @@ on:
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
-        default: '86114db0c49f20fa7857b8b559f3ab87cbc2d00d'      
+        default: 'gki-android12-5.10'      
       android13-5_15_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android13-5.15'
         type: string
-        default: 'e4bd49f708108cc829fe7ca079312ea8fefa89f8'      
+        default: 'gki-android13-5.15'      
       android14-6_1_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android14-6.1'
         type: string
-        default: '9bf72ec2c83d40f194b936cabbc64ce342e005bf'
+        default: 'gki-android14-6.1'
       android15-6_6_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android15-6.6'
         type: string
-        default: '2df41de789026a6422521606402576507c687435'
+        default: 'gki-android15-6.6'
       android16-6_12_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
-        default: '75a613850178234c6c7595d1db8211716a011a2e'
+        default: 'gki-android16-6.12'
 
 jobs:
   set-op-model:
