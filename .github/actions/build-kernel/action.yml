@@ -1112,6 +1112,18 @@ runs:
         cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
         cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
         
+        # Stub LSM hook calls in KernelSU-Next's selinux_hide.c since LSM hooks are disabled/removed under SUSFS
+        if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+          if [ -d "$KSUN_FOLDER" ]; then
+            echo "Stubbing LSM hooks in KernelSU-Next's selinux_hide.c..."
+            cd "$KSUN_FOLDER"
+            if [ -f "kernel/feature/selinux_hide.c" ]; then
+              sed -i '1i #ifdef CONFIG_KSU_SUSFS\n#define ksu_lsm_hook(x) (0)\n#define ksu_lsm_unhook(x) do {} while(0)\n#endif' kernel/feature/selinux_hide.c
+            fi
+            cd "$KERNEL_PLATFORM_FOLDER"
+          fi
+        fi
+        
         susfs_version=$(grep '#define SUSFS_VERSION' "$COMMON_KERNEL_FOLDER/include/linux/susfs.h" | awk -F'"' '{print $2}')
         echo "SUSVER=$susfs_version" >> $GITHUB_ENV
         echo "$susfs_version" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
