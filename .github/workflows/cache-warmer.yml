@@ -31,11 +31,11 @@ jobs:
           set -euo pipefail
           
           # Use default SUSFS hashes from build-kernel-release.yml
-          echo "susfs_hash_android12_5_10=86114db0c49f20fa7857b8b559f3ab87cbc2d00d" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android13_5_15=e4bd49f708108cc829fe7ca079312ea8fefa89f8" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android14_6_1=9bf72ec2c83d40f194b936cabbc64ce342e005bf" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android15_6_6=2df41de789026a6422521606402576507c687435" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android16_6_12=75a613850178234c6c7595d1db8211716a011a2e" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android12_5_10=ce2c2b2dea28c89d33f61af898cc18a93bf65ae9" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android13_5_15=529919fbc9f8aee6ee70eb3a8890ef33af0a109c" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android14_6_1=d1327b62e0854603cfc26e2226e0a993ec9b0656" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android15_6_6=676d202ed2cc322a2f90bcb2b56bc4f6a864acb8" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android16_6_12=d20fb81b5f17e66ffeac1321a1257d53e2d16e53" >> $GITHUB_OUTPUT
 
           echo "[" > matrix.json
           mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
