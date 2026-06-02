@@ -1112,17 +1112,32 @@ runs:
         cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
         cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
         
-        # Stub LSM hook calls in KernelSU-Next's selinux_hide.c since LSM hooks are disabled/removed under SUSFS
-        if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-          if [ -d "$KSUN_FOLDER" ]; then
-            echo "Stubbing LSM hooks in KernelSU-Next's selinux_hide.c..."
-            cd "$KSUN_FOLDER"
-            if [ -f "kernel/feature/selinux_hide.c" ]; then
-              echo -e '\n#ifdef CONFIG_KSU_SUSFS\nint ksu_lsm_hook(struct ksu_lsm_hook *hook) {\n\treturn 0;\n}\nvoid ksu_lsm_unhook(struct ksu_lsm_hook *hook) {\n}\n#endif' >> kernel/feature/selinux_hide.c
-            fi
-            cd "$KERNEL_PLATFORM_FOLDER"
-          fi
-        fi
+        # Stub LSM hook calls, ksu_patch_text, and resolve static symbols in all selinux_hide.c files under SUSFS
+        echo "Applying comprehensive symbol fixes in all selinux_hide.c files..."
+        find "$KERNEL_PLATFORM_FOLDER" -type f -name "selinux_hide.c" | while read -r filepath; do
+          echo "Patching $filepath..."
+          sed -i 's/static bool ksu_selinux_hide_running/bool ksu_selinux_hide_running/g' "$filepath"
+          sed -i 's/static struct selinux_state fake_state/struct selinux_state fake_state/g' "$filepath"
+          cat >> "$filepath" << 'EOF'
+
+/* SUSFS & hookless mode symbol stubs defined by SakFi */
+#ifndef STUBS_DEFINED_BY_SAKFI
+#define STUBS_DEFINED_BY_SAKFI
+
+__attribute__((weak)) int ksu_lsm_hook(void *hook) {
+	return 0;
+}
+
+__attribute__((weak)) void ksu_lsm_unhook(void *hook) {
+}
+
+__attribute__((weak)) int ksu_patch_text(void *addr, void *new_addr) {
+	return 0;
+}
+
+#endif
+EOF
+        done
         
         susfs_version=$(grep '#define SUSFS_VERSION' "$COMMON_KERNEL_FOLDER/include/linux/susfs.h" | awk -F'"' '{print $2}')
         echo "SUSVER=$susfs_version" >> $GITHUB_ENV
@@ -1338,6 +1353,12 @@ runs:
             sed -i '/#include <linux\/swap_slots.h>/d' ./mm/memory.c
             fake_patched=1
           fi
+          
+          if grep -qxF '#include <linux/swap_slots.h>' ./mm/memory.c; then
+            echo "#include swap_slots.h> Line found. Deleting header."
+            sed -i '/#include <linux\/swap_slots.h>/d' ./mm/memory.c
+            fake_patched=1
+          fi
         fi
         
         if [ "${{ env.ANDROID_VER }}" = "android14" ] && [ "${{ env.KERNEL_VER }}" = "6.1" ]; then
@@ -1383,6 +1404,11 @@ runs:
               echo "vma_pages Line found. Revert Fake Patching!"
               sed -i -e 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c
               sed -i -e '/if (!vma_pages(vma))/d' ./fs/proc/task_mmu.c
+            fi
+            
+            if ! grep -qxF '#include <linux/swap_slots.h>' ./mm/memory.c; then
+              echo "#include <linux/swap_slots.h> Line not found. Adding missing header"
+              sed -i '/#include <linux\/vmalloc.h>/a #include <linux\/swap_slots.h>' ./mm/memory.c
             fi
             
             if ! grep -qxF '#include <linux/swap_slots.h>' ./mm/memory.c; then
@@ -1716,6 +1742,16 @@ runs:
         CONFIG_NETFILTER_XT_MATCH_RECENT=y
         EOF
         
+        if [ "${{ env.OP_RUST_BUILD }}" = "true" ]; then
+          echo "Add IPC NS missing symbols for rust binder"
+          if ! grep -q 'EXPORT_SYMBOL.*put_ipc_ns' "$COMMON_KERNEL_FOLDER/ipc/namespace.c"; then
+            echo -e '\nEXPORT_SYMBOL_GPL(put_ipc_ns);' >> "$COMMON_KERNEL_FOLDER/ipc/namespace.c"
+          fi
+          if ! grep -q 'EXPORT_SYMBOL.*init_ipc_ns' "$COMMON_KERNEL_FOLDER/ipc/msgutil.c"; then
+            echo -e '\nEXPORT_SYMBOL_GPL(init_ipc_ns);' >> "$COMMON_KERNEL_FOLDER/ipc/msgutil.c"
+          fi
+        fi
+        
         echo "✅ Droidspaces Support applied"
         echo "::endgroup::"
 
@@ -1739,10 +1775,7 @@ runs:
         set -euo pipefail
         echo "Add Build based configs"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
-        CONFIG_ANDROID_BINDER_IPC_RUST=y
-        CONFIG_CMDLINE="module_blacklist=rust_binder"
-        CONFIG_CMDLINE_EXTEND=y
-        CONFIG_CMDLINE_FORCE=n
+        CONFIG_ANDROID_BINDER_IPC_RUST=m
         CONFIG_RUST=y
         EOF
 
@@ -2156,10 +2189,11 @@ runs:
         
         sed -i 's/do.check_boot_version=.*/do.check_boot_version=1/' anykernel.sh
         
+        ZIP_MODEL=$(echo "$OP_MODEL" | sed 's/-[0-9]\+\.[0-9]\+\.[0-9]\+$//')
         if [ "${{ env.OP_SUSFS }}" = true ]; then
-          ZIP_NAME="SKF_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+          ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
         else
-          ZIP_NAME="SKF_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
+          ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
         fi
         mkdir -p "$ARTIFACTS_FOLDER"
         
