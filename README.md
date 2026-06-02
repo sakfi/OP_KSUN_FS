@@ -4,7 +4,7 @@
 [![Build Kernel](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml/badge.svg)](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/sakfi/OP_KSUN_FS?style=flat-square&color=blue)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
 [![Forks](https://img.shields.io/github/forks/sakfi/OP_KSUN_FS?style=flat-square&color=orange)](https://github.com/sakfi/OP_KSUN_FS/network/members)
-[![Stars](https://img.shields.io/github/stars/sakfi/OP_KSUN_FS.svg?style=flat-square&color=yellow)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
+[![Stars](https://img.shields.io/github/stars/sakfi/OP_KSUN_FS?style=flat-square&color=yellow)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
 
 <a href="https://github.com/sakfi/OP_KSUN_FS">
   <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=An+Open+Source+Kernel;Integrated+With+KernelSU-Next+%2B+SUSFS;For+OnePlus+Devices;Maintained+by+SakFi" alt="Typing SVG" />
