@@ -2184,8 +2184,28 @@ runs:
         
         # Re-apply SakFi Branding (Banner and Flash Output)
         if [ -f "${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt" ]; then
-          cp "${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt" "$AK3_FOLDER/banner"
-          echo "✅ Applied custom SakFi banner"
+          echo "✅ Injecting custom SakFi cinematic banner..."
+          BANNER_FILE="${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt"
+          
+          cd "$AK3_FOLDER"
+          rm -f custom_banner.sh
+          
+          # Parse ASCII Banner: wrap plain text in ui_print, leave sleep/ui_print alone
+          awk '/\[ASCII_BANNER_START\]/{flag=1; next} /\[ASCII_BANNER_END\]/{flag=0; next} flag {
+            if ($0 ~ /^sleep/ || $0 ~ /^ui_print/) { print $0 }
+            else { gsub(/"/, "\\\"", $0); print "ui_print \"" $0 "\"" }
+          }' "$BANNER_FILE" > custom_banner.sh
+          
+          # Parse UI Print Section: append exactly as written
+          awk '/\[UI_PRINT_START\]/{flag=1; next} /\[UI_PRINT_END\]/{flag=0; next} flag' "$BANNER_FILE" >> custom_banner.sh
+          
+          # Inject into anykernel.sh just below the core import
+          awk '/^\. tools\/ak3-core\.sh;?/{print $0; print ""; while((getline line < "custom_banner.sh") > 0) print line; close("custom_banner.sh"); next} 1' anykernel.sh > anykernel.sh.tmp
+          mv anykernel.sh.tmp anykernel.sh
+          
+          # Clean up temporary files and remove default static banner
+          rm -f custom_banner.sh banner
+          cd - > /dev/null
         fi
 
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
