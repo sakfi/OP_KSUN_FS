@@ -53,8 +53,9 @@ jobs:
             STATUS="Manual Notification"
           fi
 
-          # Extract only the commit changelog (lines starting with '- ')
-          CLEAN_CHANGELOG=$(echo "$REL_BODY" | grep '^- ' | head -n 15 || echo "- Minor updates and under the hood improvements")
+          # Extract only the commit changelog under 'This Release'
+          CLEAN_CHANGELOG=$(echo "$REL_BODY" | awk '/^### This Release/ {flag=1; next} /^### Previous Releases/ || /^---/ || /^## / {flag=0} flag && /^- /' | head -n 15)
+          if [ -z "$CLEAN_CHANGELOG" ]; then CLEAN_CHANGELOG="- Minor updates and under the hood improvements"; fi
           if [[ ${#CLEAN_CHANGELOG} -gt 1500 ]]; then CLEAN_CHANGELOG="${CLEAN_CHANGELOG:0:1500}..."; fi
 
           # Build message (HTML formatted)
