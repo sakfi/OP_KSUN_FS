@@ -53,22 +53,34 @@ jobs:
             STATUS="Manual Notification"
           fi
 
-          # Clean up changelog for Telegram (strip HTML tags and limit length)
-          # We use sed to remove anything between < and > to prevent Telegram parse errors
-          CLEAN_BODY=$(echo "$REL_BODY" | sed 's/<[^>]*>//g' | head -c 1000)
-          if [[ ${#REL_BODY} -gt 1000 ]]; then CLEAN_BODY="${CLEAN_BODY}..."; fi
+          # Extract only the commit changelog (lines starting with '- ')
+          CLEAN_CHANGELOG=$(echo "$REL_BODY" | grep '^- ' | head -n 15 || echo "- Minor updates and under the hood improvements")
+          if [[ ${#CLEAN_CHANGELOG} -gt 1500 ]]; then CLEAN_CHANGELOG="${CLEAN_CHANGELOG:0:1500}..."; fi
 
           # Build message (HTML formatted)
           MESSAGE=$(cat <<EOF
           <b>$EMOJI $STATUS</b>
 
-          <b>Repository:</b> <code>$REPO</code>
-          <b>Tag:</b> <code>$REL_TAG</code>
-          <b>Title:</b> $REL_NAME
+          <pre><code class="language-markdown">Kernel Name: OnePlus Kernels with KSUN & SUSFS
+          Version / Tag: $REL_TAG
+          Title: $REL_NAME
+          Device: Any supported OnePlus device (Check GitHub for your device)
 
-          $CLEAN_BODY
+          Features:
+          - Vanilla & SUSFS Variants
+          - KernelSU & KernelSU-Next Supported
+          - TCP BBR & Wireguard Integrated
+          - Optimized for Battery & Performance
 
-          🔗 <a href="$REL_URL">View on GitHub</a>
+          Changelog:
+          $CLEAN_CHANGELOG</code></pre>
+
+          <b>Important:</b>
+          - Flash via Kernel Flasher (for KernelSU/Next) or FKM.
+          - If you run into issues, please provide logs in the GitHub repository.
+          - Support the development by leaving a 🌟 on GitHub!
+
+          🔗 <a href="$REL_URL">Download Release on GitHub</a>
           EOF
           )
 
