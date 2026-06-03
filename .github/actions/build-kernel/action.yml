@@ -2144,6 +2144,18 @@ runs:
           cd "$AK3_FOLDER"
           rm -f custom_banner.sh
           
+          # Remove original ui_print lines from anykernel.sh
+          sed -i '/^[[:space:]]*ui_print/d' anykernel.sh
+          
+          # Update kernel.string
+          sed -i 's/kernel.string=.*/kernel.string=OnePlus Kernels by SakFi/g' anykernel.sh
+          
+          # Remove default AnyKernel3 banner from core script to prevent duplicate banners
+          if [ -f tools/ak3-core.sh ]; then
+            sed -i '/ui_print "$kernel_string"/d' tools/ak3-core.sh
+            sed -i '/ui_print "AnyKernel3 by osm0sis/d' tools/ak3-core.sh
+          fi
+          
           # Parse ASCII Banner: wrap plain text in ui_print, leave sleep/ui_print alone
           awk '/\[ASCII_BANNER_START\]/{flag=1; next} /\[ASCII_BANNER_END\]/{flag=0; next} flag {
             if ($0 ~ /^sleep/ || $0 ~ /^ui_print/) { print $0 }
