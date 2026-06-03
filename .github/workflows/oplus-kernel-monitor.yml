@@ -350,41 +350,7 @@ jobs:
             gh issue comment $ISSUE_NUMBER --repo ${{ github.repository }} --body "$BODY"
           fi
 
-      - name: 📢 Telegram Notification
-        if: steps.scanner.outputs.changes_found == 'true'
-        env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          GROUP_ID: ${{ secrets.TELEGRAM_GROUP }}
-          CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL }}
-        run: |
-          [ -z "$BOT_TOKEN" ] && echo "Skipping Telegram (No Token)" && exit 0
-          
-          LOG_DATA="${{ steps.scanner.outputs.log_content }}"
-          # Convert Markdown to basic HTML for Telegram
-          LOG_DATA=$(echo "$LOG_DATA" | sed 's/### \(.*\)/<b>\1<\/b>/g' | sed 's/\*\*\([^*]*\)\*\*/<b>\1<\/b>/g' | sed 's/`\([^`]*\)`/<code>\1<\/code>/g')
-          
-          MESSAGE=$(cat <<EOF
-          <b>📱 OnePlusOSS Kernel Monitor</b>
-          
-          $LOG_DATA
-          
-          🔗 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Full Report</a>
-          EOF
-          )
 
-          send_telegram() {
-            local chat_id="$1"
-            if [ -n "$chat_id" ]; then
-              curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-                --data-urlencode "chat_id=$chat_id" \
-                --data-urlencode "text=$MESSAGE" \
-                --data-urlencode "parse_mode=HTML" \
-                --data-urlencode "disable_web_page_preview=true"
-            fi
-          }
-
-          send_telegram "$GROUP_ID"
-          send_telegram "$CHANNEL_ID"
 
       - name: Update Status Branch README
         if: success()
