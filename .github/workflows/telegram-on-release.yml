@@ -67,10 +67,14 @@ jobs:
           Device: Any supported OnePlus device (Check GitHub for your device)
 
           Features:
-          - Vanilla & SUSFS Variants
-          - KernelSU & KernelSU-Next Supported
-          - TCP BBR & Wireguard Integrated
-          - Optimized for Battery & Performance
+          - Multiple variants:
+            - KernelSU
+            - KernelSU-Next
+            - SUSFS (v2.1.0) and non-SUSFS
+          - Optimized for performance and battery life (LTO, Memory, I/O)
+          - Network features (TCP BBR, WireGuard, IP Set, TTL)
+          - Advanced features (Droidspaces, NTSync, HMBIRD SCX)
+          - Enhanced security (BBG, Manual Hooks v1.4)
 
           Changelog:
           $CLEAN_CHANGELOG</code></pre>
