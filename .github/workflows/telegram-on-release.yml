@@ -66,6 +66,8 @@ jobs:
           <b>Tag:</b> <code>$REL_TAG</code>
           <b>Title:</b> $REL_NAME
 
+          $CLEAN_BODY
+
           🔗 <a href="$REL_URL">View on GitHub</a>
           EOF
           )
