@@ -2,7 +2,7 @@
 
 # 🔥 OP_KSUN_FS 🔥
 [![Build Kernel](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml/badge.svg)](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml)
-[![GitHub Release](https://badgen.net/github/release/sakfi/OP_KSUN_FS?color=blue)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
+[![GitHub Release](https://badgen.net/github/tag/sakfi/OP_KSUN_FS?label=release&color=blue)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
 [![Forks](https://badgen.net/github/forks/sakfi/OP_KSUN_FS?color=orange)](https://github.com/sakfi/OP_KSUN_FS/network/members)
 [![Stars](https://badgen.net/github/stars/sakfi/OP_KSUN_FS?color=yellow)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
 
