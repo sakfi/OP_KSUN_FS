@@ -2,7 +2,7 @@
 
 # 🔥 OP_KSUN_FS 🔥
 [![Build Kernel](https://img.shields.io/github/actions/workflow/status/sakfi/OP_KSUN_FS/build-kernel-release.yml?label=Latest%20Release%20status&style=flat-square)](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/sakfi/OP_KSUN_FS?label=release&color=blue)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/tag/sakfi/OP_KSUN_FS?label=release&color=blue)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
 [![Forks](https://badgen.net/github/forks/sakfi/OP_KSUN_FS?color=orange)](https://github.com/sakfi/OP_KSUN_FS/network/members)
 [![Stars](https://badgen.net/github/stars/sakfi/OP_KSUN_FS?color=yellow)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
 
