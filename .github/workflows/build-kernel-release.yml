@@ -977,18 +977,23 @@ jobs:
           fi
           
           for file in $(find downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | sort); do
-            zipname=$(basename "$file" .zip)
-            rest="${zipname#SKF_}"
-            IFS='_' read -ra parts <<< "$rest"
-            model="${parts[0]:-unknown}"
-            os_version="${parts[1]:-unknown}"
-            kernel_version="${parts[2]:-unknown}"
-            ksu_type="${parts[3]:-unknown}"
-            ksu_ver="${parts[4]:-unknown}"
-            if [ "${parts[5]:-}" = "SuSFS" ]; then
-              susfs_ver="${parts[6]:-unknown}"
-            else
-              susfs_ver="none"
+            if [ -f "$file" ]; then
+              zipname=$(basename "$file" .zip)
+              rest="${zipname#SKF_}"
+              IFS='_' read -ra parts <<< "$rest"
+              model="${parts[0]}"
+              os_version="${parts[1]}"
+              kernel_version="${parts[2]}"
+              ksu_type="${parts[3]}"
+              ksu_ver="${parts[4]}"
+              if [ "${parts[5]:-}" = "SuSFS" ]; then
+                susfs_ver="${parts[6]:-unknown}"
+              else
+                susfs_ver="none"
+              fi
+              full_model="${model}_${os_version}_${kernel_version}"
+              device_info["$full_model"]="$model|$os_version|$kernel_version|$ksu_type|$ksu_ver|$susfs_ver"
+
             fi
             full_model="${model}_${os_version}"
             device_info["$full_model"]="$model|$os_version|$kernel_version|$ksu_type|$ksu_ver|$susfs_ver"
@@ -1053,9 +1058,17 @@ jobs:
           for full_key in $(printf '%s\n' "${!device_info[@]}" | sort); do
             IFS='|' read -r model os_ver kernel_ver _ _ _ <<< "${device_info[$full_key]}"
             
-            feature_flags=$(echo "$JSON_BUILD_DATA" | jq -r --arg MODEL "$model" '
-              .[] | 
-              select(.model == $MODEL) |
+
+            # Use jq to extract feature flags for this model from the JSON matrix.
+            # Reconstruct the original model name (e.g. OP13r-6.1.118) in case the ZIP
+            # had the kernel version suffix stripped for display. Try exact ORIG_MODEL
+            # first, fall back to base MODEL, both filtered by os_version.
+            full_kv=$(echo "$kernel_ver" | sed 's/^[^-]*-//')
+            possible_orig_model="${model}-${full_kv}"
+            feature_flags=$(jq -r --arg MODEL "$model" --arg ORIG_MODEL "$possible_orig_model" --arg OS "$os_ver" '
+              ([ .[] | select(.model == $ORIG_MODEL and .os_version == $OS) ][0]) //
+              ([ .[] | select(.model == $MODEL      and .os_version == $OS) ][0]) |
+
               "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)"
             ' | head -n 1)
             
