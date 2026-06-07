@@ -483,8 +483,8 @@ runs:
         # 1. Install ccache-ECS (Optimized for Kernel Builds)
         CCACHE_URL="https://github.com/cctv18/ccache-ECS/releases/download/ccache-ECS-v1.0/linux-x86_64-glibc-binary.zip"
         echo "Downloading ccache-ECS v1.0..."
-        sudo curl -L "$CCACHE_URL" -o /tmp/ccache.zip
-        sudo unzip -o /tmp/ccache.zip -d /tmp
+        curl -fL "$CCACHE_URL" -o /tmp/ccache.zip
+        unzip -o /tmp/ccache.zip -d /tmp
         sudo mv /tmp/ccache /usr/local/bin/ccache
         sudo chmod +x /usr/local/bin/ccache
         ccache --version
