@@ -1036,7 +1036,7 @@ jobs:
           # 🔥 OnePlus Kernels Release 🔥
           
           [![Release](https://img.shields.io/badge/release-${{ env.NEW_TAG }}-blue?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})
-          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${{ env.NEW_TAG }}/total?style=flat-square&color=green&label=downloads)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})
+          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/total?style=flat-square&color=green&label=downloads)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})
           [![Workflow](https://img.shields.io/badge/Workflow-Build--Kernel-orange?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           
           <br>
