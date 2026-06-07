@@ -97,7 +97,7 @@ on:
         description: 'Enter KernelSU build json'
         required: true
         type: string
-        default: '[{"type":"ksun","hash":"c2013a15ae1eaca69032fa6016ffefb70adf6146"}]'
+        default: '[{"type":"ksun","hash":"f1b64f440f3cd170e2a86d7816bef26fbdee1caa"}]'
       enable_wireguard:
         description: '🛂 Global Master Switch: Enable WireGuard for all models'
         required: true
@@ -157,23 +157,23 @@ on:
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
-        default: 'ce2c2b2dea28c89d33f61af898cc18a93bf65ae9'      
+        default: '9a8a553adba2b91aaa137be5ffad4dab0aea7eb0'      
       android13-5_15_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android13-5.15'
         type: string
-        default: '529919fbc9f8aee6ee70eb3a8890ef33af0a109c'      
+        default: 'cb79a8b35e2387a98645024f432b8d0c7cab6625'      
       android14-6_1_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android14-6.1'
         type: string
-        default: 'd1327b62e0854603cfc26e2226e0a993ec9b0656'
+        default: '7bc8989feacd1ed262103aaf77ca120d02043e2a'
       android15-6_6_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android15-6.6'
         type: string
-        default: '676d202ed2cc322a2f90bcb2b56bc4f6a864acb8'
+        default: '8c6da8443a622c8e5dfdea621d306b5143b40d01'
       android16-6_12_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
-        default: 'd20fb81b5f17e66ffeac1321a1257d53e2d16e53'
+        default: '7b3e90160043ffe844f3db34d8c7c57ff4789f53'
 
 jobs:
   set-op-model:

@@ -76,7 +76,6 @@ body:
       options:
         - KernelSU-Next
         - KernelSU
-        - WildKSU
         - pershoot KSUN
     validations:
       required: true
