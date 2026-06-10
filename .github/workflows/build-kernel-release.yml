@@ -851,6 +851,12 @@ jobs:
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
+      - name: Get prebuilt ccache (downloaded once by prepare_ccache)
+        uses: actions/download-artifact@v4
+        with:
+          name: ccache-binary
+          path: ccache-dl
+        continue-on-error: true
       - name: 🔨 Build Kernel
         uses: ./.github/actions/build-kernel
         with:
@@ -880,6 +886,12 @@ jobs:
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
+      - name: Get prebuilt ccache (downloaded once by prepare_ccache)
+        uses: actions/download-artifact@v4
+        with:
+          name: ccache-binary
+          path: ccache-dl
+        continue-on-error: true
       - name: 🔨 Build Kernel
         uses: ./.github/actions/build-kernel
         with:
@@ -909,6 +921,12 @@ jobs:
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
+      - name: Get prebuilt ccache (downloaded once by prepare_ccache)
+        uses: actions/download-artifact@v4
+        with:
+          name: ccache-binary
+          path: ccache-dl
+        continue-on-error: true
       - name: 🔨 Build Kernel
         uses: ./.github/actions/build-kernel
         with:

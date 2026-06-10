@@ -54,9 +54,42 @@ jobs:
           MATRIX=$(cat matrix.json | jq -c '{include: .}')
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
+  prepare_ccache:
+    name: Prepare ccache binary (download once)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download custom ccache once
+        run: |
+          set -uo pipefail
+          echo "::group::Download ccache"
+          url="https://github.com/cctv18/ccache-ECS/releases/download/ccache-ECS-v1.0/linux-x86_64-glibc-binary.zip"
+          ok=0
+          for attempt in 1 2 3 4 5 6; do
+            if curl -LfsS --connect-timeout 30 --max-time 120 "$url" -o /tmp/ccache.zip && unzip -o /tmp/ccache.zip -d /tmp; then
+              ok=1; break
+            fi
+            echo "attempt $attempt failed (504/throttle); backing off..."
+            sleep $(( attempt * 5 + RANDOM % 6 ))
+          done
+          if [ "$ok" = 1 ]; then
+            mv /tmp/ccache ./ccache
+            echo "✅ downloaded ccache once for all matrix jobs"
+          else
+            echo "::warning::custom ccache download failed; matrix jobs will fall back to the apt ccache"
+            rm -f ./ccache
+          fi
+          echo "::endgroup::"
+      - name: Upload ccache artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ccache-binary
+          path: ccache
+          retention-days: 1
+          if-no-files-found: warn
+
   warm-cache:
     name: 🔨 ${{ matrix.model }} (${{ matrix.os_version }})
-    needs: generate-matrix
+    needs: [generate-matrix, prepare_ccache]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -100,17 +133,26 @@ jobs:
           echo "✅ Dependencies installed"
           echo "::endgroup::"
 
-      - name: Install ccache with ECS by cctv18
+      - name: Get prebuilt ccache (downloaded once by prepare_ccache)
+        uses: actions/download-artifact@v4
+        with:
+          name: ccache-binary
+          path: ccache-dl
+        continue-on-error: true
+
+      - name: Install ccache (ECS by cctv18, shared via artifact)
         run: |
-          # Install ccache with ECS by cctv18
-          set -euo pipefail
-          echo "::group::Install ccache with ECS"
-          curl -LfsS --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --tcp-fastopen -H "User-Agent: Mozilla/5.0" "https://github.com/WildKernels/kernel_patches/raw/refs/heads/main/ccache/ccache-x86-64" -o ccache
-          sudo cp -f ./ccache /usr/bin/ccache
-          sudo chmod +x /usr/bin/ccache
-          rm -f ./ccache
-          
-          echo "[DEBUG] Ccache version : $(ccache --version)"
+          set -uo pipefail
+          echo "::group::Install ccache"
+          if [ -s ccache-dl/ccache ]; then
+            sudo cp -f ccache-dl/ccache /usr/bin/ccache
+            sudo chmod +x /usr/bin/ccache
+            echo "✅ installed custom ccache from shared artifact"
+          else
+            echo "::warning::shared ccache artifact unavailable; using apt ccache"
+          fi
+          rm -rf ccache-dl
+          echo "[DEBUG] Ccache version : $(ccache --version | head -1)"
           echo "::endgroup::"
 
       - name: ♻️ Configure ccache & LTO cache (bounded)

@@ -1007,10 +1007,24 @@ runs:
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Adding KernelSU Next..."
         KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
+        url="https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh"
+        ok=0
+        for attempt in 1 2 3 4 5 6; do
+          if curl -LfsS --connect-timeout 30 --max-time 120 "$url" -o setup.sh && [ -s setup.sh ]; then
+            ok=1; break
+          fi
+          echo "attempt $attempt failed (504/throttle); backing off..."
+          sleep $(( attempt * 5 + RANDOM % 6 ))
+        done
+        if [ "$ok" != 1 ]; then
+          echo "::error::Failed to download KernelSU-Next setup.sh"
+          exit 1
+        fi
+        
         if [ -z "$KSU_INPUT" ]; then
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+          bash setup.sh
         else
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "$KSU_INPUT"
+          bash setup.sh "$KSU_INPUT"
         fi
         cd KernelSU-Next/kernel
         
@@ -1076,10 +1090,24 @@ runs:
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Adding KernelSU..."
         KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
+        url="https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh"
+        ok=0
+        for attempt in 1 2 3 4 5 6; do
+          if curl -LfsS --connect-timeout 30 --max-time 120 "$url" -o setup.sh && [ -s setup.sh ]; then
+            ok=1; break
+          fi
+          echo "attempt $attempt failed (504/throttle); backing off..."
+          sleep $(( attempt * 5 + RANDOM % 6 ))
+        done
+        if [ "$ok" != 1 ]; then
+          echo "::error::Failed to download KernelSU setup.sh"
+          exit 1
+        fi
+        
         if [ -z "$KSU_INPUT" ]; then
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+          bash setup.sh
         else
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s "$KSU_INPUT"
+          bash setup.sh "$KSU_INPUT"
         fi
         cd KernelSU/kernel
         BASE_VERSION=30000
