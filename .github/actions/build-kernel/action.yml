@@ -473,6 +473,14 @@ runs:
         echo "CCACHE_MAXSIZE=10G" >> "$GITHUB_ENV"
         echo "CCACHE_SLOPPINESS=file_macro,locale,time_macros,include_file_mtime,include_file_ctime,file_stat_matches" >> "$GITHUB_ENV"
 
+    - name: Get prebuilt ccache (downloaded once by prepare_ccache)
+      if: ${{ inputs.install_ccache_ecs == 'true' }}
+      uses: actions/download-artifact@v8
+      with:
+        name: ccache-binary
+        path: ccache-dl
+      continue-on-error: true
+
     - name: 🚀 Install ccache‑ECS and setup Staging RAM Disk
       if: ${{ inputs.install_ccache_ecs == 'true' }}
       shell: bash
@@ -481,13 +489,18 @@ runs:
         echo "::group::Install ccache-ECS and setup RAM Disk"
         
         # 1. Install ccache-ECS (Optimized for Kernel Builds)
-        CCACHE_URL="https://github.com/cctv18/ccache-ECS/releases/download/ccache-ECS-v1.0/linux-x86_64-glibc-binary.zip"
-        echo "Downloading ccache-ECS v1.0..."
-        curl -fL "$CCACHE_URL" -o /tmp/ccache.zip
-        unzip -o /tmp/ccache.zip -d /tmp
-        sudo mv /tmp/ccache /usr/local/bin/ccache
-        sudo chmod +x /usr/local/bin/ccache
-        ccache --version
+        if [ -s ccache-dl/ccache ]; then
+          sudo cp -f ccache-dl/ccache /usr/local/bin/ccache
+          sudo chmod +x /usr/local/bin/ccache
+          echo "✅ installed custom ccache from shared artifact"
+        else
+          echo "::warning::shared ccache artifact unavailable; using apt ccache"
+        fi
+        rm -rf ccache-dl
+        
+        if command -v ccache >/dev/null 2>&1; then
+          ccache --version
+        fi
         
         # 2. Redirect ccache staging to RAM to shave off microseconds
         mkdir -p /dev/shm/ccache_tmp
