@@ -89,7 +89,7 @@ jobs:
           echo "### 🛠 Kernel Trees Report" > ../local_summary.md
           
           # Auto filter repos: Ignore Repos not related to android_kernel and ignore android_kernel_modules or any modules or techpack
-          REPOS=$(gh repo list $ORG --limit 1000 --json name --jq '.[] | select((.name | startswith("android_kernel_") or . == "kernel_manifest") and (.name | contains("modules") or contains("techpack") | not)) | .name')
+          REPOS=$(gh repo list $ORG --limit 1000 --json name --jq '.[] | select((.name | startswith("android_kernel_") or .name == "kernel_manifest") and (.name | (contains("modules") or contains("techpack")) | not)) | .name')
           
           echo "🔍 Found $(echo "$REPOS" | wc -w) repositories to scan."
           
@@ -155,8 +155,8 @@ jobs:
             
             RETRY_COUNT=0; MAX_RETRIES=3; BRANCH_DATA=""
             until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-              BRANCH_DATA=$(gh api graphql -f query="$ACTIVE_QUERY" -f owner="$ORG" -f name="$repo" --jq '.data.repository.refs.nodes[]' 2>/dev/null)
-              [ $? -eq 0 ] && [ -n "$BRANCH_DATA" ] && break
+              BRANCH_DATA=$(gh api graphql -f query="$ACTIVE_QUERY" -f owner="$ORG" -f name="$repo" --jq '.data.repository.refs.nodes[]' 2>/dev/null || true)
+              if [ -n "$BRANCH_DATA" ]; then break; fi
               RETRY_COUNT=$((RETRY_COUNT + 1))
               echo "⚠️ API failed for $repo. Retry $RETRY_COUNT/$MAX_RETRIES..."
               sleep 5
@@ -167,7 +167,7 @@ jobs:
               echo "" >> "$TARGET_BUF"
             
               while read -r row; do
-                [ -z "$row" ] && continue
+                if [ -z "$row" ]; then continue; fi
                 BRANCH_NAME=$(echo "$row" | jq -r '.name')
                 SHA=$(echo "$row" | jq -r '.target.oid')
                 MSG=$(echo "$row" | jq -r '.target.message' | head -n 1 | cut -c1-200 | sed 's/[|`]/ /g')
@@ -228,7 +228,7 @@ jobs:
                       if [ "$OLD_VAL" != "NONE" ]; then
                         OLD_OID=$(echo "$OLD_VAL" | cut -d'|' -f2- | jq -r --arg f "$fname" '.[$f] // "NONE"' 2>/dev/null || echo "NONE")
                       fi
-                      [ "$OLD_OID" = "NONE" ] && F_STATUS="🆕 New"
+                      if [ "$OLD_OID" = "NONE" ]; then F_STATUS="🆕 New"; fi
                       printf '| %s | %s |\n' "$fname" "$F_STATUS"
                     done < <(echo "$FILES_JSON" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
                     
@@ -248,9 +248,9 @@ jobs:
                   KERNEL="N/A"
                   if [ -n "$MAKEFILE_TEXT" ]; then
                     KERNEL_RAW=$(printf '%s\n' "$MAKEFILE_TEXT" | grep -oE '(VERSION|PATCHLEVEL|SUBLEVEL)[[:space:]]*=[[:space:]]*[0-9]+' | cut -d'=' -f2 | tr -d ' ' || true)
-                    [ -n "$KERNEL_RAW" ] && KERNEL=$(printf '%s\n' "$KERNEL_RAW" | paste -sd '.' -)
+                    if [ -n "$KERNEL_RAW" ]; then KERNEL=$(printf '%s\n' "$KERNEL_RAW" | paste -sd '.' -); fi
                   fi
-                  [ -z "$KERNEL" ] && KERNEL="N/A"
+                  if [ -z "$KERNEL" ]; then KERNEL="N/A"; fi
                 
                   echo "  ↳ 🌿 Branch: $BRANCH_NAME ($KERNEL)"
                   CURRENT_VAL="$SHA|$KERNEL"
@@ -275,7 +275,7 @@ jobs:
                   fi
                 fi
                 
-                [ "$STATUS" != "✅" ] && CHANGES_DETECTED="true"
+                if [ "$STATUS" != "✅" ]; then CHANGES_DETECTED="true"; fi
                 echo "| $repo | $BRANCH_NAME | \`${SHA:0:7}\` | $KERNEL | $STATUS |" >> $GITHUB_STEP_SUMMARY
                 
                 jq --arg repo "$repo" --arg branch "$BRANCH_NAME" --arg val "$CURRENT_VAL" '.[$repo][$branch] = $val' new_state.json > tmp.json && mv tmp.json new_state.json
@@ -301,12 +301,12 @@ jobs:
           done
           
           while read -r old_repo; do
-            [ -z "$old_repo" ] && continue
+            if [ -z "$old_repo" ]; then continue; fi
             
             # If the repo still exists in the new state, check its branches
             if jq -e ".\"$old_repo\"" new_state.json > /dev/null 2>&1; then
               while read -r old_branch; do
-                [ -z "$old_branch" ] && continue
+                if [ -z "$old_branch" ]; then continue; fi
                 if ! jq -e ".\"$old_repo\".\"$old_branch\"" new_state.json > /dev/null; then
                   DELETED_ITEMS+="- 🗑️ **Branch Deleted**: $old_repo ($old_branch)\n"
                   CHANGES_DETECTED="true"
@@ -319,10 +319,10 @@ jobs:
           echo "changes_found=$CHANGES_DETECTED" >> $GITHUB_OUTPUT
           
           FINAL_LOG=""
-          [ ! -z "$NEW_REPOS" ] && FINAL_LOG+="### 📂 New Repositories\n$NEW_REPOS\n"
-          [ ! -z "$NEW_BRANCHES" ] && FINAL_LOG+="### ✨ New Branches\n$NEW_BRANCHES\n"
-          [ ! -z "$UPDATED_BRANCHES" ] && FINAL_LOG+="### 🔄 Updated Branches\n$UPDATED_BRANCHES\n"
-          [ ! -z "$DELETED_ITEMS" ] && FINAL_LOG+="### 🗑️ Deleted Items\n$DELETED_ITEMS\n"
+          if [ ! -z "$NEW_REPOS" ]; then FINAL_LOG+="### 📂 New Repositories\n$NEW_REPOS\n"; fi
+          if [ ! -z "$NEW_BRANCHES" ]; then FINAL_LOG+="### ✨ New Branches\n$NEW_BRANCHES\n"; fi
+          if [ ! -z "$UPDATED_BRANCHES" ]; then FINAL_LOG+="### 🔄 Updated Branches\n$UPDATED_BRANCHES\n"; fi
+          if [ ! -z "$DELETED_ITEMS" ]; then FINAL_LOG+="### 🗑️ Deleted Items\n$DELETED_ITEMS\n"; fi
           
           echo "log_content<<EOF" >> $GITHUB_OUTPUT
           echo -e "$FINAL_LOG" >> $GITHUB_OUTPUT
