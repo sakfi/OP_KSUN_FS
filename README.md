@@ -75,7 +75,7 @@ This repository provides a fully automated GitHub Actions workflow that:
 | 🏷️ Feature | 📝 Description |
 |:---|:---|
 | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
-| 🛡️ **SUSFS v2.1.0+** | Advanced root hiding with Magic Mount support (Auto-synced) |
+| 🛡️ **SUSFS v2.2.0+** | Advanced root hiding with Magic Mount support (Auto-synced) |
 | 🔋 **Battery Optimization** | Modular suite: Wakelock hard-caps, Schedutil tuning, MGLRU, and Log Silencing |
 | 🛠️ **Manual Hooks** | `scope_min_manual_hooks_v1.4` for better app compatibility |
 | 🖧 **BBR** | Improved TCP congestion control |
