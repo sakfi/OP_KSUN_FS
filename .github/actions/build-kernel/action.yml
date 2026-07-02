@@ -2066,15 +2066,18 @@ runs:
           # Parse ASCII Banner: wrap plain text in ui_print, leave sleep/ui_print alone
           awk '/\[ASCII_BANNER_START\]/{flag=1; next} /\[ASCII_BANNER_END\]/{flag=0; next} flag {
             if ($0 ~ /^sleep/ || $0 ~ /^ui_print/) { print $0 }
-            else { gsub(/"/, "\\"", $0); print "ui_print \"" $0 "\"" }
+            else { gsub(/"/, "\\\"", $0); print "ui_print \"" $0 "\"" }
           }' "$BANNER_FILE" > custom_banner.sh
           
           # Parse UI Print Section: append exactly as written
           awk '/\[UI_PRINT_START\]/{flag=1; next} /\[UI_PRINT_END\]/{flag=0; next} flag' "$BANNER_FILE" >> custom_banner.sh
           
-          # Inject custom_banner.sh content directly after the first remaining executable line in anykernel.sh
-          sed -i '/^kernel\.string=/ r custom_banner.sh' anykernel.sh
-          rm custom_banner.sh
+          # Inject into anykernel.sh just below the core import
+          awk '/^\. tools\/ak3-core\.sh;?/{print $0; print ""; while((getline line < "custom_banner.sh") > 0) print line; close("custom_banner.sh"); next} 1' anykernel.sh > anykernel.sh.tmp
+          mv anykernel.sh.tmp anykernel.sh
+          
+          # Clean up temporary files and remove default static banner
+          rm -f custom_banner.sh banner
           cd - > /dev/null
         fi
         
