@@ -2089,7 +2089,10 @@ runs:
         case "$OP_BRANCH" in
           wild/sm8850|wild/sm8845)
             echo "Applying BBG efisp abl whitelist control patch"
-            patch -p1 < "$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-volume-input-to-enable-bbg-efisp-patch.patch"
+            patch -p1 < "$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-volume-input-to-enable-bbg-efisp-patch.patch" || true
+            if ! grep -q "killall getevent" anykernel.sh; then
+              echo "killall getevent 2>/dev/null" >> anykernel.sh
+            fi
           ;;
         esac
         
