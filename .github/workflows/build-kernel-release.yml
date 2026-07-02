@@ -1160,81 +1160,104 @@ jobs:
           EOF
           fi
           cat << EOF >> release_notes.md
-          ### Community Managers
-          - **WildKSU Manager** (Recommended for additional features)  
-            → [GitHub Release](https://github.com/WildKernels/Wild_KSU/releases)
+          ### Official Manager
+          - **KernelSU Next Manager**  
+            → [GitHub](https://github.com/KernelSU-Next/KernelSU-Next)
           
-          ### Required Module
+          ### SusFS Module
           - **KSU SUSFS Module** (Required for SUSFS features)  
             → [GitHub Release](https://github.com/sidex15/ksu_module_susfs/releases)
           
-          ### Recomended Flasher
-          - **Kernel Flasher** (Required for flashing AnyKernel3 zips and backups and OTA)  
+          ### Recommended Flasher
+          - **Kernel Flasher** (Recommended for flashing AnyKernel3 ZIPs, backups and OTA)  
             → [GitHub Release](https://github.com/fatalcoder524/KernelFlasher/releases)
+          - **KSUN Built-in Flasher** (Alternative flasher)  
+            → Accessible directly within the KernelSU Next Manager app
           
           ---
           
           ## 📥 Installation Instructions
           
-          ### Prerequisites
+          <details>
+          <summary><b>🛠️ View Prerequisites</b></summary>
+          
           - Unlocked bootloader.
           - Backup your current boot image.
-          - Have root access using Magisk / KernelSU / Apatch (Any forks).
+          - Have root access using Magisk / KernelSU (Any forks) / Apatch.
+          </details>
           
           ### Via Kernel Flasher
-          1. Download the correct AnyKernel3 ZIP for your device.
-          2. If you previously used another root method, clean it up first:
-              a. **Magisk**: perform a complete uninstall **after flashing the AnyKernel3 ZIP**.
-              b. **KSU LKM (boot/init_boot/vendor_boot patched)**: Flash back the stock boot/init_boot/vendor_boot depending on what you patched.
-              c. **KSU GKI**: if you are 100% sure you already flashed stock init_boot/boot/vendor_boot, no action is needed; otherwise, follow the same steps as KSU LKM.
-              d. **APatch**: remove /data/adb contents to avoid leftover root conflicts **after flashing the AnyKernel3 ZIP**.
-          3. Flash the ZIP to the active slot using Kernel Flasher.
-          4. Install the KernelSU-Next Manager APK, same version as mentioned in the AnyKernel3 ZIP name.
-          5. Open the KernelSU-Next app.
-          6. Reboot the device if you performed any cleanup in step 2.
+          1. Download the appropriate ZIP for your device from the Assets below.
+          2. Flash the ZIP file using [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) or [Horizon Kernel Flasher](https://github.com/libxzr/HorizonKernelFlasher).
+          3. Reboot system.
+          4. Install KernelSU-Next Manager (or KernelSU Manager depending on build).
+          5. Install SUSFS module from manager.
           
           ---
           
           ## 📜 Changelog
           
           ### This Release
-          - Updated SUSFS to $SUSFS_BASE_VERSION.
-          - Added HMBIRD support for all SM8750/MT6991 devices.
-          - Improved ccache build system.
-          - Enhanced SUSFS hiding capabilities.
-          - Added IP_SET, IPv6 NAT and TTL support.
-          - Added TMPFS_XATTR and TMPFS_POSIX_ACL support for Mountify.
-          - Added Ptrace leak fix for kernels < 5.16.
-          - Compiler optimizations (${{ inputs.optimize_level }}).
-          - Additional General Optimisations.
-          - Wild_KSU Manager Support.
-          - Unicode Bypass Fix
-          - Droidspaces Support
-          - NTSync Support
-          
-          ### Previous Releases
-          See [Releases Page](${{ github.server_url }}/${{ github.repository }}/releases)
-          
-          ---
-          
-          ## 🙏 Credits
-          
-          - **KernelSU Next Team** - Root solution
-          - **KernelSU Team** - Root solution
-          - **simonpunk** - SUSFS development
-          - **OnePlus** - Kernel source code
-          - **Community Contributors** - Testing and feedback
-          
-          ---
-          
-          **⚡ Built with ❤️ by the community**
-          
           EOF
           
+          if [ -n "${{ inputs.custom_changelog }}" ]; then
+            echo "${{ inputs.custom_changelog }}" >> release_notes.md
+          else
+            PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
+            if [ -n "$PREV_TAG" ]; then
+              git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)" >> release_notes.md
+            else
+              git log --oneline --pretty=format:"- %s (%h)" -n 15 >> release_notes.md
+            fi
+          fi
+          
+          cat << 'EOF' >> release_notes.md
+          
+          ### Previous Releases
+          See [Releases Page](https://github.com/sakfi/OP_KSUN_FS/releases)
+          
+          ---
+          
+          ## 🌟 Special Thanks
+          
+          These amazing people help make this project possible! ❤️
+          
+          <div align="center">
+          
+          | 🔧 Project/Role | 👨‍💻 Developer | 🔗 Link |
+          |:---:|:---:|:---:|
+          | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
+          | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
+          | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
+          | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
+          | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
+          | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
+          | **Optimization Patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
+          
+          </div>
+          
+          ---
+          
+          ## 💬 Support & Connect
+          
+          <div align="center">
+          
+          [![Telegram](https://img.shields.io/badge/Telegram-SakFi-blue?logo=telegram)](http://t.me/SakFi)
+          [![GitHub](https://img.shields.io/badge/GitHub-SakFi-blue?logo=github)](https://github.com/sakfi)
+          
+          <br>
+          
+          **🚀 Built with ❤️ by [sakfi](https://github.com/sakfi)**
+          
+          </div>
+          EOF
+          
+          echo "--- Final Release Notes Created ---"
+          cat release_notes.md >> $GITHUB_STEP_SUMMARY
           echo "--- Final Release Notes ---"
           cat release_notes.md
 
-      - name: 🚀 Create GitHub Release
+      - name: 🚀 Create GitHub Release (Draft)
         run: |
           gh release create "${{ env.NEW_TAG }}" \
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
@@ -1258,8 +1281,12 @@ jobs:
           
           ---
           
-          ## 🎉 Release Created Successfully
+          ## 📝 Release Created as DRAFT
           
+          > [!IMPORTANT]
+          > The release has been created as a **Draft**. Please review the changelog, make any manual edits, and then **Publish** it to make it public.
+          
+          **Draft URL:** [Edit Release](${{ github.server_url }}/${{ github.repository }}/releases/edit/${{ env.NEW_TAG }})  
           **Tag:** [\`${{ env.NEW_TAG }}\`](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})  
           **Kernels:** $(find ./downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | wc -l)
           
