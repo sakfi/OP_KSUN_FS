@@ -185,7 +185,7 @@ runs:
         
         if [[ -z "$android_version" ]]; then
           errors+=("Input 'android_version' cannot be empty")
-        elif [[ ! "$android_version" =~ ^OOSndroid[0-9]+$ ]]; then
+        elif [[ ! "$android_version" =~ ^android[0-9]+$ ]]; then
           errors+=("Input 'android_version' contains invalid characters. Allowed: android followed by a number. Got: '$android_version'")
         fi
         
@@ -197,7 +197,7 @@ runs:
         
         if [[ -z "$os_version" ]]; then
           errors+=("Input 'os_version' cannot be empty")
-        elif [[ ! "$os_version" =~ ^OOS ]]; then
+        elif [[ ! "$os_version" =~ ^A ]]; then
           errors+=("Input 'os_version' does not start with 'A'. Got: '$os_version'")
         fi
         
@@ -1386,8 +1386,8 @@ runs:
           OP10r|OP-ACE-2-5.10.209|OP-ACE-2V-5.10.209|OP-PAD-MT6983-5.10.209|\
           OP10pro-5.10.209|OP10t-5.10.209|OP-ACE-5.10.209|OP11r-5.10.209|\
           OP-NORD-3-5.10.209|OP-ACE-RACE-5.10.209)
-            if [[ "$OP_OS_VERSION" == "OOS15" ]]; then
-              NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_android12-5.10_OOS14.patch"
+            if [[ "$OP_OS_VERSION" == "A15" ]]; then
+              NTSYNC_PATCH="$NTSYNC_FOLDER/ntsync_compat_android12-5.10_A14.patch"
             fi
             ;;
         esac
@@ -1561,14 +1561,14 @@ runs:
         echo "Applying patch to enable SYSVIPC without breaking ABI"
         case "$OP_BRANCH" in
           wild/sm8850|wild/sm8845)
-            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_OOS16-6.12.patch"
+            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_a16-6.12.patch"
             ;;
           wild/sm8550|wild/sm7550)
             patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch"
             ;;
           wild/sm8450|wild/sm8475|wild/mt6895|wild/mt6983|wild/mt6789)
             if [ "$ANDROID_VER" = "android12" ] && [ "$KERNEL_VER" = "5.10" ]; then
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_bypass_OOS16-6.12_below.patch"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_bypass_a16-6.12_below.patch"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_abi_padding_for_posix_mqueue.patch"
             else
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch"
