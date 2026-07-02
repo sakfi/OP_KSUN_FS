@@ -18,9 +18,10 @@
   "ds": true,
   "bbg": true,
   "bbr": true,
+  "bbr3": true,
   "ttl": true,
   "ip_set": true,
   "unicode": true,
   "ntsync": true,
-  "uname": "SakFi-OP"
+  "uname": "OP-WILD"
 }
