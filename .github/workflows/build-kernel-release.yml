@@ -1333,15 +1333,24 @@ jobs:
           ### This Release
           EOF
           
-          if [ -n "${{ inputs.custom_changelog }}" ]; then
+          if [ -f "changelog.txt" ] && [ -s "changelog.txt" ]; then
+            echo '```text' >> release_notes.md
+            cat changelog.txt >> release_notes.md
+            echo "" >> release_notes.md
+            echo '```' >> release_notes.md
+          elif [ -n "${{ inputs.custom_changelog }}" ]; then
+            echo '```text' >> release_notes.md
             echo "${{ inputs.custom_changelog }}" >> release_notes.md
+            echo '```' >> release_notes.md
           else
             PREV_TAG=$(gh api repos/$REPO_OWNER/$REPO_NAME/tags --jq '.[0].name' 2>/dev/null || true)
+            echo '```text' >> release_notes.md
             if [ -n "$PREV_TAG" ]; then
               git log "$PREV_TAG..HEAD" --oneline --pretty=format:"- %s (%h)" >> release_notes.md
             else
               git log --oneline --pretty=format:"- %s (%h)" -n 15 >> release_notes.md
             fi
+            echo '```' >> release_notes.md
           fi
           
           cat << 'EOF' >> release_notes.md

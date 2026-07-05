@@ -1,0 +1,25 @@
+﻿-Fix(ci): remove unused parameters from cache restore to eliminate GitHub Action warnings (ae4529b)
+-Fix(actions): restore mirror_toolchains input missing from UI port (22083de)
+-Fix(actions): update default KSU and SUSFS hashes as requested (c101581)
+-Feat(actions): restore custom UI inputs and integrate with upstream JSON matrix (8c3ac25)
+-Feat(ci): merge upstream dynamic workflow with custom branding (d9147f9)
+-Feat(ci): adopt upstream A14/15/16 file and directory naming convention (dba7d50)
+-Lock OnePlus 12, 13R and Ace 5 A16 kernels to a bootable source. (7041934)
+-Add efisp explot partitions to BBG whitelist (a8e30a6)
+-Fix KSU Version in Release Notes (c4dc391)
+-Rename All occurance of OOS to A (Android) to reduce confusion (1d2c6cc)
+-Add BBRv3 Support for a12-5.10 to a15-6.6 Kernels (99dd829)
+-Enable Important Net Schedulers (qdisc) (340d30d)
+-Prevent stable /proc/config.gz due to ccache (f21fdab)
+-Fix LTO cache eviction (8bdda6c)
+-Fix Release notes generation if key or value has a space (4ae576a)
+-Add OnePlus Nord CE6 LITE OOS16 Support
+-Add OnePlus Ace OOS15 5.10.226 Support
+-Add Support for SusFS 2.2.0
+-Exclude source files from debug artifacts
+-Replace OOS with Android in release notes
+-Delete unwanted cache/toolchains before upload
+-Support LTO cache eviction
+-Prevent race conditions for disk cleanup when using Remote Actions
+-ci: clickable model links in release table + exclude ccache-binary from assets (#233)
+-ci: download ccache once via setup job + artifact (fix parallel 504 throttling) (#231)
