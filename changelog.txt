@@ -1,4 +1,5 @@
-﻿-Fix(ci): remove unused parameters from cache restore to eliminate GitHub Action warnings (ae4529b)
+-Feat(ci): Updated KSUN to latest 3.3+ (v33214)
+-Fix(ci): remove unused parameters from cache restore to eliminate GitHub Action warnings (ae4529b)
 -Fix(actions): restore mirror_toolchains input missing from UI port (22083de)
 -Fix(actions): update default KSU and SUSFS hashes as requested (c101581)
 -Feat(actions): restore custom UI inputs and integrate with upstream JSON matrix (8c3ac25)
