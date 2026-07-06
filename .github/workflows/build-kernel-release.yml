@@ -868,7 +868,7 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
       - name: Get prebuilt ccache (downloaded once by prepare_ccache)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: ccache-binary
           path: ccache-dl
@@ -920,7 +920,7 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
       - name: Get prebuilt ccache (downloaded once by prepare_ccache)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: ccache-binary
           path: ccache-dl
@@ -972,7 +972,7 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v6
       - name: Get prebuilt ccache (downloaded once by prepare_ccache)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           name: ccache-binary
           path: ccache-dl
@@ -1067,16 +1067,14 @@ jobs:
 
       - name: 📥 Download Artifacts (Current Run)
         if: inputs.workflow_mode != 'Release Only'
-        uses: actions/download-artifact@v7
-        continue-on-error: true
+        uses: actions/download-artifact@v4
         with:
           path: ./downloaded-artifacts
           merge-multiple: true
 
       - name: 📥 Download Artifacts (Release Only)
         if: inputs.workflow_mode == 'Release Only'
-        uses: actions/download-artifact@v7
-        continue-on-error: true
+        uses: actions/download-artifact@v4
         with:
           path: ./downloaded-artifacts
           merge-multiple: true
