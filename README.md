@@ -193,6 +193,16 @@ These amazing people help make this project possible! ❤️
   <img src=".github/workflows/split.gif" alt="Divider" width="100%" height="4px" />
 </div>
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=sakfi/OP_KSUN_FS&type=date&legend=top-left&sealed_token=P2zI1CsCyzCC28LtHa0EH7c5ty10V8zKIH5tSCDr9lD4l715sEo2KDk28OzO19Vp0FLTW1AIumRCK3DCB9EEv5xlitokIwSzRKPlKmzuBlWzOWIQZdL4Tw)](https://www.star-history.com/?repos=sakfi%2FOP_KSUN_FS&type=date&legend=top-left)
+
+<br>
+
+<div align="center">
+  <img src=".github/workflows/split.gif" alt="Divider" width="100%" height="4px" />
+</div>
+
 ## 💬 Support
 
 If you encounter any issues or need help, feel free to:
