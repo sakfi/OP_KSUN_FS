@@ -105,7 +105,7 @@ on:
         description: 'Enter KernelSU build json'
         required: true
         type: string
-        default: '[{"type":"ksun","hash":"dev"}]'
+        default: '[{"type":"sukisu","hash":"dev"}]'
       enable_wireguard:
         description: '🛂 Global Master Switch: Enable WireGuard for all models'
         required: true
@@ -330,11 +330,11 @@ jobs:
           ksu_ref=$(echo "$ksu_options_normalized" | jq -r '.[0].hash')
           
           if [ "$ksu_type" == "KSUN" ]; then
-            KSU_REPO_OWNER="KernelSU-Next"
-            KSU_REPO_NAME="KernelSU-Next"
+            KSU_REPO_OWNER="SukiSU-Ultra"
+            KSU_REPO_NAME="SukiSU-Ultra"
           else
-            KSU_REPO_OWNER="tiann"
-            KSU_REPO_NAME="KernelSU"
+            KSU_REPO_OWNER="SukiSU-Ultra"
+            KSU_REPO_NAME="SukiSU-Ultra"
           fi
           
           HEAD_REF="refs/heads/${ksu_ref}"
