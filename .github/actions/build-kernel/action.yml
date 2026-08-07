@@ -1040,9 +1040,15 @@ runs:
               for rej_file in "${rej_files[@]}"; do
                 [ -f "$rej_file" ] || continue
                 file=$(basename "$rej_file" .c.rej)
-                echo "Patching file: $file.c with fix_$file.c.patch"
                 rm -f "$rej_file"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
+                
+                FIX_PATCH="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch
+                if [ -f "$FIX_PATCH" ]; then
+                  echo "Patching file: $file with fix_$file.patch"
+                  patch -p1 --forward < "$FIX_PATCH"
+                else
+                  echo "Warning: $FIX_PATCH not found. Skipping."
+                fi
               done
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
             else
