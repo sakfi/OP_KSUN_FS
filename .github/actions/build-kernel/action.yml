@@ -1122,14 +1122,19 @@ runs:
               for rej_file in "${rej_files[@]}"; do
                 [ -f "$rej_file" ] || continue
                 file=$(basename "$rej_file" .rej)
-                echo "Patching file: $file with fix_$file.patch"
                 rm -f "$rej_file"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                FIX_PATCH="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                if [ -f "$FIX_PATCH" ]; then
+                  echo "Patching file: $file with fix_$file.patch"
+                  patch -p1 --forward < "$FIX_PATCH" || true
+                else
+                  echo "Warning: $FIX_PATCH not found, skipping."
+                fi
               done
               echo "Patching Hook Mode!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch" || true
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch" || true
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
