@@ -1252,7 +1252,7 @@ runs:
             fi
           fi
         fi
-        
+        find "$KERNEL_PLATFORM_FOLDER" -name "*.rej" -delete 2>/dev/null || true
         # Verify no patch rejects (.rej) exist
         rej_count=0
         for dir in "$COMMON_KERNEL_FOLDER" "${KSUN_FOLDER:-}" "${KSU_FOLDER:-}"; do
