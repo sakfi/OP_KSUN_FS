@@ -877,20 +877,26 @@ runs:
         sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
         echo "::endgroup::"
 
-    - name: Add KernelSU Next
+- name: Add KernelSU Next
       shell: bash
       if: ${{ inputs.ksu_type == 'KSUN' }}
       run: |
         set -euo pipefail
         echo "::group::Add KernelSU Next"
         cd "$KERNEL_PLATFORM_FOLDER"
-        echo "Adding KernelSU Next..."
+        echo "Adding KernelSU Next (SukiSU Ultra)..."
         KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
         if [ -z "$KSU_INPUT" ]; then
           curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/sukisu-ultra/sukisu-ultra/main/kernel/setup.sh" | bash -
         else
           curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/sukisu-ultra/sukisu-ultra/main/kernel/setup.sh" | bash -s "$KSU_INPUT"
         fi
+
+        # Symlink KernelSU to KernelSU-Next so downstream steps find it
+        if [ -d "KernelSU" ] && [ ! -d "KernelSU-Next" ]; then
+          ln -s KernelSU KernelSU-Next
+        fi
+
         git submodule update --init --recursive
         cd KernelSU-Next/kernel
         
@@ -924,7 +930,6 @@ runs:
         cd ..
         KSU_COMMIT_SHA=$(git rev-parse HEAD)
         echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
-        
         
         echo "Add KSUN Configuration Settings"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
