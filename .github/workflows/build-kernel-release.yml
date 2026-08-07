@@ -7,7 +7,7 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      custom_release_tag:
+      custom_release_tag: "nobbr"
         description: 'Provide a custom release tag (e.g., v2.0.0). Leave empty to auto-generate.'
         required: false
         type: string
