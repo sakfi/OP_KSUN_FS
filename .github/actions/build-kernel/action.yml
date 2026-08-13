@@ -2305,7 +2305,9 @@ runs:
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
         cd "$AK3_FOLDER"
         
-        sed -i 's/do.check_boot_version=.*/do.check_boot_version=1/' anykernel.sh
+        if [[ "$OP_BRANCH" != wild/mt* ]]; then
+          sed -i 's/do.check_boot_version=.*/do.check_boot_version=1/' anykernel.sh
+        fi
         
         case "$OP_BRANCH" in
           wild/sm8850|wild/sm8845)
