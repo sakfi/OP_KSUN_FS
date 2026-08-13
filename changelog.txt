@@ -1,1 +1,17 @@
-🚀 Updated KSUN to 33239
+🚀 Add OnePlus N6 A16 Support [New Device]
+🚀 Add OnePlus 13 A16 6.6.89 Support
+🚀 Add OnePlus 13T A16 6.6.89 Support
+🚀 Add OnePlus Ace 5 Pro A16 6.6.89 Support
+🚀 Add OnePlus Pad 2 Pro A16 6.6.89 Support
+🚀 Add OnePlus Pad 3 (SM8750) A16 6.6.89 Support
+🚀 Add OnePlus Ace 5 Ultra A16 6.6.89 Support
+🚀 Add OnePlus Ace 6 A16 6.6.89 Support
+🚀 Add OnePlus Ace 5 Race A16 6.1.134 Support
+🚀 Add OnePlus Nord CE5 A16 6.1.134 Support
+🚀 Updated SUSFS commit hashes to latest testing branch
+🚀 Skip force_tcp_nodelay patch if BBR/BBR3 is enabled
+🚀 Update hmbird support for OP13, 13T, Ace 5 Pro, Ace 5 Ultra, Ace 6, Pad 2 Pro, Pad 3 6.6.89
+🚀 Fix VMA_PAD_START missing issue for deprecated kernels & backport fold_fixup_entries
+🚀 Fix cache warmer workflow matrix JSON slurp & artifact v8 compatibility
+🚀 Compare build-tools fully during source sync
+🚀 Remove USER_NS hardening patch per upstream
