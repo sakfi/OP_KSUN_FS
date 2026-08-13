@@ -154,13 +154,14 @@ jobs:
           if command -v ccache >/dev/null 2>&1; then
             CACHE_DIR="${{ github.workspace }}/.ccache"
             LDCACHE_DIR="${{ github.workspace }}/.ld_cache"
-            CCACHE_LOG="${{ github.workspace }}/ccache.log"
+            CCACHE_LOGFILE="${{ github.workspace }}/ccache.log"
             mkdir -p "$CACHE_DIR"
             mkdir -p "$LDCACHE_DIR"
             
             SETTINGS=(
               "CCACHE_DIR=$CACHE_DIR"
               "LDCACHE_DIR=$LDCACHE_DIR"
+              "CCACHE_LOGFILE=$CCACHE_LOGFILE"
               "CCACHE_MAXSIZE=12G"
               "CCACHE_COMPILERCHECK=content"
               "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
