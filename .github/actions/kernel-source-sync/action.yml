@@ -1,4 +1,5 @@
 name: 'Download and configure Kernel Source code'
+description: 'Download and configure Kernel Source code'
 
 inputs:
   source_location:
