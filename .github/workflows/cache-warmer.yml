@@ -31,28 +31,14 @@ jobs:
           set -euo pipefail
           
           # Use default SUSFS hashes from build-kernel-release.yml
-          echo "susfs_hash_android12_5_10=ce2c2b2dea28c89d33f61af898cc18a93bf65ae9" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android13_5_15=529919fbc9f8aee6ee70eb3a8890ef33af0a109c" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android14_6_1=d1327b62e0854603cfc26e2226e0a993ec9b0656" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android15_6_6=676d202ed2cc322a2f90bcb2b56bc4f6a864acb8" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android16_6_12=d20fb81b5f17e66ffeac1321a1257d53e2d16e53" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android12_5_10=3c14ad549f826b1f53878ec8c12253efebeed75a" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android13_5_15=ccb1918684b27644d17a6c842f57b60ae5966025" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android14_6_1=e287d59066380bf6de4396532d4a42edf4408701" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android15_6_6=be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android16_6_12=f37930f374ef88de990d6abea0c67d0ea28c1edc" >> "$GITHUB_OUTPUT"
 
-          echo "[" > matrix.json
-          mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
-          for i in "${!all_json_files[@]}"; do
-            file="${all_json_files[$i]}"
-            if [ -f "$file" ]; then
-              jq -c '.' "$file" >> matrix.json
-              if [ $((i+1)) -lt ${#all_json_files[@]} ]; then
-                echo "," >> matrix.json
-              fi
-            fi
-          done
-          echo "]" >> matrix.json
-          
-          # Wrap the array in a matrix format
-          MATRIX=$(cat matrix.json | jq -c '{include: .}')
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          MATRIX=$(find configs/ -type f -name "*.json" ! -name "*.disabled" | sort | xargs jq -s -c '{include: .}')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   prepare_ccache:
     name: Prepare ccache binary (download once)
@@ -118,7 +104,7 @@ jobs:
           else
             HASH=""
           fi
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
 
       - name: Install Minimal Dependencies
         run: |
@@ -134,7 +120,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Get prebuilt ccache (downloaded once by prepare_ccache)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ccache-binary
           path: ccache-dl
@@ -205,7 +191,7 @@ jobs:
       - name: 🔨 Warm Build
         uses: ./.github/actions/build-kernel
         with:
-          op_config_json: ${{ toJson(matrix) }}
+          op_config_json: ${{ toJSON(matrix) }}
           ksu_type: "KSUN"
           ksu_branch_or_hash: "dev"
           susfs_commit_hash_or_branch: ${{ steps.susfs_res.outputs.hash }}
