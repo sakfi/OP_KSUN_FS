@@ -1925,38 +1925,28 @@ runs:
         
         export CCACHE_DIR="${{ env.CCACHE_DIR }}"
         
-        if [ -n "${CCACHE_DIR:-}" ] && [ -d "$CCACHE_DIR" ]; then
-          echo "Clear Temporary cache files..."
-          ccache -c || true
-          
-          echo "Perform ccache eviction!"
-          # 0.5 days = 12 Hrs. Delete cache unused in 12 hrs. 12 hrs is considered for safety.
-          # Yes. ccache uses mtime as a store of time due to cross compatibility with different OS.
-          find "$CCACHE_DIR" -type f -mtime +0.5 -delete || true
-          # Remove empty layout subdirectories
-          find "$CCACHE_DIR" -type d -empty -delete || true
+        echo "Clear Temporary cache files..."
+        ccache -c
+        
+        echo "Perform ccache eviction!"
+        # 0.5 days = 12 Hrs. Delete cache unused in 12 hrs. 12 hrs is considered for safety.
+        # Yes. ccache uses mtime as a store of time due to cross compatibility with different OS.
+        find "$CCACHE_DIR" -type f -mtime +0.5 -delete
+        # Remove empty layout subdirectories
+        find "$CCACHE_DIR" -type d -empty -delete
 
-          CCACHE_LOGFILE="${{ env.CCACHE_LOGFILE:-}}"
-          if [ -n "$CCACHE_LOGFILE" ] && [ -f "$CCACHE_LOGFILE" ]; then
-            echo "Copying ccache log to cache directory..."
-            cp "$CCACHE_LOGFILE" "$CCACHE_DIR/" || echo "⚠️ Failed to copy ccache log"
+        cp "${{ env.CCACHE_LOGFILE }}" "$CCACHE_DIR"
+        
+        if [ "${{ inputs.debug }}" == "true" ]; then
+          if [ -f "${{ env.CCACHE_LOGFILE }}" ]; then
+            echo "Rename ccache log"
+            LOG_DIR=$(dirname "${{ env.CCACHE_LOGFILE }}")
+            NEW_LOG_NAME="${{ env.OP_MODEL }}_${{ env.OP_OS_VERSION }}_${{ env.KERNEL_FULL_VER }}_ccache.log"
+            mv "${{ env.CCACHE_LOGFILE }}" "$LOG_DIR/$NEW_LOG_NAME"
+            echo "CCACHE_LOGFILE=$LOG_DIR/$NEW_LOG_NAME" >> $GITHUB_ENV
           else
-            echo "⚠️ CCACHE_LOGFILE not set or file does not exist, skipping copy."
+            echo "⚠ ccache log not found, skipping rename."
           fi
-          
-          if [ "${{ inputs.debug }}" == "true" ]; then
-            if [ -n "$CCACHE_LOGFILE" ] && [ -f "$CCACHE_LOGFILE" ]; then
-              echo "Rename ccache log"
-              LOG_DIR=$(dirname "$CCACHE_LOGFILE")
-              NEW_LOG_NAME="${{ env.OP_MODEL }}_${{ env.OP_OS_VERSION }}_${{ env.KERNEL_FULL_VER }}_ccache.log"
-              mv "$CCACHE_LOGFILE" "$LOG_DIR/$NEW_LOG_NAME" || true
-              echo "CCACHE_LOGFILE=$LOG_DIR/$NEW_LOG_NAME" >> "$GITHUB_ENV"
-            else
-              echo "⚠️ ccache log not found, skipping rename."
-            fi
-          fi
-        else
-          echo "⚠️ CCACHE_DIR not set or directory does not exist, skipping ccache eviction."
         fi
         
         STATS="$(ccache -s)"
