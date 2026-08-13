@@ -37,8 +37,14 @@ jobs:
           echo "susfs_hash_android15_6_6=be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1" >> "$GITHUB_OUTPUT"
           echo "susfs_hash_android16_6_12=f37930f374ef88de990d6abea0c67d0ea28c1edc" >> "$GITHUB_OUTPUT"
 
-          MATRIX=$(find configs/ -type f -name "*.json" ! -name "*.disabled" | sort | xargs jq -s -c '{include: .}')
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          python3 -c "
+          import glob, json, os
+          files = sorted(glob.glob('configs/**/*.json', recursive=True))
+          items = [json.load(open(f, encoding='utf-8')) for f in files if not f.endswith('.disabled')]
+          matrix_json = json.dumps({'include': items}, separators=(',', ':'))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f'matrix={matrix_json}\n')
+          "
 
   prepare_ccache:
     name: Prepare ccache binary (download once)
