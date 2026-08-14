@@ -119,32 +119,30 @@ jobs:
             OPTIMIZATION=$(echo "$OPTIMIZATION" | sed 's/^, //')
 
             FEATURES_BLOCK="Features:
-          - Variants:
-          $(echo -e "$VARIANTS" | sed '/^$/d')  - Optimized for performance and battery life (${OPTIMIZATION:-LTO, Battery, Optimization})
-          - Network features (${NETWORK:-BBRv3, WireGuard, IP Set, TTL})
-          - Advanced features (${ADVANCED:-Droidspaces, NTSync, HMBIRD SCX})
-          - Enhanced security (${SECURITY:-BBG, Manual Hooks, Unicode Bypass Fix})"
+          - Integrated: KernelSU-Next & SUSFS
+          - Optimized for performance and battery life (${OPTIMIZATION:-LTO, Optimization, Battery})
+          - Network features (${NETWORK:-BBRv3, TTL Target Support, WireGuard})
+          - Advanced features (${ADVANCED:-Droidspaces, NTSync, HMBIRD SCX, TMPFS XATTR})
+          - Enhanced security (${SECURITY:-BBG})"
           else
             # Fallback: hardcoded features if extraction fails
             FEATURES_BLOCK="Features:
-          - Variants:
-              - KernelSU-Next
-              - SUSFS (${SUSFS_VER})
-          - Optimized for performance and battery life (LTO, Memory, I/O)
-          - Network features (TCP BBRv3, WireGuard, IP Set, TTL)
-          - Advanced features (Droidspaces, NTSync, HMBIRD SCX)
-          - Enhanced security (BBG, Manual Hooks v1.4)"
+          - Integrated: KernelSU-Next & SUSFS
+          - Optimized for performance and battery life (LTO, Optimization, Battery)
+          - Network features (BBRv3, TTL Target Support, WireGuard)
+          - Advanced features (Droidspaces, NTSync, HMBIRD SCX, TMPFS XATTR)
+          - Enhanced security (BBG)"
           fi
 
           # ── Changelog: read from changelog.txt (committed in repo) ──
           if [ -f "changelog.txt" ] && [ -s "changelog.txt" ]; then
-            CLEAN_CHANGELOG=$(cat changelog.txt | head -n 15)
+            CLEAN_CHANGELOG=$(cat changelog.txt)
           else
             # Fallback: extract from release body under 'This Release'
-            CLEAN_CHANGELOG=$(echo "$REL_BODY" | awk '/^### This Release/ {flag=1; next} /^### Previous Releases/ || /^---/ || /^## / {flag=0} flag && /^- /' | head -n 15)
+            CLEAN_CHANGELOG=$(echo "$REL_BODY" | awk '/^### This Release/ {flag=1; next} /^### Previous Releases/ || /^---/ || /^## / {flag=0} flag && /^- /')
           fi
           if [ -z "$CLEAN_CHANGELOG" ]; then CLEAN_CHANGELOG="- Minor updates and under the hood improvements"; fi
-          if [[ ${#CLEAN_CHANGELOG} -gt 1500 ]]; then CLEAN_CHANGELOG="${CLEAN_CHANGELOG:0:1500}..."; fi
+          if [[ ${#CLEAN_CHANGELOG} -gt 3500 ]]; then CLEAN_CHANGELOG="${CLEAN_CHANGELOG:0:3500}..."; fi
 
           # Build message (HTML formatted)
           MESSAGE=$(cat <<EOF
