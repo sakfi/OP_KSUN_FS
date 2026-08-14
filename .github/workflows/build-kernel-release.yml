@@ -170,23 +170,23 @@ on:
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
-        default: 'be08face56c347e7ba9c4fb420c2463598a14f5d'      
+        default: '3c14ad549f826b1f53878ec8c12253efebeed75a'      
       android13-5_15_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android13-5.15'
         type: string
-        default: 'e29e344398995898a3b2f2a00f8979e2a599ba96'      
+        default: 'ccb1918684b27644d17a6c842f57b60ae5966025'      
       android14-6_1_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android14-6.1'
         type: string
-        default: 'a74b1ebdfe62a0aa3809bb01d440d6ae01fdf126'
+        default: 'e287d59066380bf6de4396532d4a42edf4408701'
       android15-6_6_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android15-6.6'
         type: string
-        default: 'd4f50f6d7cfa21fef497c48cdeffa3b50952bf56'
+        default: 'be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1'
       android16-6_12_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
-        default: 'd9a486dc7197800149c31fe35a77997ea0ddaa83'
+        default: 'f37930f374ef88de990d6abea0c67d0ea28c1edc'
 
 jobs:
   set-op-model:
@@ -1157,15 +1157,15 @@ jobs:
 
           cat << EOF > release_notes.md
           <div align="center">
-            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${{ env.NEW_TAG }};Maintained+by+sakfi" alt="Typing SVG" />
+            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${NEW_TAG};Maintained+by+sakfi" alt="Typing SVG" />
           </div>
           
           <div align="center">
           
           # 🔥 OnePlus Kernels Release 🔥
           
-          [![Release](https://img.shields.io/badge/release-${{ env.NEW_TAG }}-blue?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})
-          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${{ env.NEW_TAG }}/total?style=flat-square&color=green&label=downloads)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})
+          [![Release](https://img.shields.io/badge/release-${NEW_TAG}-blue?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${NEW_TAG})
+          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${NEW_TAG}/total?style=flat-square&color=green&label=downloads)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${NEW_TAG})
           [![Workflow](https://img.shields.io/badge/Workflow-Build--Kernel-orange?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           
           <br>
@@ -1404,7 +1404,7 @@ jobs:
 
       - name: 🚀 Create GitHub Release (Draft)
         run: |
-          gh release create "${{ env.NEW_TAG }}" \
+          gh release create "$NEW_TAG" \
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
             --notes-file release_notes.md \
@@ -1415,7 +1415,7 @@ jobs:
           for file in ./downloaded-artifacts/*.zip; do
             if [ -f "$file" ]; then
               echo "Uploading $file..."
-              gh release upload "${{ env.NEW_TAG }}" "$file" --clobber
+              gh release upload "$NEW_TAG" "$file" --clobber
             fi
           done
 
@@ -1431,8 +1431,8 @@ jobs:
           > [!IMPORTANT]
           > The release has been created as a **Draft**. Please review the changelog, make any manual edits, and then **Publish** it to make it public.
           
-          **Draft URL:** [Edit Release](${{ github.server_url }}/${{ github.repository }}/releases/edit/${{ env.NEW_TAG }})  
-          **Tag:** [\`${{ env.NEW_TAG }}\`](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})  
+          **Draft URL:** [Edit Release](${{ github.server_url }}/${{ github.repository }}/releases/edit/${NEW_TAG})  
+          **Tag:** [\`${NEW_TAG}\`](${{ github.server_url }}/${{ github.repository }}/releases/tag/${NEW_TAG})  
           **Kernels:** $(find ./downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | wc -l)
           
           ### 📦 Assets

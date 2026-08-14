@@ -67,7 +67,7 @@ runs:
         # Check if it's a split archive
         if echo "$ASSETS" | grep -q "${ARCHIVE_NAME}.part"; then
           echo "Detected split archive. Downloading parts..."
-          for part in $(echo "$ASSETS" | grep "${ARCHIVE_NAME}.part" | sort); do
+          for part in $(echo "$ASSETS" | grep "${ARCHIVE_NAME}.part" | sort | tr '\n' ' '); do
             gh release download "$TAG_NAME" -p "$part" --clobber
           done
           echo "Reassembling archive..."
