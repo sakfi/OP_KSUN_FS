@@ -790,7 +790,7 @@ runs:
         retry_fetch_archive() {
           local url="$1"
           local branch="${2:-main}"
-          local max_attempts=3
+          local max_attempts=2
           local attempt=1
           
           local repo_name=$(basename "$url" .git)
@@ -879,8 +879,34 @@ runs:
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           echo "Using SUSFS branch/commit: $SUSFS_BRANCH"
-          if ! retry_fetch_archive "https://gitlab.com/simonpunk/susfs4ksu.git" "$SUSFS_BRANCH"; then
-            echo "::error::Failed to fetch SUSFS archive after multiple attempts"
+          SUSFS_FETCH_SUCCESS=false
+          if retry_fetch_archive "https://gitlab.com/simonpunk/susfs4ksu.git" "$SUSFS_BRANCH"; then
+            SUSFS_FETCH_SUCCESS=true
+          else
+            echo "⚠️ Archive download failed (GitLab 403 or network). Falling back to direct git fetch..."
+            rm -rf susfs4ksu 2>/dev/null
+            for attempt in 1 2 3; do
+              echo "🔄 Attempt $attempt/3: git fetch for susfs4ksu ($SUSFS_BRANCH)..."
+              if mkdir -p susfs4ksu && (
+                  cd susfs4ksu
+                  git init -q
+                  git config advice.detachedHead false
+                  git remote add origin "https://gitlab.com/simonpunk/susfs4ksu.git"
+                  (git fetch --depth 1 origin "$SUSFS_BRANCH" 2>/dev/null || git fetch --depth 50 origin "$SUSFS_BRANCH" 2>/dev/null || git fetch --depth 1 origin 2>/dev/null)
+                  (git checkout -f "$SUSFS_BRANCH" 2>/dev/null || git checkout -f FETCH_HEAD 2>/dev/null)
+              ); then
+                echo "✅ SUSFS repository cloned successfully via git fallback!"
+                SUSFS_FETCH_SUCCESS=true
+                break
+              fi
+              echo "❌ Attempt $attempt failed, retrying in $((attempt * 5))s..."
+              rm -rf susfs4ksu 2>/dev/null
+              sleep $((attempt * 5))
+            done
+          fi
+
+          if [ "$SUSFS_FETCH_SUCCESS" != "true" ]; then
+            echo "::error::Failed to fetch SUSFS archive and git fallback failed after multiple attempts"
             exit 1
           fi
           echo "SUSFS_COMMIT_SHA=$SUSFS_BRANCH" >> $GITHUB_ENV
