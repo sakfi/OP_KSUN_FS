@@ -106,6 +106,14 @@ on:
         required: true
         type: string
         default: '[{"type":"ksun","hash":"dev"}]'
+      ksu_mode:
+        description: 'KernelSU Integration Mode (lkm = Modular LKM + SUSFS Guard, builtin = Legacy in-tree)'
+        required: true
+        type: choice
+        options:
+          - lkm
+          - builtin
+        default: lkm
       enable_wireguard:
         description: '🛂 Global Master Switch: Enable WireGuard for all models'
         required: true
@@ -905,6 +913,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   build-A15:
     name: build-A15 (${{ matrix.model }}, ${{ matrix.ksu_type }})
@@ -957,6 +966,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   build-A14:
     name: build-A14 (${{ matrix.model }}, ${{ matrix.ksu_type }})
@@ -1009,6 +1019,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   trigger-release:
     needs: [set-op-model, build-A16, build-A15, build-A14]

@@ -46,6 +46,11 @@ inputs:
   github_token:
     description: 'GitHub Token'
     required: true
+  ksu_mode:
+    description: 'KernelSU integration mode: lkm or builtin'
+    required: false
+    type: string
+    default: 'lkm'
 
 outputs:
   kernel_version:
@@ -57,6 +62,9 @@ outputs:
   ksu_type:
     description: 'KernelSU Variant'
     value: ${{ steps.save_metadata.outputs.ksu_type }}
+  ksu_mode:
+    description: 'KernelSU Mode used'
+    value: ${{ env.KSUMODE }}
   susfs_version:
     description: 'SUSFS version string'
     value: ${{ steps.save_metadata.outputs.susfs_version }}
@@ -302,6 +310,14 @@ runs:
           O2|O3) ;;
           *) errors+=("optimize_level must be O2 or O3. Got: '$optimize'"); ;;
         esac
+
+        ksu_mode='${{ inputs.ksu_mode }}'
+        if [[ -z "$ksu_mode" ]]; then
+          ksu_mode="lkm"
+        elif [[ "$ksu_mode" != "lkm" && "$ksu_mode" != "builtin" ]]; then
+          errors+=("Input 'ksu_mode' must be 'lkm' or 'builtin'. Got: '$ksu_mode'")
+        fi
+        echo "KSUMODE=$ksu_mode" >> "$GITHUB_ENV"
         
         if [ ${#errors[@]} -ne 0 ]; then
           echo "Found ${#errors[@]} validation error(s):" >&2
@@ -311,7 +327,7 @@ runs:
           echo "::error::Input validation failed. See logs for details."
           exit 1
         else
-          echo "✅ Input validation passed"
+          echo "✅ Input validation passed (KernelSU Mode: $ksu_mode)"
         fi
         echo "::endgroup::"
 
@@ -363,8 +379,10 @@ runs:
         SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
         KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
         KSUN_DIR="$KERNEL_PLATFORM_DIR/KernelSU-Next"
+        LKM_DIR="$ARTIFACTS_DIR/lkm"
         mkdir -p "$ARTIFACTS_DIR"
         mkdir -p "$DEBUG_ARTIFACTS_DIR"
+        mkdir -p "$LKM_DIR"
         
         # Save to environment for later steps
         echo "CONFIG_FOLDER=$CONFIG_DIR" >> "$GITHUB_ENV"
@@ -378,6 +396,7 @@ runs:
         echo "SUSFS_FOLDER=$SUSFS_DIR" >> "$GITHUB_ENV"
         echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
         echo "KSUN_FOLDER=$KSUN_DIR" >> "$GITHUB_ENV"
+        echo "LKM_FOLDER=$LKM_DIR" >> "$GITHUB_ENV"
         
         DEBUG_ZIP_NAME="debug_${OP_MODEL}_${OP_OS_VERSION}.zip"
         echo "DEBUG_ZIP_NAME=$DEBUG_ZIP_NAME" >> "$GITHUB_ENV"
@@ -886,59 +905,152 @@ runs:
         set -euo pipefail
         echo "::group::Add KernelSU Next"
         cd "$KERNEL_PLATFORM_FOLDER"
-        echo "Adding KernelSU Next..."
-        KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
-        if [ -z "$KSU_INPUT" ]; then
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
-        else
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "$KSU_INPUT"
-        fi
-        git submodule update --init --recursive
-        cd KernelSU-Next/kernel
-        
-        COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD)
-        
-        if [ $COMMITS_COUNT -lt 2684 ]; then
-          BASE_VERSION=10200
-        else
-          BASE_VERSION=30000
-        fi
-        
-        KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
-        sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile
-        
-        if [ -f ksu.c ]; then
-          sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
-        fi
-        
-        if [[ "$KSU_VERSION" -gt 33095 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]]; then
-          sed -i 's|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include -I$(KSU_KERNEL_DIR)/include/uapi|' Kbuild
-          sed -i 's|$(src)|$(abspath $(src))|' Kbuild
-          sed -i 's|$(srctree)/$(src)|$(abspath $(srctree)/$(src))|' Kbuild
-        fi
-        
-        if [ "$KSU_VERSION" -lt 12884 ]; then
-          echo "NEED_HOOKS=true" >> $GITHUB_ENV
-        else
+
+        if [ "${KSUMODE:-lkm}" = "lkm" ]; then
+          echo "Setting up KernelSU Next in LKM (Loadable Kernel Module) mode..."
+          
+          echo "Ensuring GKI loadable module support in defconfig"
+          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" << 'EOF'
+CONFIG_MODULES=y
+CONFIG_MODVERSIONS=y
+CONFIG_KALLSYMS=y
+CONFIG_KALLSYMS_ALL=y
+CONFIG_KPROBES=y
+CONFIG_HAVE_KPROBES=y
+EOF
           echo "NEED_HOOKS=false" >> $GITHUB_ENV
+
+          AUTH_HEADER=()
+          if [ -n "${{ inputs.github_token }}" ]; then
+            AUTH_HEADER=(-H "Authorization: Bearer ${{ inputs.github_token }}")
+          fi
+
+          echo "Querying latest KernelSU-Next release assets..."
+          RELEASE_JSON=$(curl -sSL "${AUTH_HEADER[@]}" https://api.github.com/repos/KernelSU-Next/KernelSU-Next/releases/latest 2>/dev/null || true)
+          REL_TAG=$(echo "$RELEASE_JSON" | jq -r .tag_name 2>/dev/null || true)
+          if [ -z "$REL_TAG" ] || [ "$REL_TAG" = "null" ]; then
+            echo "::warning::Authenticated GitHub API request failed or rate-limited. Trying unauthenticated..."
+            RELEASE_JSON=$(curl -sSL https://api.github.com/repos/KernelSU-Next/KernelSU-Next/releases/latest 2>/dev/null || true)
+            REL_TAG=$(echo "$RELEASE_JSON" | jq -r .tag_name 2>/dev/null || true)
+          fi
+          if [ -z "$REL_TAG" ] || [ "$REL_TAG" = "null" ]; then
+            REL_TAG="v3.4.2"
+          fi
+          echo "Using KernelSU-Next Release: $REL_TAG"
+
+          TARGET_KMI="${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}"
+          echo "Target KMI: $TARGET_KMI"
+
+          KSU_LKM_URL=$(echo "$RELEASE_JSON" | jq -r --arg kmi "$TARGET_KMI" '.assets[] | select(.name == ("aarch64_" + $kmi + "_kernelsu.ko")) | .browser_download_url' 2>/dev/null | head -n 1 || true)
+          SUSFS_LKM_URL=$(echo "$RELEASE_JSON" | jq -r --arg kmi "$TARGET_KMI" '.assets[] | select(.name == ($kmi + "_susfs_guard_lkm.ko")) | .browser_download_url' 2>/dev/null | head -n 1 || true)
+          KSUD_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name == "ksud-aarch64-linux-android") | .browser_download_url' 2>/dev/null | head -n 1 || true)
+
+          if [ -z "$KSU_LKM_URL" ] || [ "$KSU_LKM_URL" = "null" ]; then
+            KSU_LKM_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/${REL_TAG}/aarch64_${TARGET_KMI}_kernelsu.ko"
+          fi
+          if [ -z "$SUSFS_LKM_URL" ] || [ "$SUSFS_LKM_URL" = "null" ]; then
+            SUSFS_LKM_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/${REL_TAG}/${TARGET_KMI}_susfs_guard_lkm.ko"
+          fi
+          if [ -z "$KSUD_URL" ] || [ "$KSUD_URL" = "null" ]; then
+            KSUD_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/${REL_TAG}/ksud-aarch64-linux-android"
+          fi
+
+          echo "Downloading KSUN LKM ($KSU_LKM_URL)..."
+          curl -sSL -o "$LKM_FOLDER/kernelsu.ko" "$KSU_LKM_URL" || true
+          if [ ! -s "$LKM_FOLDER/kernelsu.ko" ]; then
+            echo "::warning::Direct download failed, trying generic KMI fallback matching $OP_KERNEL_VERSION..."
+            FALLBACK_KSU_URL=$(echo "$RELEASE_JSON" | jq -r --arg kver "$OP_KERNEL_VERSION" '.assets[] | select(.name | (startswith("aarch64_") and endswith("_kernelsu.ko") and contains($kver))) | .browser_download_url' 2>/dev/null | head -n 1 || true)
+            if [ -n "$FALLBACK_KSU_URL" ] && [ "$FALLBACK_KSU_URL" != "null" ]; then
+              curl -sSL -o "$LKM_FOLDER/kernelsu.ko" "$FALLBACK_KSU_URL" || true
+            fi
+          fi
+
+          if [ -s "$LKM_FOLDER/kernelsu.ko" ]; then
+            echo "✅ kernelsu.ko downloaded ($(stat -c%s "$LKM_FOLDER/kernelsu.ko") bytes)"
+          else
+            echo "::error::Failed to download kernelsu.ko for KMI $TARGET_KMI"
+            exit 1
+          fi
+
+          echo "Downloading SUSFS Guard LKM ($SUSFS_LKM_URL)..."
+          curl -sSL -o "$LKM_FOLDER/susfs_guard_lkm.ko" "$SUSFS_LKM_URL" || true
+          if [ -s "$LKM_FOLDER/susfs_guard_lkm.ko" ]; then
+            echo "✅ susfs_guard_lkm.ko downloaded ($(stat -c%s "$LKM_FOLDER/susfs_guard_lkm.ko") bytes)"
+          else
+            echo "ℹ️ No dedicated susfs_guard_lkm.ko asset for $TARGET_KMI (using integrated KSUN driver)"
+            rm -f "$LKM_FOLDER/susfs_guard_lkm.ko"
+          fi
+
+          echo "Downloading ksud CLI tool ($KSUD_URL)..."
+          curl -sSL -o "$LKM_FOLDER/ksud" "$KSUD_URL" || true
+          chmod +x "$LKM_FOLDER/ksud" 2>/dev/null || true
+          if [ -s "$LKM_FOLDER/ksud" ]; then
+            echo "✅ ksud downloaded ($(stat -c%s "$LKM_FOLDER/ksud") bytes)"
+          else
+            echo "::error::Failed to download ksud tool"
+            exit 1
+          fi
+
+          echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+          echo "${REL_TAG} (LKM)" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+          echo "KSUVER=${REL_TAG} (LKM)" >> $GITHUB_ENV
+          echo "KSU_COMMIT_SHA=${REL_TAG}" >> $GITHUB_ENV
+          echo "KernelSU Next Version: ${REL_TAG} (LKM)"
+          echo "✅ KernelSU Next LKM acquired"
+        else
+          echo "Adding KernelSU Next (Legacy Built-in)..."
+          KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
+          if [ -z "$KSU_INPUT" ]; then
+            curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+          else
+            curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "$KSU_INPUT"
+          fi
+          git submodule update --init --recursive
+          cd KernelSU-Next/kernel
+          
+          COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD)
+          
+          if [ $COMMITS_COUNT -lt 2684 ]; then
+            BASE_VERSION=10200
+          else
+            BASE_VERSION=30000
+          fi
+          
+          KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
+          sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile
+          
+          if [ -f ksu.c ]; then
+            sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
+          fi
+          
+          if [[ "$KSU_VERSION" -gt 33095 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]]; then
+            sed -i 's|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include -I$(KSU_KERNEL_DIR)/include/uapi|' Kbuild
+            sed -i 's|$(src)|$(abspath $(src))|' Kbuild
+            sed -i 's|$(srctree)/$(src)|$(abspath $(srctree)/$(src))|' Kbuild
+          fi
+          
+          if [ "$KSU_VERSION" -lt 12884 ]; then
+            echo "NEED_HOOKS=true" >> $GITHUB_ENV
+          else
+            echo "NEED_HOOKS=false" >> $GITHUB_ENV
+          fi
+          
+          cd ..
+          KSU_COMMIT_SHA=$(git rev-parse HEAD)
+          echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
+          
+          echo "Add KSUN Configuration Settings"
+          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+CONFIG_KSU=y
+CONFIG_KSU_KPROBES_HOOK=n
+EOF
+          
+          echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+          echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+          echo "KernelSU Next Version: $KSU_VERSION"
+          echo "✅ KernelSU Next added (commit: ${KSU_COMMIT_SHA:0:8})"
         fi
-        
-        cd ..
-        KSU_COMMIT_SHA=$(git rev-parse HEAD)
-        echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
-        
-        
-        echo "Add KSUN Configuration Settings"
-        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
-        CONFIG_KSU=y
-        CONFIG_KSU_KPROBES_HOOK=n
-        EOF
-        
-        echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
-        echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
-        echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-        echo "KernelSU Next Version: $KSU_VERSION"
-        echo "✅ KernelSU Next added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
     - name: Add KernelSU
@@ -995,6 +1107,16 @@ runs:
       run: |
         set -euo pipefail
         echo "::group::Apply SUSFS patches"
+        if [ "${KSUMODE:-lkm}" = "lkm" ]; then
+          echo "ℹ️ LKM Mode Active: SUSFS functionality is provided via modular drivers (susfs_guard_lkm.ko / KSUN LKM)."
+          echo "SUSVER=LKM" >> $GITHUB_ENV
+          echo "LKM" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+          echo "SusFS Version: LKM"
+          echo "✅ In-tree kernel source kept clean for modular LKM execution"
+          echo "::endgroup::"
+          exit 0
+        fi
+
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Applying SUSFS patches..."
         cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
@@ -1873,7 +1995,13 @@ runs:
         declare -a modules=()
         IFS=',' read -ra ADDR <<< "$OP_BLACKLIST_MODULES"
         for mod in "${ADDR[@]}"; do
-          [[ -n "$mod" ]] && modules+=("$mod")
+          if [ -n "$mod" ]; then
+            if [ "${KSUMODE:-lkm}" = "lkm" ] && [ "$mod" = "kernelsu" ]; then
+              echo "ℹ️ Allowing 'kernelsu' module to load (LKM mode active)"
+            else
+              modules+=("$mod")
+            fi
+          fi
         done
         
         if [ "$OP_BBR" = "true" ] || [ "$OP_BBR3" = "true" ]; then
@@ -2334,12 +2462,90 @@ runs:
             patch -p1 < "$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-volume-input-to-enable-bbg-efisp-patch.patch"
           ;;
         esac
+
+        if [ "${KSUMODE:-lkm}" = "lkm" ] && [ -d "$LKM_FOLDER" ]; then
+          echo "Packaging LKM modules into AnyKernel3..."
+          mkdir -p "$AK3_FOLDER/modules"
+          cp "$LKM_FOLDER"/*.ko "$AK3_FOLDER/modules/" 2>/dev/null || true
+          if [ -f "$LKM_FOLDER/ksud" ]; then
+            mkdir -p "$AK3_FOLDER/tools"
+            cp "$LKM_FOLDER/ksud" "$AK3_FOLDER/tools/ksud"
+            chmod 755 "$AK3_FOLDER/tools/ksud" 2>/dev/null || true
+          fi
+
+          echo "Injecting LKM automated installer into anykernel.sh..."
+          cat >> anykernel.sh << 'EOF_LKM'
+
+## Hybrid LKM (KernelSU-Next + SUSFS Guard) Injection
+if [ -d "$home/modules" ] && [ -f "$home/tools/ksud" ]; then
+    ui_print " "
+    ui_print "=========================================="
+    ui_print "[+] Injecting KernelSU-Next & SUSFS LKM..."
+    ui_print "=========================================="
+    chmod 755 "$home/tools/ksud" "$home/tools/magiskboot" 2>/dev/null || true
+
+    target_part=""
+    target_dev=""
+    for p in init_boot init_boot_a init_boot_b boot boot_a boot_b; do
+        dev=$(find_block $p 2>/dev/null)
+        if [ -n "$dev" ] && [ -e "$dev" ]; then
+            target_part="$p"
+            target_dev="$dev"
+            break
+        fi
+    done
+
+    init_boot_dev=$(find_block init_boot 2>/dev/null)
+    if [ -n "$init_boot_dev" ] && [ -e "$init_boot_dev" ]; then
+        target_dev="$init_boot_dev"
+        target_part="init_boot"
+    fi
+
+    if [ -n "$target_dev" ]; then
+        ui_print " - Target partition: $target_part ($target_dev)"
+        cd "$home"
+        rm -f target_image.img ksud_patched_*.img 2>/dev/null
+        $home/tools/magiskboot dump "$target_dev" target_image.img 2>/dev/null || dd if="$target_dev" of=target_image.img 2>/dev/null
+
+        if [ -f target_image.img ]; then
+            ui_print " - Patching ramdisk with kernelsu.ko..."
+            $home/tools/ksud boot-patch -b target_image.img -m "$home/modules/kernelsu.ko" --magiskboot "$home/tools/magiskboot"
+            patched_file=$(ls ksud_patched_*.img 2>/dev/null | head -n 1)
+            if [ -n "$patched_file" ] && [ -f "$patched_file" ]; then
+                ui_print " - Flashing patched $target_part..."
+                dd if="$patched_file" of="$target_dev" 2>/dev/null
+                ui_print "✅ KSUN LKM injected successfully!"
+            else
+                ui_print "⚠️ Failed to patch ramdisk with ksud."
+            fi
+        fi
+
+        if [ -f "$home/modules/susfs_guard_lkm.ko" ]; then
+            ui_print " - Staging SUSFS Guard LKM module..."
+            mkdir -p /data/adb/modules/susfs_guard 2>/dev/null || true
+            cp "$home/modules/susfs_guard_lkm.ko" /data/adb/modules/susfs_guard/ 2>/dev/null || true
+            mkdir -p /tmp/modules 2>/dev/null || true
+            cp "$home/modules/susfs_guard_lkm.ko" /tmp/modules/ 2>/dev/null || true
+            ui_print "✅ SUSFS Guard LKM staged!"
+        fi
+    fi
+fi
+EOF_LKM
+        fi
         
         ZIP_MODEL=$(echo "$OP_MODEL" | sed 's/-[0-9]\+\.[0-9]\+\.[0-9]\+$//')
-        if [ "${{ env.OP_SUSFS }}" = true ]; then
-          ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+        if [ "${KSUMODE:-lkm}" = "lkm" ]; then
+          if [ "${{ env.OP_SUSFS }}" = true ]; then
+            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_LKM.zip"
+          else
+            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_LKM.zip"
+          fi
         else
-          ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
+          if [ "${{ env.OP_SUSFS }}" = true ]; then
+            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+          else
+            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
+          fi
         fi
         mkdir -p "$ARTIFACTS_FOLDER"
         
@@ -2438,6 +2644,7 @@ runs:
           echo "| **OS Version** | ${{ env.OP_OS_VERSION }} |"
           echo "| **Kernel Version** | ${{ steps.save_metadata.outputs.kernel_version }} |"
           echo "| **Kernel Uname** | \`${{ env.KERNEL_UNAME }}\` |"
+          echo "| **KernelSU Mode** | \`${KSUMODE:-lkm}\` |"
           echo "| **Build User** | ${{ env.BUILD_USER }} |"
           echo "| **Build Host** | ${{ env.BUILD_HOST }} |"
           if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
