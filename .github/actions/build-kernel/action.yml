@@ -401,6 +401,27 @@ runs:
         DEBUG_ZIP_NAME="debug_${OP_MODEL}_${OP_OS_VERSION}.zip"
         echo "DEBUG_ZIP_NAME=$DEBUG_ZIP_NAME" >> "$GITHUB_ENV"
 
+    - name: 📦 Fetch SakFi AnyKernel3
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Fetch SakFi AnyKernel3"
+        echo "Fetching customized AnyKernel3 from https://github.com/sakfi/AnyKernel3.1..."
+        rm -rf "$AK3_FOLDER"
+        for i in 1 2 3; do
+          if git clone --depth 1 -b gki-2.0 https://github.com/sakfi/AnyKernel3.1.git "$AK3_FOLDER"; then
+            echo "✅ SakFi AnyKernel3.1 (gki-2.0) successfully fetched into $AK3_FOLDER"
+            break
+          fi
+          echo "⚠️ Attempt $i failed, retrying in 3s..."
+          sleep 3
+        done
+        if [ ! -f "$AK3_FOLDER/anykernel.sh" ]; then
+          echo "::error::Failed to fetch SakFi AnyKernel3 after 3 attempts!"
+          exit 1
+        fi
+        echo "::endgroup::"
+
     - name: Set Kernel build-tools to Path
       shell: bash
       run: |
@@ -2441,14 +2462,18 @@ runs:
         
         cp "$IMAGE_PATH" "$AK3_FOLDER/Image"
 
-        # Re-apply SakFi Branding (Banner and Flash Output)
-        BANNER_FILE="${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt"
-        if [ ! -f "$BANNER_FILE" ]; then
-          BANNER_FILE="${{ github.action_path }}/../../workflows/custom_banner.txt"
-        fi
-        if [ -f "$BANNER_FILE" ] && [ -f "${{ github.action_path }}/inject_banner.py" ]; then
-          echo "Injecting custom SakFi cinematic banner into AnyKernel3..."
-          python3 "${{ github.action_path }}/inject_banner.py" "$BANNER_FILE" "$AK3_FOLDER"
+        # Verify / Apply SakFi Branding (Banner and Flash Output)
+        if ! grep -q "OnePlus Kernels by SakFi" "$AK3_FOLDER/anykernel.sh"; then
+          BANNER_FILE="${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt"
+          if [ ! -f "$BANNER_FILE" ]; then
+            BANNER_FILE="${{ github.action_path }}/../../workflows/custom_banner.txt"
+          fi
+          if [ -f "$BANNER_FILE" ] && [ -f "${{ github.action_path }}/inject_banner.py" ]; then
+            echo "Injecting custom SakFi cinematic banner into AnyKernel3..."
+            python3 "${{ github.action_path }}/inject_banner.py" "$BANNER_FILE" "$AK3_FOLDER"
+          fi
+        else
+          echo "✅ SakFi AnyKernel3.1 already contains native branding and banner."
         fi
         
         mv "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt" "$AK3_FOLDER/"
@@ -2461,7 +2486,9 @@ runs:
         case "$OP_BRANCH" in
           wild/sm8850|wild/sm8845)
             echo "Applying BBG efisp abl whitelist control patch"
-            patch -p1 < "$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-volume-input-to-enable-bbg-efisp-patch.patch"
+            if [ -f "$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-volume-input-to-enable-bbg-efisp-patch.patch" ]; then
+              patch -p1 < "$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-volume-input-to-enable-bbg-efisp-patch.patch" || true
+            fi
           ;;
         esac
 
@@ -2475,9 +2502,13 @@ runs:
             chmod 755 "$AK3_FOLDER/tools/ksud" 2>/dev/null || true
           fi
 
-          echo "Injecting LKM automated installer into anykernel.sh..."
-          if [ -f "${{ github.action_path }}/lkm_inject.sh" ]; then
-            cat "${{ github.action_path }}/lkm_inject.sh" >> anykernel.sh
+          if ! grep -q "Hybrid LKM" anykernel.sh; then
+            echo "Injecting LKM automated installer into anykernel.sh..."
+            if [ -f "${{ github.action_path }}/lkm_inject.sh" ]; then
+              cat "${{ github.action_path }}/lkm_inject.sh" >> anykernel.sh
+            fi
+          else
+            echo "✅ Native Hybrid LKM logic already present in anykernel.sh."
           fi
         fi
         
