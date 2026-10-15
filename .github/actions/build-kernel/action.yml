@@ -1976,7 +1976,11 @@ runs:
         echo "Customize Kernel Branding"
         cd "$COMMON_KERNEL_FOLDER"
         mkdir -p out
-        CUSTOM_LOCALVERSION="-${ANDROID_VER}-${OP_UNAME}"
+        UNAME_BRAND="${OP_UNAME:-SakFi-OP}"
+        if [ "$UNAME_BRAND" = "OP-WILD" ]; then
+          UNAME_BRAND="SakFi-OP"
+        fi
+        CUSTOM_LOCALVERSION="-${ANDROID_VER}-${UNAME_BRAND}"
         echo "CUSTOM_LOCALVERSION=$CUSTOM_LOCALVERSION" >> "$GITHUB_ENV"
 
     - name: Disable GPUEB
@@ -2173,7 +2177,7 @@ runs:
         
         make LD="$COMMON_KERNEL_FOLDER/ld-wrapper" HOSTLD="$COMMON_KERNEL_FOLDER/ld-wrapper" O="$OUT" gki_defconfig
         
-        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--OP-WILD}"
+        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--SakFi-OP}"
         if [ -n "${LOCAL_LOCALVERSION:-}" ]; then
           scripts/config --file "$OUT/.config" --set-str LOCALVERSION "${LOCAL_LOCALVERSION}"
           scripts/config --file "$OUT/.config" -d LOCALVERSION_AUTO || true
@@ -2438,9 +2442,12 @@ runs:
         cp "$IMAGE_PATH" "$AK3_FOLDER/Image"
 
         # Re-apply SakFi Branding (Banner and Flash Output)
-        if [ -f "${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt" ]; then
+        BANNER_FILE="${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt"
+        if [ ! -f "$BANNER_FILE" ]; then
+          BANNER_FILE="${{ github.action_path }}/../../workflows/custom_banner.txt"
+        fi
+        if [ -f "$BANNER_FILE" ]; then
           echo "✅ Injecting custom SakFi cinematic banner..."
-          BANNER_FILE="${GITHUB_WORKSPACE}/.github/workflows/custom_banner.txt"
           
           cd "$AK3_FOLDER"
           rm -f custom_banner.sh
