@@ -107,13 +107,13 @@ on:
         type: string
         default: '[{"type":"ksun","hash":"dev"}]'
       ksu_mode:
-        description: 'KernelSU Integration Mode (lkm = Modular LKM + SUSFS Guard, builtin = Legacy in-tree)'
+        description: 'KernelSU Integration Mode (builtin = In-tree with full SUSFS support [Recommended], lkm = Modular LKM)'
         required: true
         type: choice
         options:
-          - lkm
           - builtin
-        default: lkm
+          - lkm
+        default: builtin
       enable_wireguard:
         description: '🛂 Global Master Switch: Enable WireGuard for all models'
         required: true
