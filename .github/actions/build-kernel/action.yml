@@ -1155,6 +1155,35 @@ runs:
         echo "✅ KernelSU added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
+    - name: 🔍 SUSFS patch pre-check
+      shell: bash
+      if: ${{ env.OP_SUSFS == 'true' }}
+      run: |
+        echo "::group::SUSFS patch pre-check"
+        if [ -z "${SUSFS_FOLDER:-}" ] || [ ! -d "${SUSFS_FOLDER:-}" ]; then
+          echo "::error::SUSFS folder missing: ${SUSFS_FOLDER:-unknown}"
+          exit 1
+        fi
+
+        target_patch="$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
+        if [ ! -f "$target_patch" ]; then
+          echo "::error::SUSFS kernel patch not found: $target_patch"
+          exit 1
+        fi
+        echo "✅ Verified SUSFS kernel patch exists: $target_patch"
+
+        if [ "${KSUMODE:-lkm}" != "lkm" ]; then
+          ksu_patch="$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+          if [ ! -f "$ksu_patch" ]; then
+            echo "::error::SUSFS KernelSU patch not found: $ksu_patch"
+            exit 1
+          fi
+          echo "✅ Verified SUSFS KernelSU patch exists: $ksu_patch"
+        fi
+
+        echo "✅ All SUSFS patch pre-checks passed"
+        echo "::endgroup::"
+
     - name: Apply SUSFS Patches
       shell: bash
       if: ${{ env.OP_SUSFS == 'true' }}
@@ -1445,6 +1474,15 @@ runs:
               echo "::error::SUSFS patches did not apply cleanly in $dir! Found .rej files:"
               find "$dir" -name "*.rej" -exec echo "REJECT: {}" \;
               
+              echo "::group::🔍 Detailed reject file contents from $dir"
+              find "$dir" -name "*.rej" | while read -r rej_file; do
+                echo "------------------------------------------------------------"
+                echo "Reject file: $rej_file"
+                echo "------------------------------------------------------------"
+                sed -n '1,120p' "$rej_file" 2>/dev/null || cat "$rej_file" 2>/dev/null || true
+              done
+              echo "::endgroup::"
+
               # Copy rejects to a folder for artifact upload
               mkdir -p "$GITHUB_WORKSPACE/patch_rejects"
               find "$dir" -name "*.rej" | while read -r rej_file; do
@@ -1459,6 +1497,7 @@ runs:
           fi
         done
         if [ "$rej_count" -gt 0 ]; then
+          echo "::error::One or more SUSFS / KernelSU patches created .rej files. Aborting build."
           exit 1
         fi
         

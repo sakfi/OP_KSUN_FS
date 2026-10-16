@@ -30,12 +30,15 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Use default SUSFS hashes from build-kernel-release.yml
-          echo "susfs_hash_android12_5_10=3c14ad549f826b1f53878ec8c12253efebeed75a" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android13_5_15=ccb1918684b27644d17a6c842f57b60ae5966025" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android14_6_1=e287d59066380bf6de4396532d4a42edf4408701" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android15_6_6=be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android16_6_12=f37930f374ef88de990d6abea0c67d0ea28c1edc" >> $GITHUB_OUTPUT
+          # Dynamically resolve SUSFS branch hashes
+          resolve_branch() {
+            git ls-remote https://gitlab.com/simonpunk/susfs4ksu.git "refs/heads/$1" | awk '{print $1}'
+          }
+          echo "susfs_hash_android12_5_10=$(resolve_branch gki-android12-5.10 || echo 'ca7093a1a26f7911987110c34a1352d74cfb1d09')" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android13_5_15=$(resolve_branch gki-android13-5.15 || echo '2ad297356931ba06b4edc0860f42fdd143b02ffd')" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android14_6_1=$(resolve_branch gki-android14-6.1 || echo '5369359dbd10f6dd8cbdd59d1df7b788b29b168c')" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android15_6_6=$(resolve_branch gki-android15-6.6 || echo '2d11d711de80f0f749b3055f8da8f7b9682454e4')" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android16_6_12=$(resolve_branch gki-android16-6.12 || echo 'acb92d4abc922cac384a207744b2db40281a7c7f')" >> $GITHUB_OUTPUT
 
           echo "[" > matrix.json
           mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
