@@ -106,6 +106,14 @@ on:
         required: true
         type: string
         default: '[{"type":"ksun","hash":"dev"}]'
+      ksu_mode:
+        description: 'KernelSU Integration Mode (builtin = In-tree with full SUSFS support [Recommended], lkm = Modular LKM)'
+        required: true
+        type: choice
+        options:
+          - builtin
+          - lkm
+        default: builtin
       enable_wireguard:
         description: '🛂 Global Master Switch: Enable WireGuard for all models'
         required: true
@@ -170,23 +178,23 @@ on:
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
-        default: '3c14ad549f826b1f53878ec8c12253efebeed75a'      
+        default: 'gki-android12-5.10'      
       android13-5_15_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android13-5.15'
         type: string
-        default: 'ccb1918684b27644d17a6c842f57b60ae5966025'      
+        default: 'gki-android13-5.15'      
       android14-6_1_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android14-6.1'
         type: string
-        default: 'e287d59066380bf6de4396532d4a42edf4408701'
+        default: 'gki-android14-6.1'
       android15-6_6_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android15-6.6'
         type: string
-        default: 'be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1'
+        default: 'gki-android15-6.6'
       android16-6_12_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
-        default: 'f37930f374ef88de990d6abea0c67d0ea28c1edc'
+        default: 'gki-android16-6.12'
 
 jobs:
   set-op-model:
@@ -905,6 +913,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   build-A15:
     name: build-A15 (${{ matrix.model }}, ${{ matrix.ksu_type }})
@@ -957,6 +966,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   build-A14:
     name: build-A14 (${{ matrix.model }}, ${{ matrix.ksu_type }})
@@ -1009,6 +1019,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   trigger-release:
     needs: [set-op-model, build-A16, build-A15, build-A14]
