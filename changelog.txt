@@ -1,1 +1,22 @@
-🚀 Updated KSUN to 33241
+• Updated KSUN version to 33390.
+• Implemented Hybrid LKM architecture with out-of-tree kernelsu.ko.
+• Added dual-mode root support (Modular LKM & Builtin In-Tree).
+• Integrated custom sakfi/AnyKernel3.1 recovery installer engine.
+• Added animated SakFi ASCII banner reveal in recovery console.
+• Added typewriter diagnostics and real-time terminal progress bar.
+• Automated on-device ksud boot-patch ramdisk injection during flash.
+• Updated SUSFS to v2.2.0+ across all GKI versions (5.10 - 6.12).
+• Enhanced SUSFS hiding capabilities & bundled SUSFS Guard LKM.
+• Canonical GKI branch synchronization for SUSFS in CI.
+• Automated CONFIG_KSU_SUSFS defconfig enforcement and build audits.
+• Added pre-flight patch verification diagnostics before compile.
+• Resilient GitLab multi-strategy fetch/clone fallback system.
+• Backported NTSync driver for Windows gaming emulation.
+• Enabled Google BBRv3 TCP congestion control.
+• Added WireGuard VPN, IP_SET, IPv6 NAT, and TTL mangling support.
+• Energy-Aware Scheduler (EAS) tuning with little-core battery bias.
+• Enforced 10-second safety timeout caps on background wakelocks.
+• Compile-level debug logging silencing to reduce micro-stutters.
+• Standardized SakFi-OP custom uname across 160+ device configs.
+• Replaced fragile AWK banner scripts with robust inject_banner.py.
+• Softened recovery boot version check to skip safely on custom ROMs.
