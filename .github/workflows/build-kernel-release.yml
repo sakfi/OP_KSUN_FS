@@ -105,7 +105,7 @@ on:
         description: 'Enter KernelSU build json'
         required: true
         type: string
-        default: '[{"type":"ksun","hash":"204f007106cf5a91b29a28c460a5e2f7535492d5"}]'
+        default: '[{"type":"ksun","hash":"dev"}]'
       ksu_mode:
         description: 'KernelSU Integration Mode (builtin = In-tree with full SUSFS support [Recommended], lkm = Modular LKM)'
         required: true
@@ -234,7 +234,7 @@ jobs:
           
           input="${{ github.event.inputs.op_model }}"
           ksu_options_raw='${{ github.event.inputs.ksu_options }}'
-          if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null or .hash == "dev" then if .type == "KSUN" then .hash = "204f007106cf5a91b29a28c460a5e2f7535492d5" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)' 2>&1); then
+          if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "KSUN" then .hash = "dev" elif .type == "KSU" then .hash = "main" else .hash end elif .hash == "33403" then .hash = "d65c9db1b07edcdc3ad531ad2108fc66227e502c" elif .hash == "33390" then .hash = "204f007106cf5a91b29a28c460a5e2f7535492d5" else . end else error("No type found") end)' 2>&1); then
             echo "::error::ksu_options validation failed: $ksu_options_normalized"
             exit 1
           fi
@@ -340,11 +340,6 @@ jobs:
           if [ "$ksu_type" == "KSUN" ]; then
             KSU_REPO_OWNER="KernelSU-Next"
             KSU_REPO_NAME="KernelSU-Next"
-            if [ "$ksu_ref" == "dev" ]; then
-              echo "⚠️  KSUN 'dev' branch currently has breaking upstream changes incompatible with SUSFS v2.3.0 patches."
-              echo "    Pinning KSUN to verified release commit 204f007106cf5a91b29a28c460a5e2f7535492d5 (v33390)."
-              ksu_ref="204f007106cf5a91b29a28c460a5e2f7535492d5"
-            fi
           else
             KSU_REPO_OWNER="tiann"
             KSU_REPO_NAME="KernelSU"

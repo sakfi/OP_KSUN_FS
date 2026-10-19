@@ -1326,6 +1326,10 @@ runs:
                   echo "⚠️ No fix patch found for $file (reject file: $rej_file)"
                 fi
               done
+              if ([ -n "$KSUVER" ] && [ "$KSUVER" -ge 33400 ] 2>/dev/null) || [ -f "./kernel/supercall/dispatch.c.rej" ] || [ -f "./kernel/core/init.c.rej" ]; then
+                echo "Applying KSUN 33400+ compatibility fixes..."
+                python3 "${{ github.action_path }}/patch_ksun_33400.py" "$KSUN_FOLDER"
+              fi
               # Clean up any harmless non-KSUN rejects (e.g. ksud_integration.c from official KernelSU patch)
               rm -f ./kernel/runtime/*.rej 2>/dev/null || true
               echo "Patching Hook Mode!"
