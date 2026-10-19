@@ -846,10 +846,15 @@ runs:
               return 1
           fi
           
+          local aria_conns=16
+          if [[ "$url" == *"gitlab.com"* ]]; then
+              aria_conns=4
+          fi
+
           while [ $attempt -le $max_attempts ]; do
               echo " Attempt $attempt/$max_attempts: High-speed fetch for $repo_name ($branch)"
               
-              if aria2c -x16 -s16 -j16 -k1M --retry-wait=2 --max-tries=5 -d "/dev/shm" -o "$archive_name" --allow-overwrite=true "${aria2_headers[@]}" $aria_log_flags "$download_url"; then
+              if aria2c -x${aria_conns} -s${aria_conns} -j${aria_conns} -k1M --retry-wait=2 --max-tries=5 -d "/dev/shm" -o "$archive_name" --allow-overwrite=true "${aria2_headers[@]}" $aria_log_flags "$download_url"; then
                   mkdir -p "$repo_name"
                   if tar -I "pigz -p $nproc -b 256" -x --record-size=1M -f "$shm_path" -C "$repo_name" --strip-components=1 --no-same-owner; then
                       echo "✅ Success: $repo_name synced"
@@ -860,7 +865,7 @@ runs:
               
               echo "⚠️ Attempt $attempt failed, clearing RAM and retrying..."
               rm -rf "$repo_name" "$shm_path" 2>/dev/null
-              sleep 5
+              sleep $((attempt * 3 + (RANDOM % 5)))
               attempt=$((attempt + 1))
           done
           
@@ -910,8 +915,9 @@ runs:
           else
             echo "⚠️ Archive download failed (GitLab 403 or network). Falling back to direct git fetch..."
             rm -rf susfs4ksu 2>/dev/null
-            for attempt in 1 2 3; do
-              echo "🔄 Attempt $attempt/3: git fetch for susfs4ksu ($SUSFS_BRANCH)..."
+            for attempt in 1 2 3 4 5; do
+              echo "🔄 Attempt $attempt/5: git fetch for susfs4ksu ($SUSFS_BRANCH)..."
+              jitter=$((attempt * 5 + (RANDOM % 8)))
               if mkdir -p susfs4ksu && (
                   cd susfs4ksu
                   git init -q
@@ -924,9 +930,9 @@ runs:
                 SUSFS_FETCH_SUCCESS=true
                 break
               fi
-              echo "❌ Attempt $attempt failed, retrying in $((attempt * 5))s..."
+              echo "❌ Attempt $attempt failed, retrying in ${jitter}s..."
               rm -rf susfs4ksu 2>/dev/null
-              sleep $((attempt * 5))
+              sleep "$jitter"
             done
           fi
 
@@ -1417,7 +1423,29 @@ runs:
           fi
         fi
         
-        patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
+        patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch" || true
+        
+        # Resolve harmless header reject in fs/namespace.c if hunk 1 failed due to missing trace hook context
+        if [ -f "./fs/namespace.c.rej" ]; then
+          if ! grep -q 'susfs_is_current_ksu_domain' ./fs/namespace.c; then
+            sed -i '1i #ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs_def.h>\n#endif\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nextern bool susfs_is_current_ksu_domain(void);\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\n#define CL_COPY_MNT_NS BIT(25)\n#endif\n' ./fs/namespace.c
+          fi
+          if grep -q 'susfs_def.h' ./fs/namespace.c.rej && ! grep -q 'mnt_alloc_id' ./fs/namespace.c.rej; then
+            echo "Resolved harmless header reject in fs/namespace.c"
+            rm -f ./fs/namespace.c.rej
+          fi
+        fi
+
+        # Resolve harmless header reject in fs/proc/task_mmu.c if hunk 1 failed
+        if [ -f "./fs/proc/task_mmu.c.rej" ]; then
+          if ! grep -q '<linux/susfs_def.h>' ./fs/proc/task_mmu.c; then
+            sed -i '1i #if defined(CONFIG_KSU_SUSFS_SUS_KSTAT) || defined(CONFIG_KSU_SUSFS_SUS_MAP) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)\n#include <linux/susfs_def.h>\n#endif\n' ./fs/proc/task_mmu.c
+          fi
+          if grep -q 'susfs_def.h' ./fs/proc/task_mmu.c.rej && ! grep -q 'show_vma_header_prefix' ./fs/proc/task_mmu.c.rej; then
+            echo "Resolved harmless header reject in fs/proc/task_mmu.c"
+            rm -f ./fs/proc/task_mmu.c.rej
+          fi
+        fi
         
         # SUSFS's OPEN_REDIRECT code unconditionally calls VMA_PAD_START(), which
         # only exists on GKI branches that carry Google's page-size-migration

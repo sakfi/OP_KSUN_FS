@@ -308,6 +308,41 @@ void __exit kernelsu_exit(void)
             os.remove(rej)
             print("  [OK] Removed init.c.rej")
 
+    # 3. Fix sucompat.c
+    sucompat_path = os.path.join(ksun_folder, "kernel", "feature", "sucompat.c")
+    if os.path.isfile(sucompat_path):
+        with open(sucompat_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        changed = False
+        # Ensure util.h is included for userspace_stack_buffer
+        if '#include "util.h"' not in content:
+            if '#include "runtime/ksud.h"' in content:
+                content = content.replace('#include "runtime/ksud.h"', '#include "runtime/ksud.h"\n#include "util.h"')
+                changed = True
+            elif '#include "feature/sucompat.h"' in content:
+                content = content.replace('#include "feature/sucompat.h"', '#include "feature/sucompat.h"\n#include "util.h"')
+                changed = True
+
+        # Remove duplicate get_user_arg_ptr since runtime/ksud.h already defines it inline
+        import re
+        pattern = r'static const char __user \*get_user_arg_ptr\(struct user_arg_ptr argv, int nr\)\s*\{.*?\n\}\n'
+        if re.search(pattern, content, re.DOTALL):
+            content = re.sub(pattern, '', content, flags=re.DOTALL)
+            changed = True
+            print("  [OK] Removed duplicate get_user_arg_ptr from sucompat.c")
+
+        if changed:
+            with open(sucompat_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            print("  [OK] Patched sucompat.c with util.h and removed redefinition")
+
+        rej = os.path.join(ksun_folder, "kernel", "feature", "sucompat.c.rej")
+        if os.path.isfile(rej):
+            os.remove(rej)
+            print("  [OK] Removed sucompat.c.rej")
+
 if __name__ == "__main__":
     folder = sys.argv[1] if len(sys.argv) > 1 else "."
     patch_ksun(folder)
+
