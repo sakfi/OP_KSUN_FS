@@ -1317,11 +1317,11 @@ runs:
                 if [ -f "$fix_patch" ]; then
                   echo "Patching file: $file with fix_$file.patch"
                   rm -f "$rej_file"
-                  patch -p1 --forward < "$fix_patch"
+                  patch -p1 --forward < "$fix_patch" || true
                 elif [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_${file}.c.patch" ]; then
                   echo "Patching file: $file with fix_${file}.c.patch"
                   rm -f "$rej_file"
-                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_${file}.c.patch"
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_${file}.c.patch" || true
                 else
                   echo "⚠️ No fix patch found for $file (reject file: $rej_file)"
                 fi
