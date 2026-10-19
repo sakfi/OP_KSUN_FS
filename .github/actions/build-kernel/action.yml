@@ -1326,6 +1326,8 @@ runs:
                   echo "⚠️ No fix patch found for $file (reject file: $rej_file)"
                 fi
               done
+              # Clean up any harmless non-KSUN rejects (e.g. ksud_integration.c from official KernelSU patch)
+              rm -f ./kernel/runtime/*.rej 2>/dev/null || true
               echo "Patching Hook Mode!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"

@@ -1,1 +1,3 @@
-🚀 Updated KSUN to 33241
+- Updated KSUN to v33390 (204f007106cf5a91b29a28c460a5e2f7535492d5)
+- Resolved SUSFS v2.3.0 patch compatibility and eliminated patch rejects
+- Removed duplicate matrix resolution block from workflow

@@ -4,8 +4,8 @@
 ### *High-Performance Hybrid LKM & SUSFS Kernels for OnePlus Devices*
 
 [![Build Kernel](https://img.shields.io/github/actions/workflow/status/sakfi/OP_KSUN_FS/build-kernel-release.yml?label=Release%20Builds&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/sakfi/OP_KSUN_FS?label=Latest%20Release&color=00FF99&style=flat-square&logo=github)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
-[![AnyKernel3.1](https://img.shields.io/badge/AnyKernel3.1-SakFi%20Custom-blue?style=flat-square&logo=git)](https://github.com/sakfi/AnyKernel3.1)
+[![GitHub Release](https://flat.badgen.net/github/tag/sakfi/OP_KSUN_FS?label=Latest%20Release&color=00FF99&icon=github)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
+[![AnyKernel3.1](https://img.shields.io/badge/AnyKernel3.1-Custom-blue?style=flat-square&logo=git)](https://github.com/sakfi/AnyKernel3.1)
 [![Forks](https://badgen.net/github/forks/sakfi/OP_KSUN_FS?color=orange&style=flat-square)](https://github.com/sakfi/OP_KSUN_FS/network/members)
 [![Stars](https://badgen.net/github/stars/sakfi/OP_KSUN_FS?color=yellow&style=flat-square)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
 
@@ -15,8 +15,8 @@
 
 <br>
 
-[![KernelSU-Next](https://img.shields.io/badge/KernelSU--Next-Hybrid%20LKM%20%7C%20Built--in-00c853?style=for-the-badge&logo=android)](https://kernelsu-next.github.io/webpage/)
-[![SUSFS](https://img.shields.io/badge/SUSFS-v2.2.0%2B%20Patched-ff6d00?style=for-the-badge&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu)
+[![KernelSU-Next](https://img.shields.io/badge/KernelSU--Next-Hybrid%20LKM/GKI%20%7C%20Built--in-00c853?style=for-the-badge&logo=android)](https://kernelsu-next.github.io/webpage/)
+[![SUSFS](https://img.shields.io/badge/SUSFS-v2.3.0%2B%20Patched-ff6d00?style=for-the-badge&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu)
 [![Brand](https://img.shields.io/badge/Branding-SakFi--OP-00b0ff?style=for-the-badge&logo=oneplus)](https://github.com/sakfi/OP_KSUN_FS)
 
 </div>
