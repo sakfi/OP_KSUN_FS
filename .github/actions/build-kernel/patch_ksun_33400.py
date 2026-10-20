@@ -364,7 +364,44 @@ void __exit kernelsu_exit(void)
             os.remove(rej)
             print("  [OK] Removed rules.c.rej")
 
+    # 5. Fix close_fd in preinit.c for Linux < 5.11 (e.g. 5.10 GKI)
+    for sub in [os.path.join("kernel", "preinit", "preinit.c"), os.path.join("preinit", "preinit.c")]:
+        preinit_path = os.path.join(ksun_folder, sub)
+        if os.path.isfile(preinit_path):
+            with open(preinit_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            changed = False
+            if "close_fd(fd);" in content:
+                content = content.replace("close_fd(fd);", "ksu_close_fd(fd);")
+                changed = True
+
+            if "#ifndef close_fd" not in content:
+                compat = """#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
+#ifndef close_fd
+#define close_fd(fd) ksu_close_fd(fd)
+#endif
+#endif
+"""
+                if '#include "preinit/preinit.h"' in content:
+                    content = content.replace('#include "preinit/preinit.h"\n', '#include "preinit/preinit.h"\n' + compat)
+                    changed = True
+                elif '#include "util.h"' in content:
+                    content = content.replace('#include "util.h"\n', '#include "util.h"\n' + compat)
+                    changed = True
+
+            if changed:
+                with open(preinit_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print(f"  [OK] Fixed close_fd compatibility in {sub}")
+
+            rej = os.path.join(ksun_folder, os.path.dirname(sub), "preinit.c.rej")
+            if os.path.isfile(rej):
+                os.remove(rej)
+                print(f"  [OK] Removed {rej}")
+
 if __name__ == "__main__":
     folder = sys.argv[1] if len(sys.argv) > 1 else "."
     patch_ksun(folder)
+
 

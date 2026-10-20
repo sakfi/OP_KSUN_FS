@@ -793,17 +793,24 @@ runs:
           # Default SUSFS branches for each kernel version
           declare -A DEFAULT_SUSFS=(
             ["android12-5.10"]="gki-android12-5.10"
+            ["android13-5.10"]="gki-android13-5.10"
             ["android13-5.15"]="gki-android13-5.15"
+            ["android14-5.15"]="gki-android14-5.15"
             ["android14-6.1"]="gki-android14-6.1"
             ["android15-6.6"]="gki-android15-6.6"
             ["android16-6.12"]="gki-android16-6.12"
+            ["5.10"]="gki-android12-5.10"
+            ["5.15"]="gki-android13-5.15"
+            ["6.1"]="gki-android14-6.1"
+            ["6.6"]="gki-android15-6.6"
+            ["6.12"]="gki-android16-6.12"
           )
           
           # Determine which SUSFS ref to use
           KERNEL_KEY="${{ env.ANDROID_VER }}-${{ env.KERNEL_VER }}"
           if [ -z "$SUSFS_INPUT" ]; then
             # use kernel-specific default
-            SUSFS_BRANCH="${DEFAULT_SUSFS[$KERNEL_KEY]:-gki-android15-6.6}"
+            SUSFS_BRANCH="${DEFAULT_SUSFS[$KERNEL_KEY]:-${DEFAULT_SUSFS[${{ env.KERNEL_VER }}]:-gki-android15-6.6}}"
             echo "ℹ️  Using default SUSFS branch for $KERNEL_KEY: $SUSFS_BRANCH"
           else
             # 40-char hash or branch/commit passed directly
@@ -1212,6 +1219,13 @@ runs:
         cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
         cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
         
+        # Ensure susfs_def.h is self-contained with required standard kernel types and headers
+        if [ -f "$COMMON_KERNEL_FOLDER/include/linux/susfs_def.h" ]; then
+          if ! grep -q '<linux/cred.h>' "$COMMON_KERNEL_FOLDER/include/linux/susfs_def.h"; then
+            sed -i '/#include <linux\/string.h>/a #include <linux/types.h>\n#include <linux/sched.h>\n#include <linux/cred.h>\n#include <linux/thread_info.h>' "$COMMON_KERNEL_FOLDER/include/linux/susfs_def.h"
+          fi
+        fi
+        
         susfs_version=$(grep '#define SUSFS_VERSION' "$COMMON_KERNEL_FOLDER/include/linux/susfs.h" | awk -F'"' '{print $2}')
         echo "SUSVER=$susfs_version" >> $GITHUB_ENV
         echo "$susfs_version" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
@@ -1440,8 +1454,12 @@ runs:
         
         # Resolve harmless header reject in fs/namespace.c if hunk 1 failed due to missing trace hook context
         if [ -f "./fs/namespace.c.rej" ]; then
-          if ! grep -q 'susfs_is_current_ksu_domain' ./fs/namespace.c; then
-            sed -i '1i #ifdef CONFIG_KSU_SUSFS\n#include <linux/susfs_def.h>\n#endif\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nextern bool susfs_is_current_ksu_domain(void);\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\n#define CL_COPY_MNT_NS BIT(25)\n#endif\n' ./fs/namespace.c
+          if ! grep -q '<linux/susfs_def.h>' ./fs/namespace.c; then
+            if grep -q '#include "internal.h"' ./fs/namespace.c; then
+              sed -i '/#include "internal.h"/a #include <linux/susfs_def.h>\nextern bool susfs_is_current_ksu_domain(void);\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\n#ifndef CL_COPY_MNT_NS\n#define CL_COPY_MNT_NS BIT(25)\n#endif' ./fs/namespace.c
+            else
+              sed -i '1i #include <linux/susfs_def.h>\nextern bool susfs_is_current_ksu_domain(void);\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\n#ifndef CL_COPY_MNT_NS\n#define CL_COPY_MNT_NS BIT(25)\n#endif' ./fs/namespace.c
+            fi
           fi
           if grep -q 'susfs_def.h' ./fs/namespace.c.rej && ! grep -q 'mnt_alloc_id' ./fs/namespace.c.rej; then
             echo "Resolved harmless header reject in fs/namespace.c"
@@ -1449,13 +1467,43 @@ runs:
           fi
         fi
 
-        # Resolve harmless header reject in fs/proc/task_mmu.c if hunk 1 failed
+        # Resolve harmless header reject in fs/exec.c if hunk 1 failed
+        if [ -f "./fs/exec.c.rej" ]; then
+          if ! grep -q '<linux/susfs_def.h>' ./fs/exec.c; then
+            if grep -q '#include <linux/binfmts.h>' ./fs/exec.c; then
+              sed -i '/#include <linux\/binfmts.h>/a #include <linux/susfs_def.h>' ./fs/exec.c
+            else
+              sed -i '1i #include <linux/susfs_def.h>' ./fs/exec.c
+            fi
+          fi
+          if grep -q 'susfs_def.h' ./fs/exec.c.rej && ! grep -q 'do_execveat_common' ./fs/exec.c.rej; then
+            echo "Resolved harmless header reject in fs/exec.c"
+            rm -f ./fs/exec.c.rej
+          fi
+        fi
+
+        # Resolve harmless header and map rejects in fs/proc/task_mmu.c
         if [ -f "./fs/proc/task_mmu.c.rej" ]; then
           if ! grep -q '<linux/susfs_def.h>' ./fs/proc/task_mmu.c; then
-            sed -i '1i #if defined(CONFIG_KSU_SUSFS_SUS_KSTAT) || defined(CONFIG_KSU_SUSFS_SUS_MAP) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)\n#include <linux/susfs_def.h>\n#endif\n' ./fs/proc/task_mmu.c
+            if grep -q '#include "internal.h"' ./fs/proc/task_mmu.c; then
+              sed -i '/#include "internal.h"/a #include <linux/susfs_def.h>' ./fs/proc/task_mmu.c
+            else
+              sed -i '1i #include <linux/susfs_def.h>' ./fs/proc/task_mmu.c
+            fi
           fi
-          if grep -q 'susfs_def.h' ./fs/proc/task_mmu.c.rej && ! grep -q 'show_vma_header_prefix' ./fs/proc/task_mmu.c.rej; then
-            echo "Resolved harmless header reject in fs/proc/task_mmu.c"
+          # If show_smap hunk rejected, ensure SUSFS check is added to show_smap
+          if grep -q 'show_smap' ./fs/proc/task_mmu.c.rej && ! grep -q 'SUSFS_IS_INODE_SUS_MAP' ./fs/proc/task_mmu.c; then
+            perl -i -0pe 's/(static int show_smap\(struct seq_file \*m, void \*v\)\n\{\n\tstruct vm_area_struct \*vma = v;\n\tstruct mem_size_stats mss = \{\};\n)/$1#ifdef CONFIG_KSU_SUSFS_SUS_MAP\n\tif (vma->vm_file) {\n\t\tif (SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))\n\t\t\treturn 0;\n\t}\n#endif\n/' ./fs/proc/task_mmu.c
+            echo "Injected SUSFS_IS_INODE_SUS_MAP into show_smap"
+          fi
+          # If show_smaps_rollup hunk rejected, ensure bypass_orig_flow is added around smap_gather_stats
+          if grep -q 'show_smaps_rollup' ./fs/proc/task_mmu.c.rej && grep -q 'smap_gather_stats(vma, &mss, 0);' ./fs/proc/task_mmu.c && ! grep -q 'bypass_orig_flow' ./fs/proc/task_mmu.c; then
+            perl -i -0pe 's/(\tdo \{\n)(\t\tsmap_gather_stats\(vma, &mss, 0\);)/$1#ifdef CONFIG_KSU_SUSFS_SUS_MAP\n\t\tif (vma->vm_file && SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file)))\n\t\t\tgoto bypass_orig_flow;\n#endif\n$2\n#ifdef CONFIG_KSU_SUSFS_SUS_MAP\nbypass_orig_flow:\n#endif/' ./fs/proc/task_mmu.c
+            echo "Injected SUSFS bypass_orig_flow into show_smaps_rollup"
+          fi
+          # Clear task_mmu.c.rej if show_vma_header_prefix did not reject
+          if ! grep -q 'show_vma_header_prefix' ./fs/proc/task_mmu.c.rej; then
+            echo "Resolved rejects in fs/proc/task_mmu.c"
             rm -f ./fs/proc/task_mmu.c.rej
           fi
         fi

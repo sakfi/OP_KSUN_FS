@@ -141,9 +141,8 @@ runs:
                                 found_in_cache = True
                             
                         if not found_in_cache:
-                            print(f"::error::[FATAL ERROR] Toolchain {base_filename} NOT FOUND in GitHub Release cache!")
-                            print(f"::error::[FATAL ERROR] Please Run Mirror Toolchain Workflow or select sync toolchain during build!!!")
-                            return False
+                            print(f"⚠️ Toolchain {base_filename} not in GitHub Release cache. Falling back to direct repository fetch: {url}")
+
                     
                     if found_in_cache:
                         parts = sorted(glob.glob(os.path.join(shm_workspace, f"*.part*")))
@@ -176,6 +175,19 @@ runs:
                 finally:
                     if os.path.exists(shm_workspace):
                         shutil.rmtree(shm_workspace, ignore_errors=True)
+            # If archive fetching failed, attempt git clone as final fallback
+            print(f"  [GIT FALLBACK] Attempting shallow git clone for {name}...")
+            try:
+                git_url = f"{base_url}/{name}"
+                if os.path.exists(path) and os.listdir(path):
+                    shutil.rmtree(path, ignore_errors=True)
+                os.makedirs(path, exist_ok=True)
+                clone_cmd = f"git clone --depth 1 -b {rev} {git_url} {path} || git clone --depth 1 {git_url} {path}"
+                subprocess.run(clone_cmd, shell=True, check=True)
+                print(f"Synced {name} via git clone successfully!")
+                return True
+            except Exception as ge:
+                print(f"  [GIT FALLBACK FAILED] {ge}")
             return False
         
         global_start = time.time()
