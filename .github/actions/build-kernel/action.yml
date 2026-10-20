@@ -402,6 +402,7 @@ runs:
         echo "DEBUG_ARTIFACTS_FOLDER=$DEBUG_ARTIFACTS_DIR" >> "$GITHUB_ENV"
         echo "KERNEL_PATCHES_FOLDER=$KERNEL_PATCHES_DIR" >> "$GITHUB_ENV"
         echo "SUSFS_FOLDER=$SUSFS_DIR" >> "$GITHUB_ENV"
+        echo "SUSFS_DIR=$SUSFS_DIR" >> "$GITHUB_ENV"
         echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
         echo "KSUN_FOLDER=$KSUN_DIR" >> "$GITHUB_ENV"
         echo "LKM_FOLDER=$LKM_DIR" >> "$GITHUB_ENV"
@@ -919,6 +920,7 @@ runs:
         retry_clone "https://github.com/WildKernels/kernel_patches.git" "main" "1"
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
+          SUSFS_DIR="${SUSFS_DIR:-${SUSFS_FOLDER:-$GITHUB_WORKSPACE/susfs_patches}}"
           if [ -d "$SUSFS_DIR/fs" ] && [ -d "$SUSFS_DIR/include" ]; then
             echo "✅ Using local in-repo SUSFS patches from: $SUSFS_DIR"
             echo "SUSFS_COMMIT_SHA=in-repo" >> "$GITHUB_ENV"
