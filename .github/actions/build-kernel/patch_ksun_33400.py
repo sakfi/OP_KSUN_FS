@@ -342,6 +342,28 @@ void __exit kernelsu_exit(void)
             os.remove(rej)
             print("  [OK] Removed sucompat.c.rej")
 
+    # 4. Fix rules.c
+    rules_path = os.path.join(ksun_folder, "kernel", "selinux", "rules.c")
+    if os.path.isfile(rules_path):
+        with open(rules_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        changed = False
+        if "susfs_set_batch_sid();" not in content and "void apply_kernelsu_rules()" in content:
+            if "out_unlock:" in content:
+                content = content.replace("out_unlock:", "    susfs_set_batch_sid();\nout_unlock:", 1)
+                changed = True
+                print("  [OK] Injected susfs_set_batch_sid() into rules.c")
+
+        if changed:
+            with open(rules_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+        rej = os.path.join(ksun_folder, "kernel", "selinux", "rules.c.rej")
+        if os.path.isfile(rej):
+            os.remove(rej)
+            print("  [OK] Removed rules.c.rej")
+
 if __name__ == "__main__":
     folder = sys.argv[1] if len(sys.argv) > 1 else "."
     patch_ksun(folder)

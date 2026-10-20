@@ -467,6 +467,26 @@ jobs:
               echo "::warning::GitLab GraphQL API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
               sleep $RETRY_DELAY
             done
+
+            # Fallback via git ls-remote and raw blob if GraphQL resolution failed
+            if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then
+              echo "⚠️ GraphQL resolution failed, attempting git ls-remote fallback for '$user_val'..."
+              resolved=$(git ls-remote "https://gitlab.com/${GITLAB_PROJECT_PATH}.git" "refs/heads/${user_val}" 2>/dev/null | awk '{print $1}')
+              if [ -z "$resolved" ]; then
+                resolved=$(git ls-remote "https://gitlab.com/${GITLAB_PROJECT_PATH}.git" "refs/tags/${user_val}" 2>/dev/null | awk '{print $1}')
+              fi
+              if [ -z "$resolved" ] && [[ "$user_val" =~ ^[0-9a-fA-F]{40}$ ]]; then
+                resolved="$user_val"
+              fi
+              if [ -n "$resolved" ]; then
+                echo "  ✅ Fallback resolved $key → $resolved"
+                if [ "${{ inputs.make_release }}" = "true" ] && [ "${susfs_versions_per_key[$key]:-unknown}" = "unknown" ]; then
+                  extracted=$(curl -sSL "https://gitlab.com/${GITLAB_PROJECT_PATH}/-/raw/${user_val}/kernel_patches/include/linux/susfs.h" 2>/dev/null | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}')
+                  susfs_versions_per_key[$key]="${extracted:-unknown}"
+                  echo "  ✅ Fallback $key → SUSFS_VERSION = ${extracted:-unknown}"
+                fi
+              fi
+            fi
             
             # Final Validation — SUSFS hash
             if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then

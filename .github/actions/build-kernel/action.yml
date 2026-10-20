@@ -1171,7 +1171,14 @@ runs:
           exit 1
         fi
 
-        target_patch="$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch"
+        target_patch="$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${SUSFS_KERNEL_BRANCH:-${{ env.SUSFS_KERNEL_BRANCH }}}.patch"
+        if [ ! -f "$target_patch" ]; then
+          found_patch=$(find "$SUSFS_FOLDER/kernel_patches" -maxdepth 1 -name "50_add_susfs_in_*.patch" 2>/dev/null | head -n 1)
+          if [ -n "$found_patch" ] && [ -f "$found_patch" ]; then
+            echo "ℹ️ Auto-discovered SUSFS kernel patch: $(basename "$found_patch")"
+            target_patch="$found_patch"
+          fi
+        fi
         if [ ! -f "$target_patch" ]; then
           echo "::error::SUSFS kernel patch not found: $target_patch"
           exit 1
@@ -1332,10 +1339,8 @@ runs:
                   echo "⚠️ No fix patch found for $file (reject file: $rej_file)"
                 fi
               done
-              if ([ -n "$KSUVER" ] && [ "$KSUVER" -ge 33400 ] 2>/dev/null) || [ -f "./kernel/supercall/dispatch.c.rej" ] || [ -f "./kernel/core/init.c.rej" ]; then
-                echo "Applying KSUN 33400+ compatibility fixes..."
-                python3 "${{ github.action_path }}/patch_ksun_33400.py" "$KSUN_FOLDER"
-              fi
+              echo "Applying KSUN compatibility fixes (patch_ksun_33400.py)..."
+              python3 "${{ github.action_path }}/patch_ksun_33400.py" "$KSUN_FOLDER"
               # Clean up any harmless non-KSUN rejects (e.g. ksud_integration.c from official KernelSU patch)
               rm -f ./kernel/runtime/*.rej 2>/dev/null || true
               echo "Patching Hook Mode!"
@@ -1423,7 +1428,15 @@ runs:
           fi
         fi
         
-        patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${{ env.SUSFS_KERNEL_BRANCH }}.patch" || true
+        target_patch="$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${SUSFS_KERNEL_BRANCH:-${{ env.SUSFS_KERNEL_BRANCH }}}.patch"
+        if [ ! -f "$target_patch" ]; then
+          found_patch=$(find "$SUSFS_FOLDER/kernel_patches" -maxdepth 1 -name "50_add_susfs_in_*.patch" 2>/dev/null | head -n 1)
+          if [ -n "$found_patch" ] && [ -f "$found_patch" ]; then
+            target_patch="$found_patch"
+          fi
+        fi
+        echo "Applying SUSFS kernel patch: $target_patch"
+        patch -p1 --forward < "$target_patch" || true
         
         # Resolve harmless header reject in fs/namespace.c if hunk 1 failed due to missing trace hook context
         if [ -f "./fs/namespace.c.rej" ]; then
