@@ -429,6 +429,18 @@ jobs:
             default_val="${default_branches[$key]}"
             user_val="${user_inputs[$key]:-$default_val}"
             
+            # If in-repo susfs_patches exist, use them directly
+            if [ -d "$GITHUB_WORKSPACE/susfs_patches" ] && [ -f "$GITHUB_WORKSPACE/susfs_patches/include/linux/susfs.h" ]; then
+              echo "  ✅ Using in-repo SUSFS patches for $key"
+              susfs_hashes["$key"]="in-repo"
+              if [ "${{ inputs.make_release }}" = "true" ]; then
+                extracted=$(grep '#define SUSFS_VERSION' "$GITHUB_WORKSPACE/susfs_patches/include/linux/susfs.h" | awk -F'"' '{print $2}')
+                susfs_versions_per_key[$key]="${extracted:-unknown}"
+                echo "  ✅ In-repo $key → SUSFS_VERSION = ${extracted:-unknown}"
+              fi
+              continue
+            fi
+            
             # Build GraphQL query — include blob fetch only when releasing
             HASH_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } } } }"
             RELEASE_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } blobs(paths: [\"kernel_patches/include/linux/susfs.h\"], ref: \"${user_val}\") { nodes { rawBlob } } } } }"
