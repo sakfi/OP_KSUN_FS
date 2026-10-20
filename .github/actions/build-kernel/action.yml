@@ -380,7 +380,11 @@ runs:
         AK3_DIR="$CONFIG_DIR/AnyKernel3"
         DEBUG_ARTIFACTS_DIR="$GITHUB_WORKSPACE/debug_artifacts"
         KERNEL_PATCHES_DIR="$GITHUB_WORKSPACE/kernel_patches"
-        SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
+        if [ -d "$GITHUB_WORKSPACE/susfs_patches" ]; then
+          SUSFS_DIR="$GITHUB_WORKSPACE/susfs_patches"
+        else
+          SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
+        fi
         KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
         KSUN_DIR="$KERNEL_PLATFORM_DIR/KernelSU-Next"
         LKM_DIR="$ARTIFACTS_DIR/lkm"
@@ -915,39 +919,44 @@ runs:
         retry_clone "https://github.com/WildKernels/kernel_patches.git" "main" "1"
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
-          echo "Using SUSFS branch/commit: $SUSFS_BRANCH"
-          SUSFS_FETCH_SUCCESS=false
-          if retry_fetch_archive "https://gitlab.com/simonpunk/susfs4ksu.git" "$SUSFS_BRANCH"; then
-            SUSFS_FETCH_SUCCESS=true
+          if [ -d "$SUSFS_DIR/fs" ] && [ -d "$SUSFS_DIR/include" ]; then
+            echo "✅ Using local in-repo SUSFS patches from: $SUSFS_DIR"
+            echo "SUSFS_COMMIT_SHA=in-repo" >> "$GITHUB_ENV"
           else
-            echo "⚠️ Archive download failed (GitLab 403 or network). Falling back to direct git fetch..."
-            rm -rf susfs4ksu 2>/dev/null
-            for attempt in 1 2 3 4 5; do
-              echo "🔄 Attempt $attempt/5: git fetch for susfs4ksu ($SUSFS_BRANCH)..."
-              jitter=$((attempt * 5 + (RANDOM % 8)))
-              if mkdir -p susfs4ksu && (
-                  cd susfs4ksu
-                  git init -q
-                  git config advice.detachedHead false
-                  git remote add origin "https://gitlab.com/simonpunk/susfs4ksu.git"
-                  (git fetch --depth 1 origin "$SUSFS_BRANCH" 2>/dev/null || git fetch --depth 50 origin "$SUSFS_BRANCH" 2>/dev/null || git fetch --depth 1 origin 2>/dev/null)
-                  (git checkout -f "$SUSFS_BRANCH" 2>/dev/null || git checkout -f FETCH_HEAD 2>/dev/null)
-              ); then
-                echo "✅ SUSFS repository cloned successfully via git fallback!"
-                SUSFS_FETCH_SUCCESS=true
-                break
-              fi
-              echo "❌ Attempt $attempt failed, retrying in ${jitter}s..."
+            echo "Using SUSFS branch/commit: $SUSFS_BRANCH"
+            SUSFS_FETCH_SUCCESS=false
+            if retry_fetch_archive "https://gitlab.com/simonpunk/susfs4ksu.git" "$SUSFS_BRANCH"; then
+              SUSFS_FETCH_SUCCESS=true
+            else
+              echo "⚠️ Archive download failed (GitLab 403 or network). Falling back to direct git fetch..."
               rm -rf susfs4ksu 2>/dev/null
-              sleep "$jitter"
-            done
-          fi
+              for attempt in 1 2 3 4 5; do
+                echo "🔄 Attempt $attempt/5: git fetch for susfs4ksu ($SUSFS_BRANCH)..."
+                jitter=$((attempt * 5 + (RANDOM % 8)))
+                if mkdir -p susfs4ksu && (
+                    cd susfs4ksu
+                    git init -q
+                    git config advice.detachedHead false
+                    git remote add origin "https://gitlab.com/simonpunk/susfs4ksu.git"
+                    (git fetch --depth 1 origin "$SUSFS_BRANCH" 2>/dev/null || git fetch --depth 50 origin "$SUSFS_BRANCH" 2>/dev/null || git fetch --depth 1 origin 2>/dev/null)
+                    (git checkout -f "$SUSFS_BRANCH" 2>/dev/null || git checkout -f FETCH_HEAD 2>/dev/null)
+                ); then
+                  echo "✅ SUSFS repository cloned successfully via git fallback!"
+                  SUSFS_FETCH_SUCCESS=true
+                  break
+                fi
+                echo "❌ Attempt $attempt failed, retrying in ${jitter}s..."
+                rm -rf susfs4ksu 2>/dev/null
+                sleep "$jitter"
+              done
+            fi
 
-          if [ "$SUSFS_FETCH_SUCCESS" != "true" ]; then
-            echo "::error::Failed to fetch SUSFS archive and git fallback failed after multiple attempts"
-            exit 1
+            if [ "$SUSFS_FETCH_SUCCESS" != "true" ]; then
+              echo "::error::Failed to fetch SUSFS archive and git fallback failed after multiple attempts"
+              exit 1
+            fi
+            echo "SUSFS_COMMIT_SHA=$SUSFS_BRANCH" >> "$GITHUB_ENV"
           fi
-          echo "SUSFS_COMMIT_SHA=$SUSFS_BRANCH" >> $GITHUB_ENV
         fi
         echo "✅ Dependencies cloned"
         echo "::endgroup::"
@@ -1215,9 +1224,13 @@ runs:
         fi
 
         cd "$KERNEL_PLATFORM_FOLDER"
-        echo "Applying SUSFS patches..."
-        cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
-        cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
+        if [ -d "$SUSFS_FOLDER/kernel_patches/fs" ]; then
+          cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
+          cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
+        elif [ -d "$SUSFS_FOLDER/fs" ]; then
+          cp "$SUSFS_FOLDER/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
+          cp "$SUSFS_FOLDER/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
+        fi
         
         # Ensure susfs_def.h is self-contained with required standard kernel types and headers
         if [ -f "$COMMON_KERNEL_FOLDER/include/linux/susfs_def.h" ]; then
@@ -1442,12 +1455,21 @@ runs:
           fi
         fi
         
-        target_patch="$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${SUSFS_KERNEL_BRANCH:-${{ env.SUSFS_KERNEL_BRANCH }}}.patch"
-        if [ ! -f "$target_patch" ]; then
-          found_patch=$(find "$SUSFS_FOLDER/kernel_patches" -maxdepth 1 -name "50_add_susfs_in_*.patch" 2>/dev/null | head -n 1)
-          if [ -n "$found_patch" ] && [ -f "$found_patch" ]; then
-            target_patch="$found_patch"
+        target_patch=""
+        if [ -d "$SUSFS_FOLDER/${{ env.KERNEL_VER }}" ]; then
+          target_patch=$(find "$SUSFS_FOLDER/${{ env.KERNEL_VER }}" -name "50_add_susfs_in_${SUSFS_KERNEL_BRANCH:-${{ env.SUSFS_KERNEL_BRANCH }}}*.patch" 2>/dev/null | head -n 1)
+          if [ -z "$target_patch" ] || [ ! -f "$target_patch" ]; then
+            target_patch=$(find "$SUSFS_FOLDER/${{ env.KERNEL_VER }}" -name "50_add_susfs_in_*.patch" 2>/dev/null | head -n 1)
           fi
+        fi
+        if [ -z "$target_patch" ] || [ ! -f "$target_patch" ]; then
+          target_patch="$SUSFS_FOLDER/kernel_patches/50_add_susfs_in_${SUSFS_KERNEL_BRANCH:-${{ env.SUSFS_KERNEL_BRANCH }}}.patch"
+          if [ ! -f "$target_patch" ]; then
+            target_patch=$(find "$SUSFS_FOLDER/kernel_patches" -maxdepth 1 -name "50_add_susfs_in_*.patch" 2>/dev/null | head -n 1)
+          fi
+        fi
+        if [ -z "$target_patch" ] || [ ! -f "$target_patch" ]; then
+          target_patch=$(find "$SUSFS_FOLDER" -name "50_add_susfs_in_*.patch" 2>/dev/null | head -n 1)
         fi
         echo "Applying SUSFS kernel patch: $target_patch"
         patch -p1 --forward < "$target_patch" || true

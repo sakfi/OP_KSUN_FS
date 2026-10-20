@@ -1,0 +1,36 @@
+name: 🔄 Update In-Repo SUSFS Patches
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-susfs:
+    name: 🔄 Fetch & Adapt Upstream SUSFS Patches
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🚀 Run Fetch and Prepare Script
+        run: |
+          python3 scripts/fetch_and_prepare_susfs.py
+
+      - name: 💾 Commit & Push Changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add susfs_patches/
+          if git diff --staged --quiet; then
+            echo "✅ No changes to commit. SUSFS patches are already up to date!"
+          else
+            git commit -m "chore(susfs): update in-repo susfs patches from upstream"
+            git push
+            echo "🚀 Successfully updated and pushed in-repo SUSFS patches!"
+          fi

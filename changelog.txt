@@ -1,4 +1,5 @@
 - Updated KSUN to v33403 / dev (d65c9db1b07edcdc3ad531ad2108fc66227e502c)
 - Added automated compatibility patcher for KSUN 33400+ (preinit & supercall changes) with SUSFS v2.3.0
 - Preserved backward compatibility for KSUN v33390 and older releases
-- Clean zero-reject build verification across all targets
+- Added in-repo pre-adapted SUSFS patches (`susfs_patches/`) with zero-reject support across 5.10, 5.15, 6.1, 6.6, and 6.12 kernels
+- Added update-susfs-patches automation workflow and fetch script
