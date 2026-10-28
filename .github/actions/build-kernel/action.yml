@@ -120,7 +120,9 @@ runs:
         set -euo pipefail
         echo '${{ inputs.op_config_json }}' > /tmp/config.json
         jq -r 'to_entries[] | "OP_\(.key | ascii_upcase)=\(.value)"' /tmp/config.json >> "$GITHUB_ENV"
-        echo "Parsed config:"
+        echo "OP_SUSFS=false" >> "$GITHUB_ENV"
+        echo "SUSVER=LKM" >> "$GITHUB_ENV"
+        echo "Parsed config (SUSFS LKM mode - in-tree SUSFS patching disabled):"
         jq '.' /tmp/config.json
 
     - name: Validate Inputs
@@ -1106,10 +1108,16 @@ runs:
           KSU_COMMIT_SHA=$(git rev-parse HEAD)
           echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
           
-          echo "Add KSUN Configuration Settings"
+          echo "Add KSUN Configuration Settings (Built-in KSUN + SUSFS LKM Support)"
           printf '%s\n' \
             'CONFIG_KSU=y' \
             'CONFIG_KSU_KPROBES_HOOK=n' \
+            'CONFIG_MODULES=y' \
+            'CONFIG_MODVERSIONS=y' \
+            'CONFIG_KALLSYMS=y' \
+            'CONFIG_KALLSYMS_ALL=y' \
+            'CONFIG_KPROBES=y' \
+            'CONFIG_HAVE_KPROBES=y' \
             >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
           
           echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
@@ -1159,6 +1167,12 @@ runs:
         echo "Add KSU Configuration Settings"
         printf '%s\n' \
           'CONFIG_KSU=y' \
+          'CONFIG_MODULES=y' \
+          'CONFIG_MODVERSIONS=y' \
+          'CONFIG_KALLSYMS=y' \
+          'CONFIG_KALLSYMS_ALL=y' \
+          'CONFIG_KPROBES=y' \
+          'CONFIG_HAVE_KPROBES=y' \
           >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
         
         echo "KSU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
@@ -2108,9 +2122,7 @@ runs:
         echo "ksu_version=${KSUVER:-unknown}" >> "$GITHUB_OUTPUT"
         echo "ksu_type=${{ inputs.ksu_type }}" >> "$GITHUB_OUTPUT"
         echo "build_timestamp=${EFFECTIVE_BUILD_TIMESTAMP:-unknown}" >> "$GITHUB_OUTPUT"
-        if [ "${{ env.OP_SUSFS }}" = true ]; then
-          echo "susfs_version=${SUSVER:-unknown}" >> "$GITHUB_OUTPUT"
-        fi
+        echo "susfs_version=${SUSVER:-LKM}" >> "$GITHUB_OUTPUT"
 
     - name: Customize Kernel Branding
       shell: bash
@@ -2169,8 +2181,8 @@ runs:
         IFS=',' read -ra ADDR <<< "$OP_BLACKLIST_MODULES"
         for mod in "${ADDR[@]}"; do
           if [ -n "$mod" ]; then
-            if [ "${KSUMODE:-lkm}" = "lkm" ] && [ "$mod" = "kernelsu" ]; then
-              echo "ℹ️ Allowing 'kernelsu' module to load (LKM mode active)"
+            if [ "$mod" = "kernelsu" ] || [ "$mod" = "susfs_guard_lkm" ]; then
+              echo "ℹ️ Allowing '$mod' module to load (SUSFS/KSUN LKM support)"
             else
               modules+=("$mod")
             fi
@@ -2762,6 +2774,8 @@ runs:
           if [ "${{ env.OP_SUSFS }}" = true ]; then
             echo "SUSFS Version: ${SUSVER:-unknown}"
             echo "SUSFS commit SHA: $SUSFS_SHA"
+          else
+            echo "SUSFS Mode: LKM (via KSUN Manager)"
           fi
           echo "Optimization: ${{ inputs.optimize_level }}"
           echo "Clean Build: ${{ inputs.clean }}"
@@ -2828,6 +2842,8 @@ runs:
             else
               echo "| **SUSFS Commit** | unknown |"
             fi
+          else
+            echo "| **SUSFS Mode** | \`LKM (via KSUN Manager)\` |"
           fi
           
           echo ""

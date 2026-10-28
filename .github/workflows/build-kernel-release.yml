@@ -396,135 +396,27 @@ jobs:
           # Inject ksu_resolved_hash into each device in the matrix
           merged_matrix=$(echo "$merged_matrix" | jq  --arg resolved_sha "$resolved_sha" 'map(.ksu_resolved_hash = $resolved_sha)')
           
-          # SUSFS hash fetch
-          SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"
-          GITLAB_PROJECT_PATH="simonpunk/susfs4ksu"
-          
-          declare -A default_branches=(
-            ["android12-5.10"]="gki-android12-5.10"
-            ["android13-5.15"]="gki-android13-5.15"
-            ["android14-6.1"]="gki-android14-6.1"
-            ["android15-6.6"]="gki-android15-6.6"
-            ["android16-6.12"]="gki-android16-6.12"
-          )
-          
-          declare -A user_inputs=(
-            ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
-            ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
-            ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
-            ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
-            ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
-          )
-          
+          # SUSFS is now handled via LKM in KSUN Manager (in-tree simonpunk/susfs4ksu patching disabled)
+          echo "ℹ️ In-tree SUSFS patching is disabled (SUSFS is supported via KSUN LKM). Skipping GitLab API calls."
           mapfile -t active_keys < <(
             echo "$merged_matrix" \
-              | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' \
+              | jq -r '.[] | "\(.android_version)-\(.kernel_version)"' \
               | sort -u
           )
-          
-          echo "🔍 Resolving SUSFS hashes for: ${active_keys[*]:-none}"
-          
-          declare -A susfs_hashes
-          declare -A susfs_versions_per_key
-          
-          for key in "${active_keys[@]}"; do
-            default_val="${default_branches[$key]}"
-            user_val="${user_inputs[$key]:-$default_val}"
-            
-            # Build GraphQL query — include blob fetch only when releasing
-            HASH_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } } } }"
-            RELEASE_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } blobs(paths: [\"kernel_patches/include/linux/susfs.h\"], ref: \"${user_val}\") { nodes { rawBlob } } } } }"
-            
-            if [ "${{ inputs.make_release }}" = "true" ]; then
-              GL_QUERY="$RELEASE_QUERY"
-            else
-              GL_QUERY="$HASH_QUERY"
-            fi
-            
-            MAX_RETRIES=3
-            RETRY_COUNT=0
-            RETRY_DELAY=5
-            resolved=""
-            
-            until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-              RESPONSE=$(curl -s --fail -G "https://gitlab.com/api/graphql" --data-urlencode "query=$GL_QUERY")
-              EXIT_CODE=$?
-              
-              if [ $EXIT_CODE -eq 0 ] && [ -n "$RESPONSE" ]; then
-                resolved=$(echo "$RESPONSE" | jq -r '.data.project.repository.ch.sha // empty')
-                if [ -n "$resolved" ] && [ "$resolved" != "null" ]; then
-                  echo "  ✅ Query for $key Success"
-                  
-                  if [ "${{ inputs.make_release }}" = "true" ]; then
-                    extracted=$(echo "$RESPONSE" | jq -r '.data.project.repository.blobs.nodes[0].rawBlob // empty' | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}')
-                    susfs_versions_per_key[$key]="${extracted:-unknown}"
-                    echo "  ✅ $key → SUSFS_VERSION = ${extracted:-unknown}"
-                  fi
-                  
-                  break
-                fi
-              fi
-              
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "::warning::GitLab GraphQL API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
-              sleep $RETRY_DELAY
-            done
-            
-            # Final Validation — SUSFS hash
-            if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then
-              echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
-              exit 1
-            fi
-            
-            # Final Validation — SUSFS version
-            if [ "${{ inputs.make_release }}" = "true" ] && [ "${susfs_versions_per_key[$key]:-unknown}" = "unknown" ]; then
-              echo "::error::Could not extract SUSFS_VERSION from susfs.h for '$key' after $MAX_RETRIES attempts. Cannot proceed with release."
-              exit 1
-            fi
-            
-            susfs_hashes["$key"]="$resolved"
-            echo "  ✅ Resolved: $key → $resolved"
-          done
-          
-          # Write CSV list of active GKI versions
           active_gki_keys_csv=$(IFS=','; echo "${active_keys[*]:-}")
           echo "active_gki_keys=$active_gki_keys_csv" >> "$GITHUB_OUTPUT"
-          
-          # Write hash to GITHUB_OUTPUT
-          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
-          
-          # SUSFS_VERSION — only when releasing
+          echo "susfs_hash_android12_5_10=LKM" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android13_5_15=LKM" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android14_6_1=LKM"   >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android15_6_6=LKM"   >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android16_6_12=LKM" >> "$GITHUB_OUTPUT"
           if [ "${{ inputs.make_release }}" = "true" ]; then
-            susfs_base_version="unknown"
-            for key in "${active_keys[@]}"; do
-              ver="${susfs_versions_per_key[$key]:-unknown}"
-              if [ "$ver" != "unknown" ]; then
-                susfs_base_version="$ver"
-                break
-              fi
-            done
-            
-            if [ "$susfs_base_version" = "unknown" ]; then
-              echo "::error::Could not extract SUSFS_VERSION from susfs.h for any active GKI key. Cannot proceed with release."
-              exit 1
+            REL_TAG=$(curl -sSL https://api.github.com/repos/KernelSU-Next/KernelSU-Next/releases/latest 2>/dev/null | jq -r '.tag_name // empty' || true)
+            if [ -z "$REL_TAG" ] || [ "$REL_TAG" = "null" ]; then
+              REL_TAG="v3.4.2"
             fi
-            
-            # make_release=true: mismatch is a hard error — prevents wrong tag
-            for key in "${active_keys[@]}"; do
-              key_ver="${susfs_versions_per_key[$key]:-unknown}"
-              if [ "$key_ver" != "$susfs_base_version" ]; then
-                echo "::error::SUSFS version mismatch: '$key' has '$key_ver', expected '$susfs_base_version'. Align refs before releasing."
-                exit 1
-              fi
-            done
-            
-            # Ensure v prefix for standardized versioning
-            [[ "$susfs_base_version" != v* ]] && susfs_base_version="v$susfs_base_version"
-            echo "susfs_base_version=$susfs_base_version" >> "$GITHUB_OUTPUT"
+            [[ "$REL_TAG" != v* ]] && REL_TAG="v$REL_TAG"
+            echo "susfs_base_version=$REL_TAG" >> "$GITHUB_OUTPUT"
           fi
           
           # Inject susfs_resolved_hash into each device in the matrix
@@ -1057,7 +949,7 @@ jobs:
             if [[ -n "$feature_flags" ]]; then
               IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync <<< "$feature_flags"
               [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
-              [[ "$susfs" == "true" ]] && features+=("ඞ SusFS")
+              features+=("ඞ SusFS (LKM)")
               if [[ "$bbr" == "true" ]]; then
                 # Show BBRv3 when bbr3 flag is true, otherwise BBR
                 bbr3_flag=$(echo "$JSON_BUILD_DATA" | jq -r --arg MODEL "$model" --arg ORIG_MODEL "$possible_orig_model" --arg OS "$os_ver" '
