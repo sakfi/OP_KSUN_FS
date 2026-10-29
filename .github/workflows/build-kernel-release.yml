@@ -420,23 +420,7 @@ jobs:
           fi
           
           # Inject susfs_resolved_hash into each device in the matrix
-          susfs_hashes_json=$(jq -n \
-            --arg a12 "${susfs_hashes[android12-5.10]:-unknown}" \
-            --arg a13 "${susfs_hashes[android13-5.15]:-unknown}" \
-            --arg a14 "${susfs_hashes[android14-6.1]:-unknown}" \
-            --arg a15 "${susfs_hashes[android15-6.6]:-unknown}" \
-            --arg a16 "${susfs_hashes[android16-6.12]:-unknown}" \
-            '{
-              "android12-5.10": $a12,
-              "android13-5.15": $a13,
-              "android14-6.1":  $a14,
-              "android15-6.6":  $a15,
-              "android16-6.12": $a16
-            }')
-          
-          merged_matrix=$(echo "$merged_matrix" | jq \
-            --argjson hashes "$susfs_hashes_json" \
-            '[.[] | . + {susfs_resolved_hash: ($hashes["\(.android_version)-\(.kernel_version)"] // "unknown")}]')
+          merged_matrix=$(echo "$merged_matrix" | jq '[.[] | . + {susfs_resolved_hash: "LKM"}]')
           
           merged_matrix=$(echo "$merged_matrix" | jq '
             sort_by(
