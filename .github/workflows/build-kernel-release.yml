@@ -106,6 +106,14 @@ on:
         required: true
         type: string
         default: '[{"type":"ksun","hash":"dev"}]'
+      ksu_mode:
+        description: 'KernelSU Integration Mode (builtin = In-tree with full SUSFS support [Recommended], lkm = Modular LKM)'
+        required: true
+        type: choice
+        options:
+          - builtin
+          - lkm
+        default: builtin
       enable_wireguard:
         description: '🛂 Global Master Switch: Enable WireGuard for all models'
         required: true
@@ -170,23 +178,23 @@ on:
       android12-5_10_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android12-5.10'
         type: string
-        default: '3c14ad549f826b1f53878ec8c12253efebeed75a'      
+        default: ''      
       android13-5_15_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android13-5.15'
         type: string
-        default: 'ccb1918684b27644d17a6c842f57b60ae5966025'      
+        default: ''      
       android14-6_1_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android14-6.1'
         type: string
-        default: 'e287d59066380bf6de4396532d4a42edf4408701'
+        default: ''
       android15-6_6_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android15-6.6'
         type: string
-        default: 'be7b7ef49a1e1b189c3abf00eacaa7ebdb4168c1'
+        default: ''
       android16-6_12_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
-        default: 'f37930f374ef88de990d6abea0c67d0ea28c1edc'
+        default: ''
 
 jobs:
   set-op-model:
@@ -905,6 +913,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   build-A15:
     name: build-A15 (${{ matrix.model }}, ${{ matrix.ksu_type }})
@@ -957,6 +966,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   build-A14:
     name: build-A14 (${{ matrix.model }}, ${{ matrix.ksu_type }})
@@ -1009,6 +1019,7 @@ jobs:
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          ksu_mode: ${{ inputs.ksu_mode }}
 
   trigger-release:
     needs: [set-op-model, build-A16, build-A15, build-A14]
@@ -1157,7 +1168,7 @@ jobs:
 
           cat << EOF > release_notes.md
           <div align="center">
-            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${NEW_TAG};Maintained+by+sakfi" alt="Typing SVG" />
+            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=SukiSU-Ultra+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${NEW_TAG};Fork+of+OP_KSUN_FS" alt="Typing SVG" />
           </div>
           
           <div align="center">
@@ -1266,7 +1277,7 @@ jobs:
           
           | 🏷️ Feature | 📝 Description |
           |:---|:---|
-          | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
+          | 🔐 **SukiSU-Ultra** | KernelSU-Next fork with integrated SUSFS — kernel-level root |
           | 🥷 **SUSFS** | Advanced root hiding with Magic Mount support |
           | 💻 **Droidspaces** | SYSVIPC support for multi-instance app environments |
           | 🔃 **NTSync** | Fast wine synchronization primitives for emulation |
@@ -1296,8 +1307,8 @@ jobs:
           ## 📱 Manager Applications
           
           ### Official Manager
-          - **KernelSU Next Manager**  
-            → [GitHub](https://github.com/KernelSU-Next/KernelSU-Next)
+          - **SukiSU-Ultra Manager**  
+            → [GitHub](https://github.com/SukiSU-Ultra/SukiSU-Ultra)
           
           ### SusFS Module
           - **KSU SUSFS Module** (Required for SUSFS features)  
@@ -1306,8 +1317,8 @@ jobs:
           ### Recommended Flasher
           - **Kernel Flasher** (Recommended for flashing AnyKernel3 ZIPs, backups and OTA)  
             → [GitHub Release](https://github.com/fatalcoder524/KernelFlasher/releases)
-          - **KSUN Built-in Flasher** (Alternative flasher)  
-            → Accessible directly within the KernelSU Next Manager app
+          - **SukiSU Built-in Flasher** (Alternative flasher)  
+            → Accessible directly within the SukiSU-Ultra Manager app
           
           ---
           
@@ -1325,7 +1336,7 @@ jobs:
           1. Download the appropriate ZIP for your device from the Assets below.
           2. Flash the ZIP file using [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) or [Horizon Kernel Flasher](https://github.com/libxzr/HorizonKernelFlasher).
           3. Reboot system.
-          4. Install KernelSU-Next Manager (or KernelSU Manager depending on build).
+          4. Install the SukiSU-Ultra Manager app.
           5. Install SUSFS module from manager.
           
           ---
@@ -1359,7 +1370,7 @@ jobs:
           cat << 'EOF' >> release_notes.md
           
           ### Previous Releases
-          See [Releases Page](https://github.com/sakfi/OP_KSUN_FS/releases)
+          See [Releases Page](https://github.com/Unnidentified/oplus-sukisu_kernel/releases)
           
           ---
           
@@ -1373,7 +1384,7 @@ jobs:
           |:---:|:---:|:---:|
           | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
           | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
-          | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
+          | **SukiSU-Ultra** (KernelSU-Next fork) | SukiSU-Ultra | [![GitHub](https://img.shields.io/badge/GitHub-SukiSU--Ultra-blue?style=flat-square&logo=github)](https://github.com/SukiSU-Ultra/SukiSU-Ultra) |
           | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
           | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
           | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
