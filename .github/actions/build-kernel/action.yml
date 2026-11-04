@@ -991,12 +991,12 @@ runs:
           TARGET_KMI="${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}"
           echo "Target KMI: $TARGET_KMI"
 
-          KSU_LKM_URL=$(echo "$RELEASE_JSON" | jq -r --arg kmi "$TARGET_KMI" '.assets[] | select(.name == ("lkm-aarch64_" + $kmi + "_kernelsu.ko")) | .browser_download_url' 2>/dev/null | head -n 1 || true)
+          KSU_LKM_URL=$(echo "$RELEASE_JSON" | jq -r --arg kmi "$TARGET_KMI" '.assets[] | select(.name == ("lkm-aarch64-" + $kmi + "_kernelsu.ko")) | .browser_download_url' 2>/dev/null | head -n 1 || true)
           KSUD_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name == "ksud-aarch64-linux-android") | .browser_download_url' 2>/dev/null | head -n 1 || true)
           KSUINIT_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name == "ksuinit-aarch64") | .browser_download_url' 2>/dev/null | head -n 1 || true)
 
           if [ -z "$KSU_LKM_URL" ] || [ "$KSU_LKM_URL" = "null" ]; then
-            KSU_LKM_URL="https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases/download/${REL_TAG}/lkm-aarch64_${TARGET_KMI}_kernelsu.ko"
+            KSU_LKM_URL="https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases/download/${REL_TAG}/lkm-aarch64-${TARGET_KMI}_kernelsu.ko"
           fi
           if [ -z "$KSUD_URL" ] || [ "$KSUD_URL" = "null" ]; then
             KSUD_URL="https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases/download/${REL_TAG}/ksud-aarch64-linux-android"
@@ -1009,7 +1009,7 @@ runs:
           curl -sSL -o "$LKM_FOLDER/kernelsu.ko" "$KSU_LKM_URL" || true
           if [ ! -s "$LKM_FOLDER/kernelsu.ko" ]; then
             echo "::warning::Direct download failed, trying generic KMI fallback matching $OP_KERNEL_VERSION..."
-            FALLBACK_KSU_URL=$(echo "$RELEASE_JSON" | jq -r --arg kver "$OP_KERNEL_VERSION" '.assets[] | select(.name | (startswith("lkm-aarch64_") and endswith("_kernelsu.ko") and contains($kver))) | .browser_download_url' 2>/dev/null | head -n 1 || true)
+            FALLBACK_KSU_URL=$(echo "$RELEASE_JSON" | jq -r --arg kver "$OP_KERNEL_VERSION" '.assets[] | select(.name | (startswith("lkm-aarch64-") and endswith("_kernelsu.ko") and contains($kver))) | .browser_download_url' 2>/dev/null | head -n 1 || true)
             if [ -n "$FALLBACK_KSU_URL" ] && [ "$FALLBACK_KSU_URL" != "null" ]; then
               curl -sSL -o "$LKM_FOLDER/kernelsu.ko" "$FALLBACK_KSU_URL" || true
             fi
