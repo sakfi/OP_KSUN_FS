@@ -210,7 +210,7 @@ jobs:
         with:
           op_config_json: ${{ toJson(matrix) }}
           ksu_type: "KSUN"
-          ksu_branch_or_hash: "dev"
+          ksu_branch_or_hash: "builtin"
           susfs_commit_hash_or_branch: ${{ steps.susfs_res.outputs.hash }}
           optimize_level: "O2"
           github_token: ${{ secrets.GITHUB_TOKEN }}
