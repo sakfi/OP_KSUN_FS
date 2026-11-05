@@ -1346,6 +1346,12 @@ runs:
           "v2.2.0"|"v2.3.0")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
+              # SukiSU-Ultra 'builtin' already carries the full in-kernel SUSFS
+              # integration; applying the KSU-side patch on top would reject.
+              # Trees without a KSU_SUSFS Kconfig (main/dev) need it applied.
+              if grep -q "^config KSU_SUSFS" "./kernel/Kconfig" 2>/dev/null; then
+                echo "SukiSU Ultra already contains integrated SUSFS hooks. Skipping KSU patch."
+              else
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               mapfile -t rej_files < <(find ./kernel -name "*.rej")
               for rej_file in "${rej_files[@]}"; do
@@ -1368,6 +1374,7 @@ runs:
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              fi
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
