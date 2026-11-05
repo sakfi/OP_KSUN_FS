@@ -8,7 +8,7 @@ No local toolchain needed: pick your device in GitHub Actions, and the kernel is
 
 ### Table of Contents
 
-- [Building a kernel](#building-a-kernel)
+- [Building the kernel](#building-the-kernel)
 - [What's inside](#whats-inside)
 - [Supported devices](#supported-devices)
 - [Flashing](#flashing)
@@ -17,7 +17,7 @@ No local toolchain needed: pick your device in GitHub Actions, and the kernel is
 
 ---
 
-## Building a kernel
+## Building the kernel
 
 1. Open the [Actions tab](https://github.com/Unnidentified/oplus-sukisu_kernel/actions) and run the **Build Kernel** workflow.
 2. Pick your device. For a OnePlus 15: `op_model: OP15`, `android_version_filter: A16`, `kernel_version_filter: android16-6.12`.
