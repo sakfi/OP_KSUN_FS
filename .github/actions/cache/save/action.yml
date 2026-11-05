@@ -141,8 +141,7 @@ runs:
             for part in "${FILENAME}".part*; do
               echo "Uploading $part..."
               if ! upload_with_retry "$part"; then
-                echo "::error::Failed to upload part $part after multiple attempts."
-                exit 1
+                echo "::warning::Failed to upload part $part after multiple attempts. Cache will not be warm for the next build, but the kernel artifacts are unaffected."
               fi
               rm -f "$part"
             done
@@ -150,8 +149,7 @@ runs:
           else
             echo "Uploading $FILENAME..."
             if ! upload_with_retry "$FILENAME"; then
-              echo "::error::Failed to upload $FILENAME after multiple attempts."
-              exit 1
+              echo "::warning::Failed to upload $FILENAME after multiple attempts. Cache will not be warm for the next build, but the kernel artifacts are unaffected."
             fi
             rm -f "$FILENAME"
           fi
