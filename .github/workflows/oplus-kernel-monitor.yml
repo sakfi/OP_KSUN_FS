@@ -1,4 +1,4 @@
-name: 🔍 OnePlusOSS Kernel Monitor
+name: OnePlusOSS Kernel Monitor
 
 on:
   schedule:
@@ -59,11 +59,11 @@ jobs:
           cd status_repo
           if [ -f "$STATE_FILE" ]; then
             cp "$STATE_FILE" ../main/
-            echo "✅ Existing state loaded from status-page branch."
+            echo " Existing state loaded from status-page branch."
           else
             echo "{}" > ../main/"$STATE_FILE"
             echo "init" > .gitignore # Ensure we can track files if orphan
-            echo "ℹ️ No existing state found. Starting fresh."
+            echo " No existing state found. Starting fresh."
           fi
 
       - name: Process Repositories
@@ -80,30 +80,30 @@ jobs:
           CHANGES_DETECTED="false"
           
           # Desktop Summary Table Header
-          echo "### 📊 Branch Status & Kernel Versions" >> $GITHUB_STEP_SUMMARY
+          echo "### Branch Status & Kernel Versions" >> $GITHUB_STEP_SUMMARY
           echo "| Repo | Branch | Latest Commit | Kernel | Status |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
           
           # Initialize README Buffer
-          echo "### 📓 Kernel Manifests Report" > ../manifest_summary.md
-          echo "### 🛠 Kernel Trees Report" > ../local_summary.md
+          echo "### Kernel Manifests Report" > ../manifest_summary.md
+          echo "### Kernel Trees Report" > ../local_summary.md
           
           # Auto filter repos: Ignore Repos not related to android_kernel and ignore android_kernel_modules or any modules or techpack
           REPOS=$(gh repo list $ORG --limit 1000 --json name --jq '.[] | select((.name | startswith("android_kernel_") or . == "kernel_manifest") and (.name | contains("modules") or contains("techpack") | not)) | .name')
           
-          echo "🔍 Found $(echo "$REPOS" | wc -w) repositories to scan."
+          echo " Found $(echo "$REPOS" | wc -w) repositories to scan."
           
           for repo in $REPOS; do
             # Check against multiline blacklist
             if echo "$BLACKLIST_REPOS" | grep -qxw "$repo"; then
-              echo "🚫 Skipping blacklisted repo: $repo"
+              echo " Skipping blacklisted repo: $repo"
               continue
             fi
             
-            echo "📂 Processing: $repo"
+            echo " Processing: $repo"
             
             if ! jq -e ".\"$repo\"" "$STATE_FILE" > /dev/null; then
-               NEW_REPOS+="- 🆕 $repo\n"
+               NEW_REPOS+="- $repo\n"
                CHANGES_DETECTED="true"
             fi
             
@@ -158,7 +158,7 @@ jobs:
               BRANCH_DATA=$(gh api graphql -f query="$ACTIVE_QUERY" -f owner="$ORG" -f name="$repo" --jq '.data.repository.refs.nodes[]' 2>/dev/null)
               [ $? -eq 0 ] && [ -n "$BRANCH_DATA" ] && break
               RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "⚠️ API failed for $repo. Retry $RETRY_COUNT/$MAX_RETRIES..."
+              echo " API failed for $repo. Retry $RETRY_COUNT/$MAX_RETRIES..."
               sleep 5
             done
             
@@ -173,7 +173,7 @@ jobs:
                 MSG=$(echo "$row" | jq -r '.target.message' | head -n 1 | cut -c1-200 | sed 's/[|`]/ /g')
                 
                 OLD_VAL=$(jq -r ".\"$repo\".\"$BRANCH_NAME\" // \"NONE\"" "$STATE_FILE")
-                STATUS="✅"
+                STATUS=""
                 KERNEL="N/A"
                 DIFF_LOG=""
                 
@@ -182,14 +182,14 @@ jobs:
                   CURRENT_VAL="$SHA|$FILES_JSON"
                   
                   if [ "$OLD_VAL" = "NONE" ]; then
-                    STATUS="🆕"
+                    STATUS=""
                   elif [ "$OLD_VAL" != "$CURRENT_VAL" ]; then
-                    STATUS="🔄 Updated"
+                    STATUS=" Updated"
                   else
-                    STATUS="✅"
+                    STATUS=""
                   fi
                   
-                  if [ "$STATUS" != "✅" ]; then
+                  if [ "$STATUS" != "" ]; then
                     # Loop through current files
                     while IFS="|" read -r fname foid; do
                       # If it's a brand new branch, every file is "Added"
@@ -200,9 +200,9 @@ jobs:
                       fi
                       
                       if [ "$OLD_OID" == "NONE" ]; then
-                        DIFF_LOG+="  - 🆕 Added: \\\`$fname\\\`\n"
+                        DIFF_LOG+=" - Added: \\\`$fname\\\`\n"
                       elif [ "$OLD_OID" != "$foid" ]; then
-                        DIFF_LOG+="  - 📝 Modified: \\\`$fname\\\`\n"
+                        DIFF_LOG+=" - Modified: \\\`$fname\\\`\n"
                       fi
                     done <<< "$(echo "$FILES_JSON" | jq -r 'to_entries[] | "\(.key)|\(.value)"')"
                     
@@ -210,7 +210,7 @@ jobs:
                     if [ "$OLD_VAL" != "NONE" ]; then
                       while read -r old_fname; do
                         if ! echo "$FILES_JSON" | jq -e ".\"$old_fname\"" > /dev/null; then
-                          DIFF_LOG+="  - 🗑️ Deleted: \\\`$old_fname\\\`\n"
+                          DIFF_LOG+=" - Deleted: \\\`$old_fname\\\`\n"
                         fi
                       done <<< "$(echo "$OLD_VAL" | cut -d'|' -f2- | jq -r 'keys[]' 2>/dev/null)"
                     fi
@@ -223,12 +223,12 @@ jobs:
                     printf '| :--- | :--- |\n'
                     
                     while IFS=$'\t' read -r fname foid; do
-                      F_STATUS="✅"
+                      F_STATUS=""
                       OLD_OID="NONE"
                       if [ "$OLD_VAL" != "NONE" ]; then
                         OLD_OID=$(echo "$OLD_VAL" | cut -d'|' -f2- | jq -r --arg f "$fname" '.[$f] // "NONE"' 2>/dev/null || echo "NONE")
                       fi
-                      [ "$OLD_OID" = "NONE" ] && F_STATUS="🆕 New"
+                      [ "$OLD_OID" = "NONE" ] && F_STATUS=" New"
                       printf '| %s | %s |\n' "$fname" "$F_STATUS"
                     done < <(echo "$FILES_JSON" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
                     
@@ -236,11 +236,11 @@ jobs:
                   } >> $TARGET_BUF
                   KERNEL="MANIFEST"
                   
-                  if [ "$STATUS" != "✅" ]; then
-                    [ "$STATUS" == "🆕" ] && NEW_BRANCHES+="- ✨ $repo ($BRANCH_NAME)\n$DIFF_LOG" || UPDATED_BRANCHES+="- 🔄 $repo ($BRANCH_NAME)\n$DIFF_LOG"
+                  if [ "$STATUS" != "" ]; then
+                    [ "$STATUS" == "" ] && NEW_BRANCHES+="- $repo ($BRANCH_NAME)\n$DIFF_LOG" || UPDATED_BRANCHES+="- $repo ($BRANCH_NAME)\n$DIFF_LOG"
                   fi
                   
-                  echo "  ↳ 🌿 Branch: $BRANCH_NAME"
+                  echo " ↳ Branch: $BRANCH_NAME"
                   
                 else
                   MAKEFILE_TEXT=$(echo "$row" | jq -r '.target.file.object.text // empty')
@@ -252,14 +252,14 @@ jobs:
                   fi
                   [ -z "$KERNEL" ] && KERNEL="N/A"
                 
-                  echo "  ↳ 🌿 Branch: $BRANCH_NAME ($KERNEL)"
+                  echo " ↳ Branch: $BRANCH_NAME ($KERNEL)"
                   CURRENT_VAL="$SHA|$KERNEL"
                   if [ "$OLD_VAL" = "NONE" ]; then
-                    STATUS="🆕"
+                    STATUS=""
                   elif [ "$OLD_VAL" != "$CURRENT_VAL" ]; then
-                    STATUS="🔄 Updated"
+                    STATUS=" Updated"
                   else
-                    STATUS="✅"
+                    STATUS=""
                   fi
                   
                   {
@@ -270,12 +270,12 @@ jobs:
                     echo "---"
                   } >> "$TARGET_BUF"
                   
-                  if [ "$STATUS" != "✅" ]; then
-                    [ "$STATUS" == "🆕" ] && NEW_BRANCHES+="- ✨ $repo ($BRANCH_NAME)\n" || UPDATED_BRANCHES+="- 🔄 $repo ($BRANCH_NAME) → $KERNEL\n"
+                  if [ "$STATUS" != "" ]; then
+                    [ "$STATUS" == "" ] && NEW_BRANCHES+="- $repo ($BRANCH_NAME)\n" || UPDATED_BRANCHES+="- $repo ($BRANCH_NAME) → $KERNEL\n"
                   fi
                 fi
                 
-                [ "$STATUS" != "✅" ] && CHANGES_DETECTED="true"
+                [ "$STATUS" != "" ] && CHANGES_DETECTED="true"
                 echo "| $repo | $BRANCH_NAME | \`${SHA:0:7}\` | $KERNEL | $STATUS |" >> $GITHUB_STEP_SUMMARY
                 
                 jq --arg repo "$repo" --arg branch "$BRANCH_NAME" --arg val "$CURRENT_VAL" '.[$repo][$branch] = $val' new_state.json > tmp.json && mv tmp.json new_state.json
@@ -283,19 +283,19 @@ jobs:
               
               echo "</details>" >> "$TARGET_BUF"
             else
-              # 🛑 API returned no branches. Let's verify why.
-              echo "❓ No branch data for $repo. Verifying if repo exists..."
+              # API returned no branches. Verify why.
+              echo " No branch data for $repo. Verifying if repo exists..."
               
               if gh repo view "$ORG/$repo" > /dev/null 2>&1; then
-                # ✅ Repo EXISTS, but API failed to give branches (Timeout/Jitter)
-                echo "⚠️ API Jitter detected for $repo. Preserving state."
+                # Repo EXISTS, but API failed to give branches (Timeout/Jitter)
+                echo " API Jitter detected for $repo. Preserving state."
                 OLD_REPO_STATE=$(jq -c ".\"$repo\" // {}" "$STATE_FILE")
                 jq --argjson old "$OLD_REPO_STATE" ".\"$repo\" = \$old" new_state.json > tmp.json && mv tmp.json new_state.json
               else
-                # 🗑️ Repo is actually GONE (404)
-                echo "🗑️ Confirmation: $repo has been deleted from GitHub."
+                # Repo is actually GONE (404)
+                echo " Confirmation: $repo has been deleted from GitHub."
                 CHANGES_DETECTED="true"
-                DELETED_ITEMS+="- 🗑️ **Repo Deleted**: $repo\n"
+                DELETED_ITEMS+="- **Repo Deleted**: $repo\n"
               fi
             fi
           done
@@ -308,7 +308,7 @@ jobs:
               while read -r old_branch; do
                 [ -z "$old_branch" ] && continue
                 if ! jq -e ".\"$old_repo\".\"$old_branch\"" new_state.json > /dev/null; then
-                  DELETED_ITEMS+="- 🗑️ **Branch Deleted**: $old_repo ($old_branch)\n"
+                  DELETED_ITEMS+="- **Branch Deleted**: $old_repo ($old_branch)\n"
                   CHANGES_DETECTED="true"
                 fi
               done <<< "$(jq -r ".\"$old_repo\" | keys[]" "$STATE_FILE")"
@@ -319,10 +319,10 @@ jobs:
           echo "changes_found=$CHANGES_DETECTED" >> $GITHUB_OUTPUT
           
           FINAL_LOG=""
-          [ ! -z "$NEW_REPOS" ] && FINAL_LOG+="### 📂 New Repositories\n$NEW_REPOS\n"
-          [ ! -z "$NEW_BRANCHES" ] && FINAL_LOG+="### ✨ New Branches\n$NEW_BRANCHES\n"
-          [ ! -z "$UPDATED_BRANCHES" ] && FINAL_LOG+="### 🔄 Updated Branches\n$UPDATED_BRANCHES\n"
-          [ ! -z "$DELETED_ITEMS" ] && FINAL_LOG+="### 🗑️ Deleted Items\n$DELETED_ITEMS\n"
+          [ ! -z "$NEW_REPOS" ] && FINAL_LOG+="### New Repositories\n$NEW_REPOS\n"
+          [ ! -z "$NEW_BRANCHES" ] && FINAL_LOG+="### New Branches\n$NEW_BRANCHES\n"
+          [ ! -z "$UPDATED_BRANCHES" ] && FINAL_LOG+="### Updated Branches\n$UPDATED_BRANCHES\n"
+          [ ! -z "$DELETED_ITEMS" ] && FINAL_LOG+="### Deleted Items\n$DELETED_ITEMS\n"
           
           echo "log_content<<EOF" >> $GITHUB_OUTPUT
           echo -e "$FINAL_LOG" >> $GITHUB_OUTPUT
@@ -343,10 +343,10 @@ jobs:
           fi
           
           if [ -z "$ISSUE_NUMBER" ]; then
-            BODY=$(printf "Hi $TARGET,\n\nTracker for today.\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n🔗 [View Action Summary]($RUN_URL)")
+            BODY=$(printf "Hi $TARGET,\n\nTracker for today.\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n [View Action Summary]($RUN_URL)")
             gh issue create --repo ${{ github.repository }} --title "$DATE_TITLE" --body "$BODY" --label "notification"
           else
-            BODY=$(printf "### 🔄 New Activity Detected ($(date -u +'%H:%M') UTC)\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n🔗 [View Action Summary]($RUN_URL)")
+            BODY=$(printf "### New Activity Detected ($(date -u +'%H:%M') UTC)\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n [View Action Summary]($RUN_URL)")
             gh issue comment $ISSUE_NUMBER --repo ${{ github.repository }} --body "$BODY"
           fi
 
@@ -362,7 +362,7 @@ jobs:
           else
             git checkout --orphan status-page && git rm -rf .
           fi
-          echo "# 📱 OnePlusOSS Kernel Tracker" > README.md
+          echo "# OnePlusOSS Kernel Tracker" > README.md
           echo "> **Last Update:** $(date -u) (UTC)" >> README.md
           echo "Daily automated report for OnePlus Kernel branches." >> README.md
           cat ../manifest_summary.md >> README.md

@@ -1,4 +1,4 @@
-name: '🚀 High-Speed Cache Restore'
+name: 'High-Speed Cache Restore'
 description: 'Restores directories from GitHub Releases cache buckets'
 
 inputs:
@@ -24,7 +24,7 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: 📥 Restore and Extract
+    - name: Restore and Extract
       id: restore
       shell: bash
       env:
@@ -40,7 +40,7 @@ runs:
         TAG_NAME="${BUCKET}-latest"
         ARCHIVE_NAME="${CACHE_KEY}.tar.zst"
         
-        echo "::group::🚀 Restoring Cache: $CACHE_KEY from $BUCKET"
+        echo "::group::Restoring Cache: $CACHE_KEY from $BUCKET"
         
         # 1. Check if release exists
         if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
@@ -84,5 +84,5 @@ runs:
         rm "$ARCHIVE_NAME"
         
         echo "hit=true" >> "$GITHUB_OUTPUT"
-        echo "✅ Cache restored successfully"
+        echo " Cache restored successfully"
         echo "::endgroup::"

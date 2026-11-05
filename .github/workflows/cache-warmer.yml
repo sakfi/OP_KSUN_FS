@@ -1,4 +1,4 @@
-name: 🚀 Cache Warmer
+name: Cache Warmer
 
 on:
   schedule:
@@ -7,24 +7,24 @@ on:
 
 jobs:
   generate-matrix:
-    name: 🔍 Generate Warmup Matrix
+    name: Generate Warmup Matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       susfs_hash_android12_5_10: ${{ steps.set-matrix.outputs.susfs_hash_android12_5_10 }}
       susfs_hash_android13_5_15: ${{ steps.set-matrix.outputs.susfs_hash_android13_5_15 }}
-      susfs_hash_android14_6_1:  ${{ steps.set-matrix.outputs.susfs_hash_android14_6_1 }}
-      susfs_hash_android15_6_6:  ${{ steps.set-matrix.outputs.susfs_hash_android15_6_6 }}
+      susfs_hash_android14_6_1: ${{ steps.set-matrix.outputs.susfs_hash_android14_6_1 }}
+      susfs_hash_android15_6_6: ${{ steps.set-matrix.outputs.susfs_hash_android15_6_6 }}
       susfs_hash_android16_6_12: ${{ steps.set-matrix.outputs.susfs_hash_android16_6_12 }}
     steps:
-      - name: 📥 Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v6
         with:
           sparse-checkout: |
             configs/
           sparse-checkout-cone-mode: false
 
-      - name: 🔍 Generate Matrix
+      - name: Generate Matrix
         id: set-matrix
         shell: bash
         run: |
@@ -76,7 +76,7 @@ jobs:
           done
           if [ "$ok" = 1 ]; then
             mv /tmp/ccache ./ccache
-            echo "✅ downloaded ccache once for all matrix jobs"
+            echo " downloaded ccache once for all matrix jobs"
           else
             echo "::warning::custom ccache download failed; matrix jobs will fall back to the apt ccache"
             rm -f ./ccache
@@ -91,17 +91,17 @@ jobs:
           if-no-files-found: warn
 
   warm-cache:
-    name: 🔨 ${{ matrix.model }} (${{ matrix.os_version }})
+    name: ${{ matrix.model }} (${{ matrix.os_version }})
     needs: [generate-matrix, prepare_ccache]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
     steps:
-      - name: 📥 Checkout Code
+      - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: 🏷️ Resolve SUSFS Hash
+      - name: Resolve SUSFS Hash
         id: susfs_res
         run: |
           # Match the logic from the release workflow
@@ -133,7 +133,7 @@ jobs:
             libelf-dev libssl-dev libncurses-dev zlib1g-dev liblz4-tool \
             libxml2-utils rsync unzip dwarves file python3 ccache jq bc dos2unix kmod libdw-dev elfutils pigz
           sudo apt-get clean
-          echo "✅ Dependencies installed"
+          echo " Dependencies installed"
           echo "::endgroup::"
 
       - name: Get prebuilt ccache (downloaded once by prepare_ccache)
@@ -150,7 +150,7 @@ jobs:
           if [ -s ccache-dl/ccache ]; then
             sudo cp -f ccache-dl/ccache /usr/bin/ccache
             sudo chmod +x /usr/bin/ccache
-            echo "✅ installed custom ccache from shared artifact"
+            echo " installed custom ccache from shared artifact"
           else
             echo "::warning::shared ccache artifact unavailable; using apt ccache"
           fi
@@ -158,7 +158,7 @@ jobs:
           echo "[DEBUG] Ccache version : $(ccache --version | head -1)"
           echo "::endgroup::"
 
-      - name: ♻️ Configure ccache & LTO cache (bounded)
+      - name: Configure ccache & LTO cache (bounded)
         run: |
           echo "::group::Configure ccache environment"
           set -euo pipefail
@@ -197,7 +197,7 @@ jobs:
               echo "CCACHE_DEPEND=true" >> "$GITHUB_ENV"
             fi
             
-            echo "✅ ccache configured successfully"
+            echo " ccache configured successfully"
             echo "Current ccache configuration:"
             ccache -p
           else
@@ -205,7 +205,7 @@ jobs:
           fi
           echo "::endgroup::"
 
-      - name: 🔨 Warm Build
+      - name: Warm Build
         uses: ./.github/actions/build-kernel
         with:
           op_config_json: ${{ toJson(matrix) }}

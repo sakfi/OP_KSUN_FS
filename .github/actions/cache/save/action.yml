@@ -48,7 +48,7 @@ runs:
         # Archive, Split, and Upload Cache
         if [ "${{ inputs.debug }}" = "true" ]; then set -x; fi
         
-        if [ "${{ inputs.working_dir }}" != "" ]; then 
+        if [ "${{ inputs.working_dir }}" != "" ]; then
           cd "${{ inputs.working_dir }}"
         fi
         git config user.name "github-actions[bot]"
@@ -63,7 +63,7 @@ runs:
           FILENAME="$BASE_FILENAME.tzst"
         fi
         
-        echo "::group:: Checking Release State"
+        echo "::group::Checking Release State"
         
         git fetch --tags --force
         
@@ -80,11 +80,11 @@ runs:
         fi
         echo "::endgroup::"
         
-        echo "::group:: Archiving Path"
+        echo "::group::Archiving Path"
         echo "Target: ${{ inputs.cache_path }}"
         
         if [ ! -d "${{ inputs.cache_path }}" ] && [ ! -f "${{ inputs.cache_path }}" ]; then
-          echo "⚠️ Target path not found. Skipping cache save."
+          echo " Target path not found. Skipping cache save."
           echo "::endgroup::"
         else
           DIR_NAME=$(dirname "${{ inputs.cache_path }}")
@@ -108,35 +108,35 @@ runs:
           echo "Archive created: $FILENAME ($FILE_SIZE bytes)"
           echo "::endgroup::"
           
-          echo "::group:: Uploading Assets"
+          echo "::group::Uploading Assets"
           MAX_SIZE=2000000000 # ~1.86GB
           
           upload_with_retry() {
             local file=$1
             local max_attempts=3
             for ((i=1; i<=max_attempts; i++)); do
-              echo "  Attempt $i for $file..."
+              echo " Attempt $i for $file..."
               
               if [ "${{ inputs.debug }}" = "true" ]; then
                 if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO"; then
-                  echo "  Successfully uploaded $file"
+                  echo " Successfully uploaded $file"
                   return 0
                 fi
               else
                 if timeout 10m gh release upload "$TAG_NAME" "$file" --clobber --repo "$TARGET_REPO" > /dev/null 2>&1; then
-                  echo "  Successfully uploaded $file"
+                  echo " Successfully uploaded $file"
                   return 0
                 fi
               fi
               
-              echo "  ⚠ Attempt $i failed or timed out. Retrying..."
+              echo " Attempt $i failed or timed out. Retrying..."
               sleep 5
             done
             return 1
           }
           
           if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
-            echo "⚠ File > 2GB. Splitting..."
+            echo " File > 2GB. Splitting..."
             split -b 1500M -a 2 "$FILENAME" "${FILENAME}.part"
             for part in "${FILENAME}".part*; do
               echo "Uploading $part..."

@@ -1,4 +1,4 @@
-name: 🆕 Check for New OnePlus Devices
+name: Check for New OnePlus Devices
 
 on:
   schedule:
@@ -18,7 +18,7 @@ on:
 
 jobs:
   check-new-devices:
-    name: 🔍 Detect new device configs from upstream
+    name: Detect new device configs from upstream
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -28,10 +28,10 @@ jobs:
       UPSTREAM: ${{ inputs.upstream_repo || 'WildKernels/OnePlus_KernelSU_SUSFS' }}
 
     steps:
-      - name: 📥 Checkout this repo
+      - name: Checkout this repo
         uses: actions/checkout@v4
 
-      - name: 📡 Fetch upstream config listing
+      - name: Fetch upstream config listing
         id: fetch-upstream
         run: |
           echo "::group::Fetching upstream config file list from $UPSTREAM"
@@ -52,7 +52,7 @@ jobs:
           fi
           echo "::endgroup::"
 
-      - name: 🔍 Compare configs — detect new devices
+      - name: Compare configs — detect new devices
         id: compare
         if: steps.fetch-upstream.outputs.upstream_available == 'true'
         run: |
@@ -66,7 +66,7 @@ jobs:
             # Check if this file exists locally (in any OOS subfolder)
             LOCAL_MATCH=$(find configs/ -name "$filename" 2>/dev/null | head -n1)
             if [ -z "$LOCAL_MATCH" ]; then
-              echo "🆕 New device found: $upstream_path"
+              echo " New device found: $upstream_path"
               NEW_DEVICES="$NEW_DEVICES\n$upstream_path"
               NEW_COUNT=$((NEW_COUNT + 1))
             fi
@@ -81,17 +81,17 @@ jobs:
             cat /tmp/new_devices.txt
           else
             echo "new_found=false" >> "$GITHUB_OUTPUT"
-            echo "✅ No new devices found — you are up to date with upstream"
+            echo " No new devices found — you are up to date with upstream"
           fi
           echo "::endgroup::"
 
-      - name: 📋 Fetch config content for new devices
+      - name: Fetch config content for new devices
         id: fetch-configs
         if: steps.compare.outputs.new_found == 'true'
         run: |
           echo "::group::Fetching config content for new devices"
 
-          ISSUE_BODY="## 🆕 New OnePlus Devices Detected\n\n"
+          ISSUE_BODY="## New OnePlus Devices Detected\n\n"
           ISSUE_BODY+="The following device config(s) exist in **[$UPSTREAM](https://github.com/$UPSTREAM)** "
           ISSUE_BODY+="but are **not yet in this repository**.\n\n"
           ISSUE_BODY+="> Auto-detected on: $(date -u '+%Y-%m-%d %H:%M UTC')\n\n"
@@ -132,7 +132,7 @@ jobs:
                 *) RECOMMENDED_LTO="thin" ;;
               esac
 
-              ISSUE_BODY+="### 📱 \`$device_name\` (\`$os_folder\`)\n\n"
+              ISSUE_BODY+="### \`$device_name\` (\`$os_folder\`)\n\n"
               ISSUE_BODY+="| Field | Value |\n"
               ISSUE_BODY+="|---|---|\n"
               ISSUE_BODY+="| **SoC** | \`$SOC\` |\n"
@@ -143,7 +143,7 @@ jobs:
               ISSUE_BODY+="| **Kernel branch** | \`$BRANCH\` |\n"
               ISSUE_BODY+="| **Recommended optimize** | \`$RECOMMENDED_OPT\` (based on SoC family) |\n"
               ISSUE_BODY+="| **Recommended LTO** | \`$RECOMMENDED_LTO\` |\n\n"
-              ISSUE_BODY+="<details><summary>📄 Suggested config (with SakFi improvements)</summary>\n\n"
+              ISSUE_BODY+="<details><summary> Suggested config (with SakFi improvements)</summary>\n\n"
               ISSUE_BODY+="\`\`\`json\n"
 
               # Build suggested config with SakFi improvements applied
@@ -158,13 +158,13 @@ jobs:
               ISSUE_BODY+="**Action:** Copy the config above to \`configs/$os_folder/$filename\` and review before triggering a build.\n\n"
               ISSUE_BODY+="---\n\n"
             else
-              ISSUE_BODY+="### 📱 \`$device_name\` (\`$os_folder\`)\n"
+              ISSUE_BODY+="### \`$device_name\` (\`$os_folder\`)\n"
               ISSUE_BODY+="> _Could not fetch config content — check upstream manually._\n\n"
               ISSUE_BODY+="---\n\n"
             fi
           done < /tmp/new_devices.txt
 
-          ISSUE_BODY+="### 📌 Steps to add a new device\n"
+          ISSUE_BODY+="### Steps to add a new device\n"
           ISSUE_BODY+="1. Copy the suggested config above into the correct \`configs/\` subfolder\n"
           ISSUE_BODY+="2. Verify \`kernel_branch\` and \`manifest\` are correct\n"
           ISSUE_BODY+="3. Adjust \`optimize\` / \`lto\` if needed\n"
@@ -176,11 +176,11 @@ jobs:
           printf '%b' "$ISSUE_BODY" > /tmp/issue_body.md
           echo "::endgroup::"
 
-      - name: 📢 Open GitHub Issue for new devices
+      - name: Open GitHub Issue for new devices
         if: steps.compare.outputs.new_found == 'true' && inputs.dry_run != 'true'
         run: |
           COUNT="${{ steps.compare.outputs.new_count }}"
-          TITLE="🆕 New OnePlus Device(s) Detected: $COUNT device(s) not yet added"
+          TITLE=" New OnePlus Device(s) Detected: $COUNT device(s) not yet added"
 
           # Check if issue already open for this batch (avoid duplicates)
           DEVICE_LIST=$(cat /tmp/new_devices.txt | xargs -I{} basename {} .json | tr '\n' ', ' | sed 's/,$//')
@@ -188,21 +188,21 @@ jobs:
             --json title --jq '.[].title' | grep -c "New OnePlus" || true)
 
           if [ "$EXISTING" -gt 0 ]; then
-            echo "ℹ️  An open new-device issue already exists — adding a comment instead"
+            echo " An open new-device issue already exists — adding a comment instead"
             ISSUE_NUMBER=$(gh issue list --state open --label "new-device" \
               --json number --jq '.[0].number')
             gh issue comment "$ISSUE_NUMBER" \
               --body "$(cat /tmp/issue_body.md)"
-            echo "💬 Comment added to existing issue #$ISSUE_NUMBER"
+            echo " Comment added to existing issue #$ISSUE_NUMBER"
           else
             gh issue create \
               --title "$TITLE" \
               --body-file /tmp/issue_body.md \
               --label "enhancement,new-device"
-            echo "📢 New issue created for $COUNT device(s): $DEVICE_LIST"
+            echo " New issue created for $COUNT device(s): $DEVICE_LIST"
           fi
 
-      - name: 📊 Summary
+      - name: Summary
         if: always()
         run: |
           UPSTREAM_OK="${{ steps.fetch-upstream.outputs.upstream_available }}"
@@ -211,15 +211,15 @@ jobs:
 
           cat >> "$GITHUB_STEP_SUMMARY" << EOF
 
-          ## 🆕 New Device Check Results
+          ## New Device Check Results
 
           | | |
           |---|---|
           | Upstream repo | \`$UPSTREAM\` |
           | Upstream reachable | $UPSTREAM_OK |
           | New devices found | ${COUNT:-0} |
-          | Issue opened | $([ "$NEW_FOUND" = "true" ] && [ "${{ inputs.dry_run }}" != "true" ] && echo "✅ Yes" || echo "⏭️ No") |
-          | Mode | $([ "${{ inputs.dry_run }}" = "true" ] && echo "🔍 Dry run" || echo "🚀 Live") |
+          | Issue opened | $([ "$NEW_FOUND" = "true" ] && [ "${{ inputs.dry_run }}" != "true" ] && echo " Yes" || echo "⏭ No") |
+          | Mode | $([ "${{ inputs.dry_run }}" = "true" ] && echo " Dry run" || echo " Live") |
 
           EOF
 

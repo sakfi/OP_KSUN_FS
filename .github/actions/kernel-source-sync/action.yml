@@ -90,7 +90,7 @@ runs:
                 os.makedirs(shm_workspace, exist_ok=True)
                 
                 print(f"Syncing: {name} -> {path}")
-                print(f"  [PENDING] {name}")
+                print(f" [PENDING] {name}")
                 try:
                     label = None
                     for repo_key, type_label in TOOLCHAIN_MAP.items():
@@ -105,12 +105,12 @@ runs:
                         
                         check_single = f"curl -IsL {curl_headers} --retry 10 --connect-timeout 30 -o /dev/null -w '%{{http_code}}' {BASE_URL}/{base_filename}"
                         if subprocess.check_output(check_single, shell=True).decode().strip() == "200":
-                            if DEBUG: print(f"  [CACHE] Downloading single file: {base_filename}")
+                            if DEBUG: print(f" [CACHE] Downloading single file: {base_filename}")
                             aria_cmd = f"aria2c -x16 -s16 -k1M -j16 --retry-wait=5 --max-tries=10 -d {shm_workspace} --file-allocation=none {aria_quiet_flags} {aria2_headers} -o {base_filename} {BASE_URL}/{base_filename}"
                             subprocess.run(aria_cmd, shell=True, check=True, capture_output=not DEBUG)
                             found_in_cache = True
                         else:
-                            if DEBUG: print(f"  [CACHE] Single file not found, checking parts for {base_filename}...")
+                            if DEBUG: print(f" [CACHE] Single file not found, checking parts for {base_filename}...")
                             parts_to_download = []
                             for suffix in [f"a{c}" for c in "abcdefghijklmnopqrstuvwxyz"]:
                                 part_name = f"{base_filename}.part{suffix}"
@@ -121,14 +121,14 @@ runs:
                                     break
                             
                             if parts_to_download:
-                                if DEBUG: print(f"  [CACHE] Found {len(parts_to_download)} parts. Downloading...")
+                                if DEBUG: print(f" [CACHE] Found {len(parts_to_download)} parts. Downloading...")
                                 
                                 input_file_path = f"{base_filename}.urls"
                                 with open(input_file_path, "w") as f:
                                     for part_url in parts_to_download:
                                         p_suffix = part_url.split('.part')[-1]
                                         p_name = f"{base_filename}.part{p_suffix}"
-                                        f.write(f"{part_url}\n  out={p_name}\n")
+                                        f.write(f"{part_url}\n out={p_name}\n")
                                 
                                 aria_bulk_cmd = (
                                     f"aria2c -x16 -s16 -k1M -j16 --retry-wait=5 --max-tries=10 -d {shm_workspace} --file-allocation=none "
@@ -154,7 +154,7 @@ runs:
                         direct_file = f"dynamic_file.tar.gz"
                         archive_path = os.path.join(shm_workspace, direct_file)
                         aria_cmd = f"aria2c -x16 -s16 -k1M -j16 --allow-overwrite=true --retry-wait=5 --max-tries=10 -d {shm_workspace} -o {direct_file} {aria_quiet_flags} {aria2_headers} '{url}'"
-                        if DEBUG: print(f"  [DIRECT] Fetching: {url}")
+                        if DEBUG: print(f" [DIRECT] Fetching: {url}")
                         subprocess.run(aria_cmd, shell=True, check=True, capture_output=not DEBUG)
                         extract_cmd = f"tar -I 'pigz -p {NPROC} -b 256' -x --record-size=1M -f {archive_path} -C {path} {strip}"
                         subprocess.run(extract_cmd, shell=True, check=True)
@@ -163,14 +163,14 @@ runs:
                     print(f"Synced {name} successfully! ({duration:.2f}s)")
                     return True
                 except subprocess.CalledProcessError as e:
-                    print(f"  [RETRY {attempt}/{MAX_ATTEMPTS}] {name} failed with exit code {e.returncode}. Command: {e.cmd}")
-                    print(f"  [ERROR] Command failed for {name}: {e.cmd}")
-                    print(f"   Stderr: {e.stderr.decode() if e.stderr else 'No stderr'}")
+                    print(f" [RETRY {attempt}/{MAX_ATTEMPTS}] {name} failed with exit code {e.returncode}. Command: {e.cmd}")
+                    print(f" [ERROR] Command failed for {name}: {e.cmd}")
+                    print(f" Stderr: {e.stderr.decode() if e.stderr else 'No stderr'}")
                     if attempt < MAX_ATTEMPTS:
                         time.sleep(5)
                 except Exception as e:
-                    print(f"  [RETRY {attempt}/{MAX_ATTEMPTS}] {name} failed with exit code {e.returncode}. Command: {e.cmd}")
-                    print(f"  [ERROR] Failed to sync {name}")
+                    print(f" [RETRY {attempt}/{MAX_ATTEMPTS}] {name} failed with exit code {e.returncode}. Command: {e.cmd}")
+                    print(f" [ERROR] Failed to sync {name}")
                     if attempt < MAX_ATTEMPTS:
                         time.sleep(5)
                 finally:
@@ -245,10 +245,10 @@ runs:
                 if os.path.lexists(dest_path): os.remove(dest_path)
                 rel_target = os.path.relpath(src_path, os.path.dirname(dest_path))
                 os.symlink(rel_target, dest_path)
-                print(f"  [Link] {dest_rel} -> {src_rel}")
+                print(f" [Link] {dest_rel} -> {src_rel}")
             elif child.tag == 'copyfile':
                 shutil.copy2(src_path, dest_path)
-                print(f"  [Copy] {dest_rel} from {src_rel}")
+                print(f" [Copy] {dest_rel} from {src_rel}")
         
         
         total_duration = time.time() - global_start

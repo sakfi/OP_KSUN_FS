@@ -1,4 +1,4 @@
-name: 🔍 Check SUSFS Update
+name: Check SUSFS Update
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   check-susfs:
-    name: 🔍 Check for new SUSFS version
+    name: Check for new SUSFS version
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -24,10 +24,10 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - name: 📥 Checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🔍 Fetch latest SUSFS tag from GitLab
+      - name: Fetch latest SUSFS tag from GitLab
         id: fetch
         run: |
           # simonpunk/susfs4ksu lives on GitLab — use GitLab API
@@ -45,7 +45,7 @@ jobs:
           fi
 
           echo "Current SUSFS version : $CURRENT"
-          echo "Latest SUSFS version  : $LATEST_TAG"
+          echo "Latest SUSFS version : $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
           echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
 
@@ -55,23 +55,23 @@ jobs:
             echo "update_available=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: ✅ Already up to date
+      - name: Already up to date
         if: steps.fetch.outputs.update_available == 'false'
         run: |
-          echo "✅ Already on the latest SUSFS version: ${{ steps.fetch.outputs.current }}"
+          echo " Already on the latest SUSFS version: ${{ steps.fetch.outputs.current }}"
 
-      - name: 🏷️ Ensure labels exist
+      - name: Ensure labels exist
         if: steps.fetch.outputs.update_available == 'true' && inputs.dry_run != 'true'
         run: |
           gh label create "susfs-update" --color "0075ca" --description "SUSFS version update available" --force || true
           gh label create "enhancement" --color "a2eeef" --description "New feature or request" --force || true
 
-      - name: 📢 Open GitHub Issue
+      - name: Open GitHub Issue
         if: steps.fetch.outputs.update_available == 'true' && inputs.dry_run != 'true'
         run: |
           CURRENT="${{ steps.fetch.outputs.current }}"
           LATEST="${{ steps.fetch.outputs.latest_tag }}"
-          TITLE="⬆️ SUSFS Update Available: $CURRENT → $LATEST"
+          TITLE=" SUSFS Update Available: $CURRENT → $LATEST"
 
           BODY="### SUSFS Update Detected
 
@@ -95,16 +95,16 @@ jobs:
             --json title --jq '.[].title' | grep -Fc "$LATEST" || true)
 
           if [ "$EXISTING" -gt 0 ]; then
-            echo "ℹ️  Issue for $LATEST already exists — skipping"
+            echo " Issue for $LATEST already exists — skipping"
           else
             gh issue create \
               --title "$TITLE" \
               --body "$BODY" \
               --label "susfs-update,enhancement"
-            echo "📢 Issue created for SUSFS $LATEST"
+            echo " Issue created for SUSFS $LATEST"
           fi
 
-      - name: 📊 Summary
+      - name: Summary
         if: always()
         run: |
           LATEST="${{ steps.fetch.outputs.latest_tag }}"
@@ -114,19 +114,19 @@ jobs:
 
           cat >> "$GITHUB_STEP_SUMMARY" << EOF
 
-          ## 🔍 SUSFS Update Check
+          ## SUSFS Update Check
 
           | | |
           |---|---|
           | Current version | \`$CURRENT\` |
-          | Latest upstream  | \`$LATEST\` |
+          | Latest upstream | \`$LATEST\` |
           | Update available | $UPDATE |
-          | Mode | $([ "$DRY" = "true" ] && echo "🔍 Dry run (no issue opened)" || echo "🚀 Live") |
+          | Mode | $([ "$DRY" = "true" ] && echo " Dry run (no issue opened)" || echo " Live") |
 
           EOF
 
           if [ "$UPDATE" = "true" ]; then
-            echo "> ⚠️ **Update available:** \`$CURRENT\` → \`$LATEST\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "> **Update available:** \`$CURRENT\` → \`$LATEST\`" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "> ✅ **Up to date** — no action needed" >> "$GITHUB_STEP_SUMMARY"
+            echo "> **Up to date** — no action needed" >> "$GITHUB_STEP_SUMMARY"
           fi

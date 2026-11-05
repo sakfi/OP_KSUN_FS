@@ -1,4 +1,4 @@
-name: 🧹 Cleanup CCache
+name: Cleanup CCache
 
 on:
   workflow_dispatch:
@@ -9,10 +9,10 @@ on:
         required: true
         default: 'cache_only'
         options:
-          - cache_only          # Only clean caches
-          - runs_only           # Only clean workflow runs
-          - full_cleanup        # Both caches and runs
-          - analyze_only        # Just analyze, don't delete
+          - cache_only # Only clean caches
+          - runs_only # Only clean workflow runs
+          - full_cleanup # Both caches and runs
+          - analyze_only # Just analyze, don't delete
       
       device_filter:
         type: choice
@@ -93,12 +93,12 @@ on:
         required: false
         default: 'all_caches'
         options:
-          - all_caches          # All cache types
-          - ccache_only         # Only ccache (kernel builds)
-          - ccache_stale        # Only stale ccache (>14 days)
-          - apt_only            # Only apt packages
-          - kernel_only         # Only kernel-related caches
-          - old_only            # Only caches older than 7 days
+          - all_caches # All cache types
+          - ccache_only # Only ccache (kernel builds)
+          - ccache_stale # Only stale ccache (>14 days)
+          - apt_only # Only apt packages
+          - kernel_only # Only kernel-related caches
+          - old_only # Only caches older than 7 days
       
       cache_age_days:
         description: 'Delete caches older than N days'
@@ -142,7 +142,7 @@ jobs:
       ccache_count: ${{ steps.analysis.outputs.ccache_count }}
       ccache_size: ${{ steps.analysis.outputs.ccache_size }}
     steps:
-      - name: 📊 Analyze Repository Health
+      - name: Analyze Repository Health
         id: analysis
         uses: actions/github-script@v7
         with:
@@ -150,7 +150,7 @@ jobs:
             const { owner, repo } = context.repo;
             const forceCleanup = '${{ inputs.force_cleanup }}' === 'true';
             
-            console.log('🔍 Analyzing repository cache health...\n');
+            console.log(' Analyzing repository cache health...\n');
             
             let page = 1;
             let totalCacheSize = 0;
@@ -167,10 +167,10 @@ jobs:
             
             const cachesByDevice = new Map();
             const cacheAgeDistribution = {
-              fresh: 0,      // < 7 days
-              recent: 0,     // 7-14 days
-              old: 0,        // 14-30 days
-              stale: 0       // > 30 days
+              fresh: 0, // < 7 days
+              recent: 0, // 7-14 days
+              old: 0, // 14-30 days
+              stale: 0 // > 30 days
             };
             
             // Collect all cache data
@@ -215,8 +215,8 @@ jobs:
                   if (match) {
                     const device = match[1];
                     if (!cachesByDevice.has(device)) {
-                      cachesByDevice.set(device, { 
-                        size: 0, 
+                      cachesByDevice.set(device, {
+                        size: 0,
                         count: 0,
                         lastAccessed: cache.last_accessed_at,
                         oldestCache: ageDays,
@@ -257,13 +257,13 @@ jobs:
             const shouldCleanup = forceCleanup || parseFloat(usagePercent) > 75;
             
             // Health status
-            let healthEmoji = '🟢';
+            let healthEmoji = '';
             let healthStatus = 'Healthy';
             if (usagePercent > 90) {
-              healthEmoji = '🔴';
+              healthEmoji = '';
               healthStatus = 'Critical';
             } else if (usagePercent > 75) {
-              healthEmoji = '🟡';
+              healthEmoji = '';
               healthStatus = 'Warning';
             }
             
@@ -278,7 +278,7 @@ jobs:
             // Generate detailed summary
             let summary = core.summary
               .addHeading(`${healthEmoji} Cache Health Analysis - ${healthStatus}`)
-              .addRaw(`\n### 📊 Overall Statistics\n\n`)
+              .addRaw(`\n### Overall Statistics\n\n`)
               .addTable([
                 [{data: 'Metric', header: true}, {data: 'Value', header: true}],
                 ['Total Caches', cacheCount.toString()],
@@ -290,10 +290,10 @@ jobs:
               ]);
             
             // Cache breakdown by type
-            summary.addRaw(`\n### 🗂️ Cache Breakdown by Type\n\n`)
+            summary.addRaw(`\n### Cache Breakdown by Type\n\n`)
               .addTable([
                 [{data: 'Type', header: true}, {data: 'Count', header: true}, {data: 'Size (GB)', header: true}, {data: 'Percentage', header: true}],
-                ['ccache (Kernel Builds)', 
+                ['ccache (Kernel Builds)',
                   cachesByType.ccache.count.toString(),
                   (cachesByType.ccache.size / 1024 / 1024 / 1024).toFixed(2),
                   `${((cachesByType.ccache.size / totalCacheSize) * 100).toFixed(1)}%`
@@ -321,7 +321,7 @@ jobs:
               const avgCcacheSizeMB = (avgCcacheSize / 1024 / 1024).toFixed(2);
               const ccachePercent = ((cachesByType.ccache.size / totalCacheSize) * 100).toFixed(1);
               
-              summary.addRaw(`\n### ⚡ ccache Statistics\n\n`)
+              summary.addRaw(`\n### ccache Statistics\n\n`)
                 .addTable([
                   [{data: 'Metric', header: true}, {data: 'Value', header: true}],
                   ['Total ccache Entries', cachesByType.ccache.count.toString()],
@@ -333,7 +333,7 @@ jobs:
               
               // ccache recommendations
               if (parseFloat(ccachePercent) > 80) {
-                summary.addRaw(`\n⚠️ **ccache dominates storage** (${ccachePercent}%)\n`)
+                summary.addRaw(`\n **ccache dominates storage** (${ccachePercent}%)\n`)
                   .addRaw(`- Consider reducing \`CCACHE_MAXSIZE\` in build workflow\n`)
                   .addRaw(`- Clean stale device caches not actively built\n`)
                   .addRaw(`- Use \`clean_build\` option occasionally to verify builds\n`);
@@ -341,7 +341,7 @@ jobs:
             }
             
             // Age distribution
-            summary.addRaw(`\n### 📅 Cache Age Distribution\n\n`)
+            summary.addRaw(`\n### Cache Age Distribution\n\n`)
               .addTable([
                 [{data: 'Age Range', header: true}, {data: 'Count', header: true}, {data: 'Percentage', header: true}],
                 ['Fresh (< 7 days)', cacheAgeDistribution.fresh.toString(), `${((cacheAgeDistribution.fresh / cacheCount) * 100).toFixed(1)}%`],
@@ -356,7 +356,7 @@ jobs:
                 .sort((a, b) => b[1].size - a[1].size)
                 .slice(0, 15);
               
-              summary.addRaw(`\n### 📱 Top 15 Devices by Cache Size\n\n`)
+              summary.addRaw(`\n### Top 15 Devices by Cache Size\n\n`)
                 .addTable([
                   [{data: 'Device', header: true}, {data: 'Caches', header: true}, {data: 'Size (GB)', header: true}, {data: 'Age Range (days)', header: true}],
                   ...topDevices.map(([device, data]) => [
@@ -378,7 +378,7 @@ jobs:
                 .sort((a, b) => b[1].size - a[1].size);
               
               if (inactiveDevices.length > 0) {
-                summary.addRaw(`\n### 🚫 Inactive Devices (Not accessed in ${inactiveThreshold}+ days)\n\n`)
+                summary.addRaw(`\n### Inactive Devices (Not accessed in ${inactiveThreshold}+ days)\n\n`)
                   .addTable([
                     [{data: 'Device', header: true}, {data: 'Size (GB)', header: true}, {data: 'Days Since Access', header: true}],
                     ...inactiveDevices.slice(0, 10).map(([device, data]) => [
@@ -389,7 +389,7 @@ jobs:
                   ]);
                 
                 const inactiveSizeGB = inactiveDevices.reduce((sum, [_, data]) => sum + data.size, 0) / 1024 / 1024 / 1024;
-                summary.addRaw(`\n💡 **Potential savings:** ${inactiveSizeGB.toFixed(2)} GB by cleaning inactive devices\n`);
+                summary.addRaw(`\n **Potential savings:** ${inactiveSizeGB.toFixed(2)} GB by cleaning inactive devices\n`);
               }
             }
             
@@ -399,7 +399,7 @@ jobs:
               const newestDate = new Date(newestCache.created_at);
               const daysDiff = Math.floor((newestDate - oldestDate) / (1000 * 60 * 60 * 24));
               
-              summary.addRaw(`\n### 📅 Cache Age Information\n\n`)
+              summary.addRaw(`\n### Cache Age Information\n\n`)
                 .addTable([
                   [{data: 'Metric', header: true}, {data: 'Value', header: true}],
                   ['Oldest Cache', oldestDate.toISOString().split('T')[0]],
@@ -409,19 +409,19 @@ jobs:
             }
             
             // Recommendations
-            summary.addRaw(`\n### 💡 Recommendations\n\n`);
+            summary.addRaw(`\n### Recommendations\n\n`);
             
             if (parseFloat(usagePercent) > 90) {
-              summary.addRaw(`- 🔴 **URGENT:** Cache usage is critical (${usagePercent}%)\n`)
+              summary.addRaw(`- **URGENT:** Cache usage is critical (${usagePercent}%)\n`)
                 .addRaw(`- Run cleanup immediately with \`device_filter: ALL\`\n`)
                 .addRaw(`- Consider cleaning old device caches\n`)
                 .addRaw(`- Review ccache size limits in build workflows\n`);
             } else if (parseFloat(usagePercent) > 75) {
-              summary.addRaw(`- 🟡 **WARNING:** Cache usage is high (${usagePercent}%)\n`)
+              summary.addRaw(`- **WARNING:** Cache usage is high (${usagePercent}%)\n`)
                 .addRaw(`- Schedule cleanup soon\n`)
                 .addRaw(`- Consider targeting specific devices\n`);
             } else {
-              summary.addRaw(`- 🟢 Cache usage is healthy (${usagePercent}%)\n`)
+              summary.addRaw(`- Cache usage is healthy (${usagePercent}%)\n`)
                 .addRaw(`- Regular weekly cleanup recommended\n`)
                 .addRaw(`- No immediate action required\n`);
             }
@@ -430,25 +430,25 @@ jobs:
             if (cacheAgeDistribution.stale > 0) {
               const staleSizeEstimate = (cacheAgeDistribution.stale / cacheCount) * totalCacheSize;
               const staleSizeGB = (staleSizeEstimate / 1024 / 1024 / 1024).toFixed(2);
-              summary.addRaw(`\n- 📦 **${cacheAgeDistribution.stale} stale caches** (>30 days old)\n`)
+              summary.addRaw(`\n- **${cacheAgeDistribution.stale} stale caches** (>30 days old)\n`)
                 .addRaw(`- Estimated size: ~${staleSizeGB} GB\n`)
                 .addRaw(`- Run with \`cache_pattern: ccache_stale\` to clean\n`);
             }
             
             if (shouldCleanup && !forceCleanup) {
-              summary.addRaw(`\n⚠️ **Automatic cleanup will proceed** (usage > 75%)\n`);
+              summary.addRaw(`\n **Automatic cleanup will proceed** (usage > 75%)\n`);
             } else if (forceCleanup) {
-              summary.addRaw(`\n⚡ **Force cleanup enabled** - proceeding regardless of usage\n`);
+              summary.addRaw(`\n **Force cleanup enabled** - proceeding regardless of usage\n`);
             }
             
             summary.write();
             
-            console.log(`\n✅ Analysis complete:`);
-            console.log(`   - Total: ${totalGB} GB (${usagePercent}%)`);
-            console.log(`   - Caches: ${cacheCount}`);
-            console.log(`   - ccache: ${cachesByType.ccache.count} (${(cachesByType.ccache.size / 1024 / 1024 / 1024).toFixed(2)} GB)`);
-            console.log(`   - Devices: ${cachesByDevice.size}`);
-            console.log(`   - Cleanup needed: ${shouldCleanup}`);
+            console.log(`\n Analysis complete:`);
+            console.log(` - Total: ${totalGB} GB (${usagePercent}%)`);
+            console.log(` - Caches: ${cacheCount}`);
+            console.log(` - ccache: ${cachesByType.ccache.count} (${(cachesByType.ccache.size / 1024 / 1024 / 1024).toFixed(2)} GB)`);
+            console.log(` - Devices: ${cachesByDevice.size}`);
+            console.log(` - Cleanup needed: ${shouldCleanup}`);
 
   cleanup-caches:
     runs-on: ubuntu-latest
@@ -459,7 +459,7 @@ jobs:
       (inputs.cleanup_type != 'analyze_only')
     
     steps:
-      - name: 🗑️ Smart Cache Cleanup
+      - name: Smart Cache Cleanup
         uses: actions/github-script@v7
         with:
           script: |
@@ -471,20 +471,20 @@ jobs:
             const shouldCleanup = '${{ needs.analyze.outputs.should_cleanup }}' === 'true';
             const forceCleanup = '${{ inputs.force_cleanup }}' === 'true';
             
-            console.log(`🎯 Configuration:`);
-            console.log(`   - Device Filter: ${deviceFilter}`);
-            console.log(`   - Cache Pattern: ${cachePattern}`);
-            console.log(`   - Age Threshold: ${cacheAgeDays} days`);
-            console.log(`   - Dry Run: ${dryRun}`);
-            console.log(`   - Should Cleanup: ${shouldCleanup}`);
-            console.log(`   - Force Cleanup: ${forceCleanup}\n`);
+            console.log(` Configuration:`);
+            console.log(` - Device Filter: ${deviceFilter}`);
+            console.log(` - Cache Pattern: ${cachePattern}`);
+            console.log(` - Age Threshold: ${cacheAgeDays} days`);
+            console.log(` - Dry Run: ${dryRun}`);
+            console.log(` - Should Cleanup: ${shouldCleanup}`);
+            console.log(` - Force Cleanup: ${forceCleanup}\n`);
             
             // Check if we should proceed
             if (!shouldCleanup && !forceCleanup && !dryRun) {
-              console.log('ℹ️ Cache usage is healthy, skipping cleanup');
-              console.log('💡 Use force_cleanup=true to cleanup anyway');
+              console.log(' Cache usage is healthy, skipping cleanup');
+              console.log(' Use force_cleanup=true to cleanup anyway');
               core.summary
-                .addHeading('ℹ️ Cleanup Skipped')
+                .addHeading(' Cleanup Skipped')
                 .addRaw(`Cache usage is healthy (${${{ needs.analyze.outputs.usage_percent }}}%)\n\n`)
                 .addRaw('No cleanup needed at this time.\n')
                 .write();
@@ -519,7 +519,7 @@ jobs:
               const ageDays = Math.floor((new Date() - cacheDate) / (1000 * 60 * 60 * 24));
               
               // Device filter logic
-              const deviceMatch = 
+              const deviceMatch =
                 deviceFilter === 'ALL' ||
                 cacheKey.includes(deviceFilter) ||
                 cacheKey.includes(`-${deviceFilter}-`) ||
@@ -555,7 +555,7 @@ jobs:
                   break;
                   
                 case 'kernel_only':
-                  patternMatch = cacheKey.includes('kernel-') || 
+                  patternMatch = cacheKey.includes('kernel-') ||
                                cacheKey.includes('android') ||
                                cacheKey.startsWith('ccache-');
                   if (cacheKey.startsWith('ccache-')) category = 'ccache';
@@ -577,15 +577,15 @@ jobs:
                   else if (cacheKey.includes('kernel')) category = 'kernel';
               }
               
-              return { 
-                delete: patternMatch, 
+              return {
+                delete: patternMatch,
                 reason: patternMatch ? 'match' : 'pattern_mismatch',
                 category: category
               };
             }
             
             // Fetch and process caches
-            console.log('🔍 Scanning caches...\n');
+            console.log(' Scanning caches...\n');
             
             while (true) {
               const res = await github.rest.actions.getActionsCacheList({
@@ -615,11 +615,11 @@ jobs:
                   });
                   
                   if (dryRun) {
-                    console.log(`🔍 Would delete: ${cache.key}`);
-                    console.log(`   Size: ${sizeMB} MB | Age: ${agedays} days | Type: ${decision.category}`);
+                    console.log(` Would delete: ${cache.key}`);
+                    console.log(` Size: ${sizeMB} MB | Age: ${agedays} days | Type: ${decision.category}`);
                   } else {
-                    console.log(`🗑️ Deleting: ${cache.key}`);
-                    console.log(`   Size: ${sizeMB} MB | Age: ${agedays} days | Type: ${decision.category}`);
+                    console.log(` Deleting: ${cache.key}`);
+                    console.log(` Size: ${sizeMB} MB | Age: ${agedays} days | Type: ${decision.category}`);
                     
                     try {
                       // Use deleteActionsCacheByKey which is safer for caches created across different refs
@@ -637,7 +637,7 @@ jobs:
                       deletionStats[decision.category].count++;
                       deletionStats[decision.category].size += cache.size_in_bytes;
                     } catch (error) {
-                      console.log(`   ⚠️ Failed: ${error.message}`);
+                      console.log(` Failed: ${error.message}`);
                       skippedCaches.push({
                         key: cache.key,
                         reason: error.message
@@ -646,7 +646,7 @@ jobs:
                   }
                 } else if (decision.reason !== 'device_filter') {
                   // Only log non-device-filter skips in verbose mode
-                  // console.log(`⏭️ Skipping: ${cache.key} (${decision.reason})`);
+                  // console.log(`⏭ Skipping: ${cache.key} (${decision.reason})`);
                 }
               }
               
@@ -657,12 +657,12 @@ jobs:
             const sizeMB = (totalSize / 1024 / 1024).toFixed(2);
             const sizeGB = (totalSize / 1024 / 1024 / 1024).toFixed(2);
             
-            console.log(`\n✅ ${dryRun ? 'Would delete' : 'Deleted'} ${totalDeleted} caches`);
-            console.log(`📊 Space ${dryRun ? 'would be' : ''} freed: ${sizeMB} MB (${sizeGB} GB)`);
+            console.log(`\n ${dryRun ? 'Would delete' : 'Deleted'} ${totalDeleted} caches`);
+            console.log(` Space ${dryRun ? 'would be' : ''} freed: ${sizeMB} MB (${sizeGB} GB)`);
             
             // Generate detailed summary
             let summary = core.summary
-              .addHeading(`🧹 Cache Cleanup ${dryRun ? 'Preview' : 'Summary'}`)
+              .addHeading(` Cache Cleanup ${dryRun ? 'Preview' : 'Summary'}`)
               .addTable([
                 [{data: 'Metric', header: true}, {data: 'Value', header: true}],
                 ['Caches ' + (dryRun ? 'to Delete' : 'Deleted'), totalDeleted.toString()],
@@ -674,10 +674,10 @@ jobs:
             
             // Deletion breakdown by type
             if (totalDeleted > 0 || dryRun) {
-              summary.addHeading('📊 Deletion Breakdown by Type', 3)
+              summary.addHeading(' Deletion Breakdown by Type', 3)
                 .addTable([
                   [{data: 'Type', header: true}, {data: 'Count', header: true}, {data: 'Size (GB)', header: true}, {data: 'Percentage', header: true}],
-                  ['ccache', 
+                  ['ccache',
                     deletionStats.ccache.count.toString(),
                     (deletionStats.ccache.size / 1024 / 1024 / 1024).toFixed(2),
                     totalSize > 0 ? `${((deletionStats.ccache.size / totalSize) * 100).toFixed(1)}%` : '0%'
@@ -706,7 +706,7 @@ jobs:
                 .sort((a, b) => parseFloat(b.size) - parseFloat(a.size))
                 .slice(0, 20);
               
-              summary.addHeading('📦 Top 20 Largest Caches ' + (dryRun ? 'to Delete' : 'Deleted'), 3)
+              summary.addHeading(' Top 20 Largest Caches ' + (dryRun ? 'to Delete' : 'Deleted'), 3)
                 .addTable([
                   [{data: 'Cache Key', header: true}, {data: 'Size (MB)', header: true}, {data: 'Age (days)', header: true}, {data: 'Type', header: true}],
                   ...topCaches.map(c => [c.key, c.size, c.age.toString(), c.category])
@@ -719,7 +719,7 @@ jobs:
                 .sort((a, b) => b.age - a.age)
                 .slice(0, 10);
               
-              summary.addHeading('📅 Top 10 Oldest Caches ' + (dryRun ? 'to Delete' : 'Deleted'), 3)
+              summary.addHeading(' Top 10 Oldest Caches ' + (dryRun ? 'to Delete' : 'Deleted'), 3)
                 .addTable([
                   [{data: 'Cache Key', header: true}, {data: 'Age (days)', header: true}, {data: 'Size (MB)', header: true}, {data: 'Type', header: true}],
                   ...oldestCaches.map(c => [c.key, c.age.toString(), c.size, c.category])
@@ -749,7 +749,7 @@ jobs:
                   .sort((a, b) => b[1].size - a[1].size)
                   .slice(0, 10);
                 
-                summary.addHeading('📱 Top 10 Devices by Deleted ccache', 3)
+                summary.addHeading(' Top 10 Devices by Deleted ccache', 3)
                   .addTable([
                     [{data: 'Device', header: true}, {data: 'Caches', header: true}, {data: 'Size (GB)', header: true}],
                     ...topDevices.map(([device, data]) => [
@@ -763,7 +763,7 @@ jobs:
             
             // Add failures if any
             if (skippedCaches.length > 0) {
-              summary.addHeading('⚠️ Failed Deletions', 3)
+              summary.addHeading(' Failed Deletions', 3)
                 .addTable([
                   [{data: 'Cache Key', header: true}, {data: 'Reason', header: true}],
                   ...skippedCaches.map(c => [c.key, c.reason])
@@ -781,7 +781,7 @@ jobs:
       (inputs.cleanup_type != 'analyze_only')
     
     steps:
-      - name: 🗑️ Clean old workflow runs
+      - name: Clean old workflow runs
         uses: actions/github-script@v7
         with:
           script: |
@@ -792,10 +792,10 @@ jobs:
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
             
-            console.log(`📅 Configuration:`);
-            console.log(`   - Keeping runs from: ${cutoffDate.toISOString()}`);
-            console.log(`   - Keeping ${keepRecent} most recent successful runs per workflow`);
-            console.log(`   - Dry Run: ${dryRun}\n`);
+            console.log(` Configuration:`);
+            console.log(` - Keeping runs from: ${cutoffDate.toISOString()}`);
+            console.log(` - Keeping ${keepRecent} most recent successful runs per workflow`);
+            console.log(` - Dry Run: ${dryRun}\n`);
             
             const workflows = await github.rest.actions.listRepoWorkflows({
               owner,
@@ -807,7 +807,7 @@ jobs:
             const workflowStats = [];
             
             for (const workflow of workflows.data.workflows) {
-              console.log(`\n📋 Processing: ${workflow.name}`);
+              console.log(`\n Processing: ${workflow.name}`);
               
               let page = 1;
               let successfulRuns = [];
@@ -850,10 +850,10 @@ jobs:
                   const isFailed = run.conclusion === 'failure';
                   const isCancelled = run.conclusion === 'cancelled';
                   const isSkipped = run.conclusion === 'skipped';
-                  const tooManySuccessful = run.conclusion === 'success' && 
+                  const tooManySuccessful = run.conclusion === 'success' &&
                                            successfulRuns.length > keepRecent;
                   
-                  const shouldDelete = 
+                  const shouldDelete =
                     (isFailed && isOld) ||
                     (isCancelled && isOld) ||
                     (isSkipped && isOld) ||
@@ -861,9 +861,9 @@ jobs:
                   
                   if (shouldDelete) {
                     if (dryRun) {
-                      console.log(`🔍 Would delete: #${run.run_number} (${run.conclusion}, ${ageDays}d old)`);
+                      console.log(` Would delete: #${run.run_number} (${run.conclusion}, ${ageDays}d old)`);
                     } else {
-                      console.log(`🗑️ Deleting: #${run.run_number} (${run.conclusion}, ${ageDays}d old)`);
+                      console.log(` Deleting: #${run.run_number} (${run.conclusion}, ${ageDays}d old)`);
                       
                       try {
                         await github.rest.actions.deleteWorkflowRun({
@@ -874,7 +874,7 @@ jobs:
                         deletedInWorkflow++;
                         totalDeleted++;
                       } catch (error) {
-                        console.log(`   ⚠️ Failed: ${error.message}`);
+                        console.log(` Failed: ${error.message}`);
                         failedInWorkflow++;
                         totalFailed++;
                       }
@@ -896,14 +896,14 @@ jobs:
               }
             }
             
-            console.log(`\n✅ Total runs ${dryRun ? 'to delete' : 'deleted'}: ${totalDeleted}`);
+            console.log(`\n Total runs ${dryRun ? 'to delete' : 'deleted'}: ${totalDeleted}`);
             if (totalFailed > 0) {
-              console.log(`⚠️ Failed deletions: ${totalFailed}`);
+              console.log(` Failed deletions: ${totalFailed}`);
             }
             
             // Generate summary
             let summary = core.summary
-              .addHeading(`🧹 Workflow Runs ${dryRun ? 'Preview' : 'Summary'}`)
+              .addHeading(` Workflow Runs ${dryRun ? 'Preview' : 'Summary'}`)
               .addTable([
                 [{data: 'Metric', header: true}, {data: 'Value', header: true}],
                 ['Runs ' + (dryRun ? 'to Delete' : 'Deleted'), totalDeleted.toString()],
@@ -913,10 +913,10 @@ jobs:
               ]);
             
             if (workflowStats.length > 0) {
-              summary.addHeading('📊 Per-Workflow Breakdown', 3)
+              summary.addHeading(' Per-Workflow Breakdown', 3)
                 .addTable([
                   [
-                    {data: 'Workflow', header: true}, 
+                    {data: 'Workflow', header: true},
                     {data: 'Deleted', header: true},
                     {data: 'Success', header: true},
                     {data: 'Failure', header: true},
@@ -940,14 +940,14 @@ jobs:
     if: always()
     
     steps:
-      - name: 📊 Final Repository Health Report
+      - name: Final Repository Health Report
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
             const dryRun = '${{ inputs.dry_run }}' === 'true';
             
-            console.log('📊 Generating final health report...\n');
+            console.log(' Generating final health report...\n');
             
             // Get current cache usage (after cleanup)
             let page = 1;
@@ -1022,26 +1022,26 @@ jobs:
               
               const changeGB = (sizeChange / 1024 / 1024 / 1024).toFixed(2);
               
-              changeInfo = `\n### 📈 Cleanup Impact\n\n` +
+              changeInfo = `\n### Cleanup Impact\n\n` +
                 `- **Space Freed:** ${changeGB} GB\n` +
                 `- **Caches Removed:** ${countChange}\n` +
                 `- **Usage Reduced:** ${percentChange.toFixed(1)}%\n`;
             }
             
             // Determine health status
-            let healthEmoji = '🟢';
+            let healthEmoji = '';
             let healthStatus = 'Healthy';
             if (usagePercent > 90) {
-              healthEmoji = '🔴';
+              healthEmoji = '';
               healthStatus = 'Critical - Immediate Cleanup Needed!';
             } else if (usagePercent > 75) {
-              healthEmoji = '🟡';
+              healthEmoji = '';
               healthStatus = 'Warning - Consider Cleanup Soon';
             }
             
             let summary = core.summary
               .addHeading(`${healthEmoji} Final Repository Health Report`)
-              .addRaw(dryRun ? '\n**⚠️ This was a DRY RUN - No changes were made**\n\n' : '\n')
+              .addRaw(dryRun ? '\n** This was a DRY RUN - No changes were made**\n\n' : '\n')
               .addTable([
                 [{data: 'Cache Type', header: true}, {data: 'Size (GB)', header: true}, {data: 'Percentage', header: true}],
                 ['ccache (Kernel Builds)', ccacheGB, totalCacheSize > 0 ? `${((cachesByType.ccache / totalCacheSize) * 100).toFixed(1)}%` : '0%'],
@@ -1050,7 +1050,7 @@ jobs:
                 ['Other', otherGB, totalCacheSize > 0 ? `${((cachesByType.other / totalCacheSize) * 100).toFixed(1)}%` : '0%'],
                 ['**Total**', `**${totalGB}**`, '**100%**']
               ])
-              .addRaw(`\n### 📊 Current Usage Statistics\n\n`)
+              .addRaw(`\n### Current Usage Statistics\n\n`)
               .addRaw(`- **Total Caches:** ${cacheCount}\n`)
               .addRaw(`- **Limit:** ${limit} GB\n`)
               .addRaw(`- **Current Usage:** ${totalGB} GB (${usagePercent}%)\n`)
@@ -1064,7 +1064,7 @@ jobs:
                 .filter(([_, count]) => count >= 3)
                 .sort((a, b) => b[1] - a[1]);
               
-              summary.addRaw(`\n### 📱 Build Activity Analysis (Last 30 Days)\n\n`)
+              summary.addRaw(`\n### Build Activity Analysis (Last 30 Days)\n\n`)
                 .addRaw(`- **Active Devices:** ${activeDevices.length}\n`)
                 .addRaw(`- **Total Build Events:** ${Array.from(buildFrequency.values()).reduce((a, b) => a + b, 0)}\n`);
               
@@ -1078,21 +1078,21 @@ jobs:
               }
             }
             
-            summary.addRaw(`\n### 💡 Next Steps\n\n`);
+            summary.addRaw(`\n### Next Steps\n\n`);
             
             if (dryRun) {
-              summary.addRaw(`- ℹ️ This was a dry run - run again with \`dry_run: false\` to apply changes\n`);
+              summary.addRaw(`- This was a dry run - run again with \`dry_run: false\` to apply changes\n`);
             } else if (parseFloat(usagePercent) > 75) {
-              summary.addRaw(`- ⚠️ **Action Required:** Usage still high, consider additional cleanup\n`)
+              summary.addRaw(`- **Action Required:** Usage still high, consider additional cleanup\n`)
                 .addRaw(`- Target specific devices or cache types\n`)
                 .addRaw(`- Review ccache size limits\n`);
             } else {
-              summary.addRaw(`- ✅ Cache usage is now healthy\n`)
+              summary.addRaw(`- Cache usage is now healthy\n`)
                 .addRaw(`- Schedule regular cleanup (weekly recommended)\n`)
                 .addRaw(`- Monitor usage trends\n`);
             }
             
-            summary.addRaw(`\n### 🔄 Cleanup Schedule Recommendations\n\n`)
+            summary.addRaw(`\n### Cleanup Schedule Recommendations\n\n`)
               .addRaw(`- **Daily:** If building > 10 devices regularly\n`)
               .addRaw(`- **Weekly:** For moderate usage (5-10 devices)\n`)
               .addRaw(`- **Monthly:** For light usage (< 5 devices)\n`)
@@ -1100,18 +1100,18 @@ jobs:
             
             summary.write();
             
-            console.log(`\n✅ Final report generated`);
-            console.log(`   - Current usage: ${totalGB} GB (${usagePercent}%)`);
-            console.log(`   - Status: ${healthStatus}`);
+            console.log(`\n Final report generated`);
+            console.log(` - Current usage: ${totalGB} GB (${usagePercent}%)`);
+            console.log(` - Status: ${healthStatus}`);
 
-      - name: 💡 Quick Action Commands
+      - name: Quick Action Commands
         if: always()
         run: |
           cat >> $GITHUB_STEP_SUMMARY << 'EOF'
           
           ---
           
-          ## 🚀 Quick Action Commands
+          ## Quick Action Commands
           
           ### High Usage Cleanup (>75%)
           ```bash
@@ -1191,6 +1191,6 @@ jobs:
           
           ---
           
-          **💡 Tip:** Use `dry_run=true` first to preview what will be deleted!
+          ** Tip:** Use `dry_run=true` first to preview what will be deleted!
           
           EOF

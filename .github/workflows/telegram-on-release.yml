@@ -1,4 +1,4 @@
-name: 📢 Telegram on Release
+name: Telegram on Release
 
 on:
   release:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Send message to Telegram
@@ -46,13 +46,13 @@ jobs:
           fi
 
           # Set message type
-          EMOJI="🚀"
+          EMOJI=""
           STATUS="New Release Published"
           if [[ "${{ github.event.action }}" == "edited" ]]; then
-            EMOJI="✏️"
+            EMOJI=""
             STATUS="Release Notes Updated"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            EMOJI="📢"
+            EMOJI=""
             STATUS="Manual Notification"
           fi
 
@@ -61,10 +61,10 @@ jobs:
           if [ -z "$SUSFS_VER" ]; then SUSFS_VER="latest"; fi
 
           # ── Extract Features from the release body ──
-          # The release body has a "✨ Features & Capabilities" table with rows like:
-          # | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
+          # The release body has a " Features & Capabilities" table with rows like:
+          # | **KernelSU-Next** | Next-generation kernel-level root solution |
           FEATURES_RAW=$(echo "$REL_BODY" | awk '
-            /^## ✨ Features/ { flag=1; next }
+            /^## Features/ { flag=1; next }
             flag && /^\|:---/ { next }
             flag && /^\| .+\|/ {
               # Strip leading/trailing pipes and whitespace
@@ -96,7 +96,7 @@ jobs:
               case "$line" in
                 *KernelSU*|*SUSFS*)
                   feat_name=$(echo "$line" | sed 's/^- [^ ]* //' | cut -d: -f1)
-                  VARIANTS="${VARIANTS}    - ${feat_name}\n" ;;
+                  VARIANTS="${VARIANTS} - ${feat_name}\n" ;;
                 *BBR*|*WireGuard*|*TTL*|*IP.Set*)
                   feat_name=$(echo "$line" | sed 's/^- [^ ]* //' | cut -d: -f1)
                   NETWORK="${NETWORK}, ${feat_name}" ;;
@@ -161,9 +161,9 @@ jobs:
           <b>Important:</b>
           - Flash via Kernel Flasher (for KernelSU/Next) or FKM.
           - If you run into issues, please provide logs in the GitHub repository.
-          - Support the development by leaving a 🌟 on GitHub!
+          - Support the development by leaving a on GitHub!
 
-          🔗 <a href="$REL_URL">Download Release on GitHub</a>
+           <a href="$REL_URL">Download Release on GitHub</a>
           EOF
           )
 

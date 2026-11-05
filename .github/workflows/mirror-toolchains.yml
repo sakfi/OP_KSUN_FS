@@ -1,4 +1,4 @@
-name: 🛠️ ToolChains Generator
+name: ToolChains Generator
 
 permissions:
   contents: write
@@ -92,11 +92,11 @@ jobs:
           
           # Use jq to iterate over the branches array
           for branch in $(echo "$BRANCHES_JSON" | jq -r '.[]'); do
-            echo "📥 Fetching configs from branch: $branch"
+            echo " Fetching configs from branch: $branch"
             mkdir -p "branch_$branch"
             
             if ! git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-              echo "⚠️ Branch $branch does not exist on remote. Skipping..."
+              echo " Branch $branch does not exist on remote. Skipping..."
               continue
             fi
             
@@ -118,7 +118,7 @@ jobs:
           done
           echo "]" >> all_configs.json
           
-          echo "✅ Aggregated $(find all_branch_configs/ -name "*.json" | wc -l) configurations."
+          echo " Aggregated $(find all_branch_configs/ -name "*.json" | wc -l) configurations."
 
 
       - name: Resolve Unique Projects
@@ -187,7 +187,7 @@ jobs:
                         cache_filename = f"{type_label}-{rev}.tar.gz"
                         
                         if not remote_name or not rev:
-                          print(f"⚠️ Skipping toolchain project '{name}' because remote or revision cannot be resolved.")
+                          print(f" Skipping toolchain project '{name}' because remote or revision cannot be resolved.")
                           continue
                         
                         if cache_filename not in unique_toolchains:
@@ -198,19 +198,19 @@ jobs:
                             elif "git.codelinaro.org" in base_url or "gitlab.com" in base_url:
                                 dl_url = f"{base_url}/{name}/-/archive/{rev}.tar.gz"
                             else:
-                                error_msg = f"❌ [FATAL] Unknown toolchain provider for: {base_url}"
+                                error_msg = f" [FATAL] Unknown toolchain provider for: {base_url}"
                                 print(f"::error::{error_msg}")
                                 raise ValueError(error_msg)
                             unique_toolchains[cache_filename] = {"rev": rev, "url": dl_url, "name": name, "type_label": type_label, "cache_file": cache_filename}
-                            print(f"🆕 [{op_model}][{op_os_version}] -> New {type_label} found: {rev}")
+                            print(f" [{op_model}][{op_os_version}] -> New {type_label} found: {rev}")
                         else:
-                            print(f"♻️ [{op_model}][{op_os_version}] -> Using existing {type_label}: {rev}")
+                            print(f" [{op_model}][{op_os_version}] -> Using existing {type_label}: {rev}")
               except Exception as e:
-                  print(f"⚠️ Failed to process {op_manifest}: {e}")
+                  print(f" Failed to process {op_manifest}: {e}")
           matrix = {"include": list(unique_toolchains.values())}
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"matrix={json.dumps(matrix)}\n")
-          print(f"✅ Found {len(unique_toolchains)} unique projects to mirror.")
+          print(f" Found {len(unique_toolchains)} unique projects to mirror.")
 
   mirror-to-release:
     name: build (${{ matrix.type_label }}, ${{ matrix.rev }})
@@ -229,15 +229,15 @@ jobs:
           FILENAME="${{ matrix.cache_file }}"
           BASE_URL="https://github.com/${TARGET_REPO}/releases/download/toolchain-cache"
           
-          echo "🔍 Checking if $FILENAME exists in mirror..."
+          echo " Checking if $FILENAME exists in mirror..."
           
           STATUS=$(curl -IsL -o /dev/null -w "%{http_code}" "$BASE_URL/$FILENAME")
           PART_STATUS=$(curl -IsL -o /dev/null -w "%{http_code}" "$BASE_URL/${FILENAME}.partaa")
           
           if [ "$STATUS" -eq 200 ] || [ "$PART_STATUS" -eq 200 ]; then
-            echo "✅ ${{ matrix.type_label }} revision ${{ matrix.rev }} already cached."
+            echo " ${{ matrix.type_label }} revision ${{ matrix.rev }} already cached."
           else
-            echo "📥 Not found. Downloading ${{ matrix.type_label }} from source..."
+            echo " Not found. Downloading ${{ matrix.type_label }} from source..."
             
             aria2c -x16 -s16 -k1M -j5 --file-allocation=none --console-log-level=error --summary-interval=0 --retry-wait=5 --max-tries=10 -o "$FILENAME" "${{ matrix.url }}"
             
@@ -245,15 +245,15 @@ jobs:
             MAX_SIZE=2000000000 # ~1.86GB
             
             if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
-              echo "⚠️ File > 2GB. Splitting..."
+              echo " File > 2GB. Splitting..."
               split -b 1500M -a 2 "$FILENAME" "${FILENAME}.part"
               
               for part in "${FILENAME}".part*; do
-                echo "📤 Uploading $part..."
+                echo " Uploading $part..."
                 gh release upload "toolchain-cache" "$part" --clobber --repo "$TARGET_REPO"
               done
             else
-              echo "📤 Uploading single file..."
+              echo " Uploading single file..."
               gh release upload "toolchain-cache" "$FILENAME" --clobber --repo "$TARGET_REPO"
             fi
           fi
