@@ -38,7 +38,7 @@ jobs:
           echo "susfs_hash_android13_5_15=$(resolve_branch gki-android13-5.15 || echo '2ad297356931ba06b4edc0860f42fdd143b02ffd')" >> $GITHUB_OUTPUT
           echo "susfs_hash_android14_6_1=$(resolve_branch gki-android14-6.1 || echo '5369359dbd10f6dd8cbdd59d1df7b788b29b168c')" >> $GITHUB_OUTPUT
           echo "susfs_hash_android15_6_6=$(resolve_branch gki-android15-6.6 || echo '2d11d711de80f0f749b3055f8da8f7b9682454e4')" >> $GITHUB_OUTPUT
-          echo "susfs_hash_android16_6_12=f37930f374ef88de990d6abea0c67d0ea28c1edc" >> $GITHUB_OUTPUT
+          echo "susfs_hash_android16_6_12=acb92d4abc922cac384a207744b2db40281a7c7f" >> $GITHUB_OUTPUT
 
           echo "[" > matrix.json
           mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
@@ -210,7 +210,7 @@ jobs:
         with:
           op_config_json: ${{ toJson(matrix) }}
           ksu_type: "KSUN"
-          ksu_branch_or_hash: "dev"
+          ksu_branch_or_hash: "builtin"
           susfs_commit_hash_or_branch: ${{ steps.susfs_res.outputs.hash }}
           optimize_level: "O2"
           github_token: ${{ secrets.GITHUB_TOKEN }}
