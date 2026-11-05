@@ -1,0 +1,25 @@
+--- a/kernel/hook/lsm_hook.c
++++ b/kernel/hook/lsm_hook.c
+@@ -186,10 +186,21 @@ static struct security_hook_list ksu_hooks[] = {
+     LSM_HOOK_INIT(file_permission, ksu_mount_hide_file_permission),
+ };
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
++static struct lsm_id ksu_lsm_id = {
++    .name = "ksu",
++    .id = 0x6b7375,
++};
++#endif
++
+ void __init ksu_lsm_hook_init(void)
+ {
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+-    security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), "ksu");
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
++    security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), &ksu_lsm_id);
++#else
++    security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), "ksu");
++#endif
+ #else
+     // https://elixir.bootlin.com/linux/v4.10.17/source/include/linux/lsm_hooks.h#L1892
+     security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks));

@@ -105,7 +105,7 @@ on:
         description: 'Enter KernelSU build json'
         required: true
         type: string
-        default: '[{"type":"ksun","hash":"dev"}]'
+        default: '[{"type":"ksun","hash":"builtin"}]'
       ksu_mode:
         description: 'KernelSU Integration Mode (builtin = In-tree with full SUSFS support [Recommended], lkm = Modular LKM)'
         required: true
@@ -194,7 +194,7 @@ on:
       android16-6_12_susfs_branch_or_commit:
         description: 'Enter SusFS Branch or commit hash for android16-6.12'
         type: string
-        default: 'f37930f374ef88de990d6abea0c67d0ea28c1edc'
+        default: 'acb92d4abc922cac384a207744b2db40281a7c7f'
 
 jobs:
   set-op-model:
@@ -234,7 +234,7 @@ jobs:
           
           input="${{ github.event.inputs.op_model }}"
           ksu_options_raw='${{ github.event.inputs.ksu_options }}'
-          if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "KSUN" then .hash = "dev" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)' 2>&1); then
+          if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "KSUN" then .hash = "builtin" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)' 2>&1); then
             echo "::error::ksu_options validation failed: $ksu_options_normalized"
             exit 1
           fi

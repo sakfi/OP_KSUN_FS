@@ -25,7 +25,7 @@ No local toolchain needed: pick your device in GitHub Actions, and the kernel is
 
 | Input | Default | Meaning |
 |---|---|---|
-| `ksu_options` | `[{"type":"ksun","hash":"dev"}]` | SukiSU-Ultra `dev` branch |
+| `ksu_options` | `[{"type":"ksun","hash":"builtin"}]` | SukiSU-Ultra `builtin` branch (the only line with in-kernel `KSU_SUSFS`; `main`/`dev` ship SUSFS as a userspace extension shim only) |
 | `ksu_mode` | `builtin` | `builtin` compiles SukiSU into the kernel (recommended, full SUSFS support); `lkm` downloads a prebuilt `kernelsu.ko` and injects it into the ramdisk at flash time |
 
 4. When the run finishes, grab the `SKF_*.zip` from [Releases](https://github.com/Unnidentified/oplus-sukisu_kernel/releases) or the run's artifacts.
@@ -38,7 +38,7 @@ Zip names follow `SKF_{MODEL}_{OS}_{KERNEL}_{KSU_TYPE}_{VERSION}_SuSFS[_LKM].zip
 
 | Area | Feature | Notes |
 |---|---|---|
-| Root | **SukiSU-Ultra** | KernelSU-Next fork with SUSFS hooks already integrated — no extra KSU patching needed. Manager APK from [SukiSU-Ultra releases](https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases) |
+| Root | **SukiSU-Ultra** (`builtin` branch) | KernelSU-Next fork with SUSFS hooks already integrated — no extra KSU patching needed. Manager APK from [SukiSU-Ultra releases](https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases). The build carries small compat patches (6.7+ `struct lsm_id` LSM registration, SUSFS priority-filter guards) under `.github/actions/build-kernel/patches/` |
 | Stealth | **SUSFS** | Magic mount, `SUS_PATH` / `SUS_MOUNT` / `SUS_KSTAT` / `SUS_MAP`, uname & cmdline spoofing, open redirect. Branch auto-synced from [susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
 | Gaming | **NTSync** | NT synchronization primitives for Windows emulators (Winlator, Box64) |
 | Network | **BBR**, **WireGuard**, TTL / IP Set | Congestion control, in-kernel VPN, packet tools |

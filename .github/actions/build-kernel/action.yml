@@ -1063,6 +1063,32 @@ runs:
             ln -s KernelSU KernelSU-Next
           fi
 
+          # SukiSU-Ultra 'builtin' compat patches (skipped automatically on trees
+          # they do not apply to):
+          # - lsm-id: kernels >= 6.7 require a const struct lsm_id * argument to
+          #   security_add_hooks(); the builtin branch still passes "ksu"
+          # - priority-filter-stub: guards the priority_uid_filter calls behind
+          #   CMD_SUSFS_SET_PRIORITY_UID_FILTER, which only exists in susfs4ksu
+          #   commits rebased onto android16-6.12.92 (those reject on this base)
+          for p in sukisu-builtin-lsm-id sukisu-builtin-priority-filter-stub; do
+            pf="${GITHUB_ACTION_PATH}/patches/${p}.patch"
+            if patch -p1 --dry-run --forward -d "$(pwd)/KernelSU" < "$pf" >/dev/null 2>&1; then
+              patch -p1 --forward -d "$(pwd)/KernelSU" < "$pf"
+              echo "✅ Applied SukiSU builtin compat patch: $p"
+            else
+              echo "ℹ️ Skipped $p (not applicable to this KSU tree)"
+            fi
+          done
+
+          # Out-of-tree (O=out) builds resolve the preinit runner prerequisite
+          # through a relative $(srctree)/$(src) and fail with "No rule to make
+          # target .../preinit/runner/runner.c". Force an absolute KSU_KERNEL_DIR
+          # from the Makefile's own location (builtin trees only).
+          if [ -f "$(pwd)/KernelSU/kernel/ksu_main.c" ] && grep -q '^MDIR' "$(pwd)/KernelSU/kernel/Makefile" && ! grep -q 'KSU_KERNEL_DIR := \$(MDIR)' "$(pwd)/KernelSU/kernel/Makefile"; then
+            sed -i '/^MDIR/a KSU_KERNEL_DIR := \$(MDIR)' "$(pwd)/KernelSU/kernel/Makefile"
+            echo "✅ Forced absolute KSU_KERNEL_DIR for preinit runner"
+          fi
+
           git submodule update --init --recursive
           cd KernelSU-Next/kernel
           
@@ -1103,7 +1129,6 @@ runs:
           echo "Add KSUN Configuration Settings"
           printf '%s\n' \
             'CONFIG_KSU=y' \
-            'CONFIG_KSU_KPROBES_HOOK=n' \
             >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
           
           echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
@@ -1321,6 +1346,12 @@ runs:
           "v2.2.0"|"v2.3.0")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
+              # SukiSU-Ultra 'builtin' already carries the full in-kernel SUSFS
+              # integration; applying the KSU-side patch on top would reject.
+              # Trees without a KSU_SUSFS Kconfig (main/dev) need it applied.
+              if grep -q "^config KSU_SUSFS" "./kernel/Kconfig" 2>/dev/null; then
+                echo "SukiSU Ultra already contains integrated SUSFS hooks. Skipping KSU patch."
+              else
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               mapfile -t rej_files < <(find ./kernel -name "*.rej")
               for rej_file in "${rej_files[@]}"; do
@@ -1343,6 +1374,7 @@ runs:
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
               echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+              fi
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
