@@ -1321,7 +1321,28 @@ runs:
           "v2.2.0"|"v2.3.0")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
-              echo "SukiSU Ultra already contains integrated SUSFS hooks. Skipping KSU patch."
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              mapfile -t rej_files < <(find ./kernel -name "*.rej")
+              for rej_file in "${rej_files[@]}"; do
+                [ -f "$rej_file" ] || continue
+                file=$(basename "$rej_file" .rej)
+                fix_patch="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                if [ -f "$fix_patch" ]; then
+                  echo "Patching file: $file with fix_$file.patch"
+                  rm -f "$rej_file"
+                  patch -p1 --forward < "$fix_patch"
+                elif [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_${file}.c.patch" ]; then
+                  echo "Patching file: $file with fix_${file}.c.patch"
+                  rm -f "$rej_file"
+                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_${file}.c.patch"
+                else
+                  echo "⚠️ No fix patch found for $file (reject file: $rej_file)"
+                fi
+              done
+              echo "Patching Hook Mode!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
+              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
