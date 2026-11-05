@@ -37,8 +37,9 @@ runs:
         BUCKET="${{ inputs.cache_bucket }}"
         
         # Use bucket in tag name to avoid collision if keys are same across buckets
-        TAG_NAME="${BUCKET}-latest"
-        ARCHIVE_NAME="${CACHE_KEY}.tar.zst"
+        TAG_NAME="${BUCKET}"
+        ARCHIVE_NAME="cache-${CACHE_KEY}.tar.zst"
+        ARCHIVE_NAME_UNCOMPRESSED="cache-${CACHE_KEY}.tar"
         
         echo "::group::Restoring Cache: $CACHE_KEY from $BUCKET"
         
@@ -55,33 +56,43 @@ runs:
         # We look for the specific archive in the bucket
         ASSETS=$(gh api repos/${{ github.repository }}/releases/tags/"$TAG_NAME" --jq '.assets[].name')
         
-        if ! echo "$ASSETS" | grep -q "$CACHE_KEY"; then
+        if ! echo "$ASSETS" | grep -q "^cache-${CACHE_KEY}\.tar"; then
           echo "hit=false" >> "$GITHUB_OUTPUT"
           echo "Archive $CACHE_KEY not found in bucket $TAG_NAME."
           echo "::endgroup::"
           exit 0
         fi
         
+        if echo "$ASSETS" | grep -q "^${ARCHIVE_NAME}$"; then
+          ARCHIVE_TO_DOWNLOAD="$ARCHIVE_NAME"
+        else
+          ARCHIVE_TO_DOWNLOAD="$ARCHIVE_NAME_UNCOMPRESSED"
+        fi
+        
         mkdir -p "$(dirname "$PATH_TO_RESTORE")"
         
         # Check if it's a split archive
-        if echo "$ASSETS" | grep -q "${ARCHIVE_NAME}.part"; then
+        if echo "$ASSETS" | grep -q "${ARCHIVE_TO_DOWNLOAD}.part"; then
           echo "Detected split archive. Downloading parts..."
-          for part in $(echo "$ASSETS" | grep "${ARCHIVE_NAME}.part" | sort | tr '\n' ' '); do
+          for part in $(echo "$ASSETS" | grep "${ARCHIVE_TO_DOWNLOAD}.part" | sort | tr '\n' ' '); do
             gh release download "$TAG_NAME" -p "$part" --clobber
           done
           echo "Reassembling archive..."
-          cat "${ARCHIVE_NAME}.part"* > "$ARCHIVE_NAME"
-          rm "${ARCHIVE_NAME}.part"*
+          cat "${ARCHIVE_TO_DOWNLOAD}.part"* > "$ARCHIVE_TO_DOWNLOAD"
+          rm "${ARCHIVE_TO_DOWNLOAD}.part"*
         else
-          echo "Downloading $ARCHIVE_NAME..."
-          gh release download "$TAG_NAME" -p "$ARCHIVE_NAME" --clobber
+          echo "Downloading $ARCHIVE_TO_DOWNLOAD..."
+          gh release download "$TAG_NAME" -p "$ARCHIVE_TO_DOWNLOAD" --clobber
         fi
         
         # 3. Extract
         echo "Extracting archive..."
-        tar --use-compress-program="zstd -d -T0" -xf "$ARCHIVE_NAME" -C "$(dirname "$PATH_TO_RESTORE")"
-        rm "$ARCHIVE_NAME"
+        if [[ "$ARCHIVE_TO_DOWNLOAD" == *.tar.zst ]]; then
+          tar --use-compress-program="zstd -d -T0" -xf "$ARCHIVE_TO_DOWNLOAD" -C "$(dirname "$PATH_TO_RESTORE")"
+        else
+          tar -xf "$ARCHIVE_TO_DOWNLOAD" -C "$(dirname "$PATH_TO_RESTORE")"
+        fi
+        rm "$ARCHIVE_TO_DOWNLOAD"
         
         echo "hit=true" >> "$GITHUB_OUTPUT"
         echo " Cache restored successfully"
