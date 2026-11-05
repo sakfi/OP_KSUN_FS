@@ -1228,6 +1228,19 @@ runs:
 
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Applying SUSFS patches..."
+        # Overlay the additive selinux_hide + priority_uid_filter kernel-side
+        # files from susfs4ksu 15890c6 onto the pinned acb92d4 checkout. The
+        # pinned commit is the last one whose 50_add_susfs patch applies to
+        # this kernel base, but SukiSU-Ultra 'builtin' links against
+        # susfs_add_sus_type / susfs_add_sus_avd_allowed_by_type, which were
+        # only added to fs/susfs.c afterwards. The delta is purely additive.
+        susfs_overlay="${GITHUB_ACTION_PATH}/patches/susfs-kernel-files-selinux-hide-and-priority-filter.patch"
+        if patch -p1 --dry-run --forward -d "$SUSFS_FOLDER" < "$susfs_overlay" >/dev/null 2>&1; then
+          patch -p1 --forward -d "$SUSFS_FOLDER" < "$susfs_overlay"
+          echo "✅ Applied SUSFS kernel-files overlay (selinux_hide + priority_uid_filter)"
+        else
+          echo "ℹ️ SUSFS kernel-files overlay not applicable (already newer or different base)"
+        fi
         cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
         cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
         
