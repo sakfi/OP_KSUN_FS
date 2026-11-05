@@ -1076,7 +1076,7 @@ runs:
           
           KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
           sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile 2>/dev/null || true
-          if [ -f Kbuild ]; then
+          if [ -f Kbuild ] && ! grep -qF 'KSU_VERSION=' Kbuild; then
             echo "ccflags-y += -DKSU_VERSION=${KSU_VERSION} -DKSU_VERSION_OVERRIDE=${KSU_VERSION}" >> Kbuild
           fi
           
@@ -1084,7 +1084,7 @@ runs:
             sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
           fi
           
-          if [[ "$KSU_VERSION" -gt 33095 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]] && [ -f Kbuild ]; then
+          if [[ "$KSU_VERSION" -gt 33095 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]] && [ -f Kbuild ] && ! grep -qF 'filter /%,$(src)' Kbuild; then
             sed -i 's|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include -I$(KSU_KERNEL_DIR)/include/uapi|' Kbuild
             sed -i 's|$(src)|$(abspath $(src))|' Kbuild
             sed -i 's|$(srctree)/$(src)|$(abspath $(srctree)/$(src))|' Kbuild
@@ -1132,13 +1132,13 @@ runs:
         cd KernelSU/kernel
         BASE_VERSION=30000
         KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" $BASE_VERSION)
-        sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" Makefile
+        sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" Makefile 2>/dev/null || true
         
         if [ -f ksu.c ]; then
           sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
         fi
         
-        if [[ "$KSU_VERSION" -gt 32427 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]]; then
+        if [[ "$KSU_VERSION" -gt 32427 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]] && [ -f Kbuild ] && ! grep -qF 'filter /%,$(src)' Kbuild; then
           sed -i 's|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include -I$(KSU_KERNEL_DIR)/include/uapi|' Kbuild
           sed -i 's|$(src)|$(abspath $(src))|' Kbuild
           sed -i 's|$(srctree)/$(src)|$(abspath $(srctree)/$(src))|' Kbuild
