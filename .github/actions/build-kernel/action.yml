@@ -1589,13 +1589,18 @@ runs:
             *)
               FENGCHI_DIR="$KERNEL_PATCHES_FOLDER/oneplus/hmbird" ;;
           esac
-          ensure_unix "$FENGCHI_DIR/fengchi_${HMBIRD_MODEL}_${OP_OS_VERSION}.patch"
-          patch -p1 -F 3 < "$FENGCHI_DIR/fengchi_${HMBIRD_MODEL}_${OP_OS_VERSION}.patch"
-          ensure_unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
-          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
-          chmod +x ./drivers/of/overwriter/overwrite_configs/convert_configs.sh
-          ensure_unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
-          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
+          FENGCHI_PATCH="$FENGCHI_DIR/fengchi_${HMBIRD_MODEL}_${OP_OS_VERSION}.patch"
+          if [ ! -f "$FENGCHI_PATCH" ]; then
+            echo "::warning::No hmbird fengchi patch for ${HMBIRD_MODEL} ${OP_OS_VERSION} ($FENGCHI_PATCH). Skipping hmbird patches."
+          else
+            ensure_unix "$FENGCHI_PATCH"
+            patch -p1 -F 3 < "$FENGCHI_PATCH"
+            ensure_unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
+            patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
+            chmod +x ./drivers/of/overwriter/overwrite_configs/convert_configs.sh
+            ensure_unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
+            patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
+          fi
         else
           echo "Hmbird not enabled, skipping fengchi patch"
         fi
