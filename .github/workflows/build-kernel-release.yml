@@ -620,10 +620,17 @@ jobs:
             sudo cp ccache-dl/ccache /usr/local/bin/
             sudo chmod +x /usr/local/bin/ccache
             ccache --version
+          elif command -v ccache >/dev/null 2>&1; then
+            echo "ccache already present on runner."
+            ccache --version
           else
             echo "::warning::ccache binary not found from artifact. Falling back to apt ccache."
-            sudo apt-get -o Acquire::Retries=3 update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ccache
+            if ! grep -q "1.1.1.1" /etc/resolv.conf 2>/dev/null; then
+              sudo sed -i '1inameserver 1.1.1.1\nnameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || true
+            fi
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ccache
             ccache --version
           fi
       - name: 🔨 Build Kernel
@@ -674,10 +681,17 @@ jobs:
             sudo cp ccache-dl/ccache /usr/local/bin/
             sudo chmod +x /usr/local/bin/ccache
             ccache --version
+          elif command -v ccache >/dev/null 2>&1; then
+            echo "ccache already present on runner."
+            ccache --version
           else
             echo "::warning::ccache binary not found from artifact. Falling back to apt ccache."
-            sudo apt-get -o Acquire::Retries=3 update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ccache
+            if ! grep -q "1.1.1.1" /etc/resolv.conf 2>/dev/null; then
+              sudo sed -i '1inameserver 1.1.1.1\nnameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || true
+            fi
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ccache
             ccache --version
           fi
       - name: 🔨 Build Kernel
@@ -728,10 +742,17 @@ jobs:
             sudo cp ccache-dl/ccache /usr/local/bin/
             sudo chmod +x /usr/local/bin/ccache
             ccache --version
+          elif command -v ccache >/dev/null 2>&1; then
+            echo "ccache already present on runner."
+            ccache --version
           else
             echo "::warning::ccache binary not found from artifact. Falling back to apt ccache."
-            sudo apt-get -o Acquire::Retries=3 update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ccache
+            if ! grep -q "1.1.1.1" /etc/resolv.conf 2>/dev/null; then
+              sudo sed -i '1inameserver 1.1.1.1\nnameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || true
+            fi
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ccache
             ccache --version
           fi
       - name: 🔨 Build Kernel

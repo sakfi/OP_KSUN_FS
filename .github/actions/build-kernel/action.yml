@@ -352,7 +352,39 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libelf-dev libdwarf-dev libdw-dev dwarves binutils-dev build-essential bc bison flex pkg-config dos2unix
+        # Ensure resilient DNS on Azure-hosted runners
+        if ! grep -q "1.1.1.1" /etc/resolv.conf 2>/dev/null; then
+          sudo sed -i '1inameserver 1.1.1.1\nnameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || true
+        fi
+
+        # Check if required packages are already installed to avoid unnecessary apt calls
+        REQUIRED_PKGS=(libelf-dev libdwarf-dev libdw-dev dwarves binutils-dev build-essential bc bison flex pkg-config dos2unix)
+        MISSING_PKGS=()
+        for pkg in "${REQUIRED_PKGS[@]}"; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            MISSING_PKGS+=("$pkg")
+          fi
+        done
+
+        if [ ${#MISSING_PKGS[@]} -eq 0 ]; then
+          echo "✅ All required build packages are already present. Skipping apt operations."
+        else
+          echo "Missing packages detected: ${MISSING_PKGS[*]}"
+          # Switch to official archive if azure mirror is flaky
+          sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+
+          APT_OPTS=(-o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::Connect-Timeout=15)
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt to install missing dependencies..."
+            if sudo apt-get "${APT_OPTS[@]}" update -qq && \
+               sudo DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" install -y --no-install-recommends "${MISSING_PKGS[@]}"; then
+              echo "✅ Dependencies successfully installed"
+              break
+            fi
+            echo "⚠️ Attempt $attempt failed. Retrying in 5 seconds..."
+            sleep 5
+          done
+        fi
         CONFIG="$OP_MODEL"
         echo "Creating folder for configuration: $CONFIG"
         mkdir -p "$CONFIG"
