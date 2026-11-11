@@ -8,7 +8,7 @@ on:
 jobs:
   generate-matrix:
     name: 🔍 Generate Warmup Matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       susfs_hash_android12_5_10: ${{ steps.set-matrix.outputs.susfs_hash_android12_5_10 }}
@@ -56,7 +56,7 @@ jobs:
 
   prepare_ccache:
     name: Prepare ccache binary (download once)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download custom ccache once
         run: |
@@ -90,7 +90,7 @@ jobs:
   warm-cache:
     name: 🔨 ${{ matrix.model }} (${{ matrix.os_version }})
     needs: [generate-matrix, prepare_ccache]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}

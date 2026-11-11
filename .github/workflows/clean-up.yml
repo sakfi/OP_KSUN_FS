@@ -137,7 +137,7 @@ permissions:
 
 jobs:
   analyze:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       should_cleanup: ${{ steps.analysis.outputs.should_cleanup }}
       total_cache_size: ${{ steps.analysis.outputs.total_size }}
@@ -455,7 +455,7 @@ jobs:
             console.log(`   - Cleanup needed: ${shouldCleanup}`);
 
   cleanup-caches:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: analyze
     if: |
       always() &&
@@ -777,7 +777,7 @@ jobs:
             summary.write();
 
   cleanup-runs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: analyze
     if: |
       always() &&
@@ -939,7 +939,7 @@ jobs:
             summary.write();
 
   final-report:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [analyze, cleanup-caches, cleanup-runs]
     if: always()
     

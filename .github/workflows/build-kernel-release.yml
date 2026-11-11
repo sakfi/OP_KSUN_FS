@@ -137,6 +137,11 @@ on:
         type: choice
         options: [O2, O3]
         default: O2
+      mlgo:
+        description: 'Do you want to enable mlgo? [Machine Learning Guided Optimization]'
+        required: false
+        type: boolean
+        default: true
       clean_build:
         description: 'Clean build (no ccache)'
         type: boolean
@@ -200,7 +205,7 @@ on:
 
 jobs:
   set-op-model:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       matrix_A14: ${{ steps.set-matrix.outputs.matrix_A14 }}
@@ -488,6 +493,7 @@ jobs:
           
             cat << 'EOF'
           - Optimization: ${{ inputs.optimize_level }}
+          - MLGO: ${{ inputs.mlgo }}
           - Clean Build/No Ccache: ${{ inputs.clean_build && '✅ Yes' || '❌ No' }}
           - Create Release: ${{ inputs.make_release && '✅ Yes' || '❌ No' }}
           - Create Debug Artifacts: ${{ inputs.debug && '✅ Yes' || '❌ No' }}
@@ -550,7 +556,7 @@ jobs:
 
   prepare_ccache:
     name: Prepare ccache binary (download once)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download custom ccache once
         run: |
@@ -590,7 +596,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A16).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -628,6 +634,7 @@ jobs:
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
+          mlgo: ${{ inputs.mlgo }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -643,7 +650,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A15).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -681,6 +688,7 @@ jobs:
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
+          mlgo: ${{ inputs.mlgo }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -696,7 +704,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A14).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -734,6 +742,7 @@ jobs:
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
+          mlgo: ${{ inputs.mlgo }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -742,7 +751,7 @@ jobs:
 
   trigger-release:
     needs: [set-op-model, build-A16, build-A15, build-A14]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ always() && inputs.make_release && !cancelled() && (inputs.workflow_mode == 'Release Only' || !failure()) }}
     environment: ${{ (github.ref_name == 'main' || github.ref_name == 'Beta-2' || github.ref_name == 'testing') && 'Production-Release' || '' }}
     env:
@@ -863,6 +872,7 @@ jobs:
           ksu_resolved_hash="${{ needs.set-op-model.outputs.ksu_resolved_hash }}"
           
           OPTIMIZE_LEVEL="${{ inputs.optimize_level }}"
+          MLGO="${{ inputs.mlgo }}"
           CLEAN_BUILD="${{ inputs.clean_build }}"
           
           # Hash map for GKI version
@@ -975,6 +985,7 @@ jobs:
           | **KernelSU Next Version** | \`$ksu_ver_global\` |
           | **SUSFS Version** | \`$SUSFS_BASE_VERSION\` |
           | **Optimization Level** | \`$OPTIMIZE_LEVEL\` |
+          | **MLGO** | \`$MLGO\` |
           | **Clean Build** | $( [ "$CLEAN_BUILD" = "true" ] && echo "✅ Yes" || echo "❌ No" ) |
           
           ### 📌 SUSFS Branch Mapping
