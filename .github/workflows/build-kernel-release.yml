@@ -830,8 +830,8 @@ jobs:
           echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag $NEW_TAG
-          git push origin $NEW_TAG
+          git tag -f $NEW_TAG
+          git push -f origin $NEW_TAG || true
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v8
@@ -839,6 +839,7 @@ jobs:
           path: ./downloaded-artifacts
           merge-multiple: true
           skip-decompress: true
+          digest-mismatch: warn
           run-id: ${{ inputs.workflow_mode == 'Release Only' && inputs.run_id_to_release || github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -1170,7 +1171,7 @@ jobs:
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
             --notes-file release_notes.md \
-            --draft
+            --draft || gh release edit "$NEW_TAG" --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" --title "${{ env.RELEASE_NAME }}" --notes-file release_notes.md --draft
 
       - name: 📤 Upload Release Assets Dynamically
         run: |
