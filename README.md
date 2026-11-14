@@ -4,7 +4,7 @@
 ### *High-Performance Hybrid LKM & SUSFS Kernels for OnePlus Devices*
 
 [![Build Kernel](https://img.shields.io/github/actions/workflow/status/sakfi/OP_KSUN_FS/build-kernel-release.yml?label=Release%20Builds&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/sakfi/OP_KSUN_FS/actions/workflows/build-kernel-release.yml)
-[![GitHub Release](https://flat.badgen.net/github/tag/sakfi/OP_KSUN_FS?label=Latest%20Release&color=00FF99&icon=github)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
+[![GitHub Release](https://flat.badgen.net/github/tag/sakfi/OP_KSUN_FS?label=Latest%20Release&color=00FF99&icon=github&v=1)](https://github.com/sakfi/OP_KSUN_FS/releases/latest)
 [![AnyKernel3.1](https://img.shields.io/badge/AnyKernel3.1-Custom-blue?style=flat-square&logo=git)](https://github.com/sakfi/AnyKernel3.1)
 [![Forks](https://badgen.net/github/forks/sakfi/OP_KSUN_FS?color=orange&style=flat-square)](https://github.com/sakfi/OP_KSUN_FS/network/members)
 [![Stars](https://badgen.net/github/stars/sakfi/OP_KSUN_FS?color=yellow&style=flat-square)](https://github.com/sakfi/OP_KSUN_FS/stargazers)
