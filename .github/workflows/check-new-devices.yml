@@ -19,7 +19,7 @@ on:
 jobs:
   check-new-devices:
     name: 🔍 Detect new device configs from upstream
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       issues: write
       contents: read

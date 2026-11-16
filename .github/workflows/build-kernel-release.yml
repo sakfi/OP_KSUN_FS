@@ -34,6 +34,7 @@ on:
           - OP-ACE-6T
           - OP-ACE-RACE
           - OP-N6
+          - OP-N6X
           - OP-NORD-3
           - OP-NORD-4
           - OP-NORD-4-CE
@@ -41,6 +42,7 @@ on:
           - OP-NORD-6
           - OP-NORD-CE-5
           - OP-NORD-CE4-LITE
+          - OP-NORD-CE6
           - OP-NORD-CE6-LITE
           - OP-NORD-N30-SE
           - OP-OPEN
@@ -135,6 +137,11 @@ on:
         type: choice
         options: [O2, O3]
         default: O2
+      mlgo:
+        description: 'Do you want to enable mlgo? [Machine Learning Guided Optimization]'
+        required: false
+        type: boolean
+        default: true
       clean_build:
         description: 'Clean build (no ccache)'
         type: boolean
@@ -198,7 +205,7 @@ on:
 
 jobs:
   set-op-model:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       matrix_A14: ${{ steps.set-matrix.outputs.matrix_A14 }}
@@ -394,155 +401,31 @@ jobs:
           # Inject ksu_resolved_hash into each device in the matrix
           merged_matrix=$(echo "$merged_matrix" | jq  --arg resolved_sha "$resolved_sha" 'map(.ksu_resolved_hash = $resolved_sha)')
           
-          # SUSFS hash fetch
-          SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"
-          GITLAB_PROJECT_PATH="simonpunk/susfs4ksu"
-          
-          declare -A default_branches=(
-            ["android12-5.10"]="gki-android12-5.10"
-            ["android13-5.15"]="gki-android13-5.15"
-            ["android14-6.1"]="gki-android14-6.1"
-            ["android15-6.6"]="gki-android15-6.6"
-            ["android16-6.12"]="gki-android16-6.12"
-          )
-          
-          declare -A user_inputs=(
-            ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
-            ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
-            ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
-            ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
-            ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
-          )
-          
+          # SUSFS is now handled via LKM in KSUN Manager (in-tree simonpunk/susfs4ksu patching disabled)
+          echo "ℹ️ In-tree SUSFS patching is disabled (SUSFS is supported via KSUN LKM). Skipping GitLab API calls."
           mapfile -t active_keys < <(
             echo "$merged_matrix" \
-              | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' \
+              | jq -r '.[] | "\(.android_version)-\(.kernel_version)"' \
               | sort -u
           )
-          
-          echo "🔍 Resolving SUSFS hashes for: ${active_keys[*]:-none}"
-          
-          declare -A susfs_hashes
-          declare -A susfs_versions_per_key
-          
-          for key in "${active_keys[@]}"; do
-            default_val="${default_branches[$key]}"
-            user_val="${user_inputs[$key]:-$default_val}"
-            
-            # Build GraphQL query — include blob fetch only when releasing
-            HASH_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } } } }"
-            RELEASE_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } blobs(paths: [\"kernel_patches/include/linux/susfs.h\"], ref: \"${user_val}\") { nodes { rawBlob } } } } }"
-            
-            if [ "${{ inputs.make_release }}" = "true" ]; then
-              GL_QUERY="$RELEASE_QUERY"
-            else
-              GL_QUERY="$HASH_QUERY"
-            fi
-            
-            MAX_RETRIES=3
-            RETRY_COUNT=0
-            RETRY_DELAY=5
-            resolved=""
-            
-            until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-              RESPONSE=$(curl -s --fail -G "https://gitlab.com/api/graphql" --data-urlencode "query=$GL_QUERY")
-              EXIT_CODE=$?
-              
-              if [ $EXIT_CODE -eq 0 ] && [ -n "$RESPONSE" ]; then
-                resolved=$(echo "$RESPONSE" | jq -r '.data.project.repository.ch.sha // empty')
-                if [ -n "$resolved" ] && [ "$resolved" != "null" ]; then
-                  echo "  ✅ Query for $key Success"
-                  
-                  if [ "${{ inputs.make_release }}" = "true" ]; then
-                    extracted=$(echo "$RESPONSE" | jq -r '.data.project.repository.blobs.nodes[0].rawBlob // empty' | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}')
-                    susfs_versions_per_key[$key]="${extracted:-unknown}"
-                    echo "  ✅ $key → SUSFS_VERSION = ${extracted:-unknown}"
-                  fi
-                  
-                  break
-                fi
-              fi
-              
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "::warning::GitLab GraphQL API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
-              sleep $RETRY_DELAY
-            done
-            
-            # Final Validation — SUSFS hash
-            if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then
-              echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
-              exit 1
-            fi
-            
-            # Final Validation — SUSFS version
-            if [ "${{ inputs.make_release }}" = "true" ] && [ "${susfs_versions_per_key[$key]:-unknown}" = "unknown" ]; then
-              echo "::error::Could not extract SUSFS_VERSION from susfs.h for '$key' after $MAX_RETRIES attempts. Cannot proceed with release."
-              exit 1
-            fi
-            
-            susfs_hashes["$key"]="$resolved"
-            echo "  ✅ Resolved: $key → $resolved"
-          done
-          
-          # Write CSV list of active GKI versions
           active_gki_keys_csv=$(IFS=','; echo "${active_keys[*]:-}")
           echo "active_gki_keys=$active_gki_keys_csv" >> "$GITHUB_OUTPUT"
-          
-          # Write hash to GITHUB_OUTPUT
-          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
-          
-          # SUSFS_VERSION — only when releasing
+          echo "susfs_hash_android12_5_10=LKM" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android13_5_15=LKM" >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android14_6_1=LKM"   >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android15_6_6=LKM"   >> "$GITHUB_OUTPUT"
+          echo "susfs_hash_android16_6_12=LKM" >> "$GITHUB_OUTPUT"
           if [ "${{ inputs.make_release }}" = "true" ]; then
-            susfs_base_version="unknown"
-            for key in "${active_keys[@]}"; do
-              ver="${susfs_versions_per_key[$key]:-unknown}"
-              if [ "$ver" != "unknown" ]; then
-                susfs_base_version="$ver"
-                break
-              fi
-            done
-            
-            if [ "$susfs_base_version" = "unknown" ]; then
-              echo "::error::Could not extract SUSFS_VERSION from susfs.h for any active GKI key. Cannot proceed with release."
-              exit 1
+            REL_TAG=$(curl -sSL https://api.github.com/repos/KernelSU-Next/KernelSU-Next/releases/latest 2>/dev/null | jq -r '.tag_name // empty' || true)
+            if [ -z "$REL_TAG" ] || [ "$REL_TAG" = "null" ]; then
+              REL_TAG="v3.4.2"
             fi
-            
-            # make_release=true: mismatch is a hard error — prevents wrong tag
-            for key in "${active_keys[@]}"; do
-              key_ver="${susfs_versions_per_key[$key]:-unknown}"
-              if [ "$key_ver" != "$susfs_base_version" ]; then
-                echo "::error::SUSFS version mismatch: '$key' has '$key_ver', expected '$susfs_base_version'. Align refs before releasing."
-                exit 1
-              fi
-            done
-            
-            # Ensure v prefix for standardized versioning
-            [[ "$susfs_base_version" != v* ]] && susfs_base_version="v$susfs_base_version"
-            echo "susfs_base_version=$susfs_base_version" >> "$GITHUB_OUTPUT"
+            [[ "$REL_TAG" != v* ]] && REL_TAG="v$REL_TAG"
+            echo "susfs_base_version=$REL_TAG" >> "$GITHUB_OUTPUT"
           fi
           
           # Inject susfs_resolved_hash into each device in the matrix
-          susfs_hashes_json=$(jq -n \
-            --arg a12 "${susfs_hashes[android12-5.10]:-unknown}" \
-            --arg a13 "${susfs_hashes[android13-5.15]:-unknown}" \
-            --arg a14 "${susfs_hashes[android14-6.1]:-unknown}" \
-            --arg a15 "${susfs_hashes[android15-6.6]:-unknown}" \
-            --arg a16 "${susfs_hashes[android16-6.12]:-unknown}" \
-            '{
-              "android12-5.10": $a12,
-              "android13-5.15": $a13,
-              "android14-6.1":  $a14,
-              "android15-6.6":  $a15,
-              "android16-6.12": $a16
-            }')
-          
-          merged_matrix=$(echo "$merged_matrix" | jq \
-            --argjson hashes "$susfs_hashes_json" \
-            '[.[] | . + {susfs_resolved_hash: ($hashes["\(.android_version)-\(.kernel_version)"] // "unknown")}]')
+          merged_matrix=$(echo "$merged_matrix" | jq '[.[] | . + {susfs_resolved_hash: "LKM"}]')
           
           merged_matrix=$(echo "$merged_matrix" | jq '
             sort_by(
@@ -561,165 +444,6 @@ jobs:
           echo "matrix_A14=$matrix_A14" >> "$GITHUB_OUTPUT"
           
           # Maintain compatibility for existing job
-          wrapped=$(jq -c '{ include: . }' <<< "$merged_matrix")
-          echo "matrix=$wrapped" >> "$GITHUB_OUTPUT"
-          
-          ksu_type=$(echo "$ksu_options_normalized" | jq -r '.[0].type')
-          ksu_ref=$(echo "$ksu_options_normalized" | jq -r '.[0].hash')
-          
-          if [ "$ksu_type" == "KSUN" ]; then
-            KSU_REPO_OWNER="KernelSU-Next"
-            KSU_REPO_NAME="KernelSU-Next"
-          else
-            KSU_REPO_OWNER="tiann"
-            KSU_REPO_NAME="KernelSU"
-          fi
-          
-          HEAD_REF="refs/heads/${ksu_ref}"
-          TAG_REF="refs/tags/${ksu_ref}"
-          
-          QUERY='query($owner: String!, $name: String!, $headRef: String!, $tagRef: String!, $objRef: String!) {
-            repository(owner: $owner, name: $name) {
-              hb: ref(qualifiedName: $headRef) { t: target { ... on Commit { o: oid } } }
-              ht: ref(qualifiedName: $tagRef) { t: target { ... on Commit { o: oid } } }
-              ho: object(expression: $objRef) { ... on Commit { o: oid } }
-            }
-          }'
-          
-          MAX_RETRIES=3
-          RETRY_COUNT=0
-          RETRY_DELAY=5 # Seconds to wait between retries
-          
-          echo "Resolving $ksu_type hash ($ksu_ref)..."
-          
-          until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-            RESULT=$(gh api graphql -f query="$QUERY" -f owner="$KSU_REPO_OWNER" -f name="$KSU_REPO_NAME" -f headRef="$HEAD_REF" -f tagRef="$TAG_REF" -f objRef="$ksu_ref" 2>/dev/null)
-            EXIT_CODE=$?
-            
-            if [ $EXIT_CODE -eq 0 ] && [ ! -z "$RESULT" ]; then
-              echo "  ✅ API Success"
-              break
-            fi
-            
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "::warning::API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying in ${RETRY_DELAY}s..."
-            sleep $RETRY_DELAY
-          done
-          
-          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-            echo "::error::GitHub API unreachable. Cannot validate $ksu_ref"
-            exit 1
-          fi
-          
-          resolved_sha=$(echo "$RESULT" | jq -r '.data.repository | (.hb.t.o // .ht.t.o // .ho.o // "unknown")')
-          
-          if [ "$resolved_sha" == "unknown" ]; then
-            echo "::error::Ref/Hash '$ksu_ref' does not exist in $KSU_REPO_OWNER/$KSU_REPO_NAME"
-            exit 1
-          fi
-          
-          echo "  ✅ Resolved: $ksu_type/$ksu_ref → $resolved_sha"
-          echo "ksu_resolved_hash=$resolved_sha" >> "$GITHUB_OUTPUT"
-          
-          
-          # Inject ksu_resolved_hash into each device in the matrix
-          merged_matrix=$(echo "$merged_matrix" | jq  --arg resolved_sha "$resolved_sha" 'map(.ksu_resolved_hash = $resolved_sha)')
-          
-          # SUSFS hash fetch
-          SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"
-          PROJECT_ID="simonpunk%2fsusfs4ksu"
-          
-          declare -A default_branches=(
-            ["android12-5.10"]="gki-android12-5.10"
-            ["android13-5.15"]="gki-android13-5.15"
-            ["android14-6.1"]="gki-android14-6.1"
-            ["android15-6.6"]="gki-android15-6.6"
-            ["android16-6.12"]="gki-android16-6.12"
-          )
-          
-          declare -A user_inputs=(
-            ["android12-5.10"]="${{ inputs.android12-5_10_susfs_branch_or_commit }}"
-            ["android13-5.15"]="${{ inputs.android13-5_15_susfs_branch_or_commit }}"
-            ["android14-6.1"]="${{ inputs.android14-6_1_susfs_branch_or_commit }}"
-            ["android15-6.6"]="${{ inputs.android15-6_6_susfs_branch_or_commit }}"
-            ["android16-6.12"]="${{ inputs.android16-6_12_susfs_branch_or_commit }}"
-          )
-          
-          mapfile -t active_keys < <(
-            echo "$merged_matrix" \
-              | jq -r '.[] | select(.susfs == true) | "\(.android_version)-\(.kernel_version)"' \
-              | sort -u
-          )
-          
-          echo "🔍 Resolving SUSFS hashes for: ${active_keys[*]:-none}"
-          
-          declare -A susfs_hashes
-          for key in "${active_keys[@]}"; do
-            default_val="${default_branches[$key]}"
-            user_val="${user_inputs[$key]:-$default_val}"
-            
-            MAX_RETRIES=3
-            RETRY_COUNT=0
-            RETRY_DELAY=5
-            resolved=""
-            
-            until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-              # We query the commit endpoint which accepts Branch, Tag, or SHA
-              RESULT=$(curl -s --fail "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${user_val}")
-              EXIT_CODE=$?
-              
-              if [ $EXIT_CODE -eq 0 ] && [ -n "$RESULT" ]; then
-                resolved=$(echo "$RESULT" | jq -r '.id')
-                echo "  ✅ Query for $key input field Success"
-                break
-              fi
-              
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "::warning::GitLab API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
-              sleep $RETRY_DELAY
-            done
-            
-            # Final Validation
-            if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then
-               echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
-               exit 1
-            fi
-            
-            susfs_hashes["$key"]="$resolved"
-            echo "  ✅ Resolved: $key → $resolved"
-          done
-          
-          # Write CSV list of active GKI versions
-          active_gki_keys_csv=$(IFS=','; echo "${active_keys[*]:-}")
-          echo "active_gki_keys=$active_gki_keys_csv" >> "$GITHUB_OUTPUT"
-          
-          # Write hash to GITHUB_OUTPUT
-          echo "susfs_hash_android12_5_10=${susfs_hashes[android12-5.10]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android13_5_15=${susfs_hashes[android13-5.15]:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android14_6_1=${susfs_hashes[android14-6.1]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android15_6_6=${susfs_hashes[android15-6.6]:-unknown}"   >> "$GITHUB_OUTPUT"
-          echo "susfs_hash_android16_6_12=${susfs_hashes[android16-6.12]:-unknown}" >> "$GITHUB_OUTPUT"
-          
-          # Inject susfs_resolved_hash into each device in the matrix
-          susfs_hashes_json=$(jq -n \
-            --arg a12 "${susfs_hashes[android12-5.10]:-unknown}" \
-            --arg a13 "${susfs_hashes[android13-5.15]:-unknown}" \
-            --arg a14 "${susfs_hashes[android14-6.1]:-unknown}" \
-            --arg a15 "${susfs_hashes[android15-6.6]:-unknown}" \
-            --arg a16 "${susfs_hashes[android16-6.12]:-unknown}" \
-            '{
-              "android12-5.10": $a12,
-              "android13-5.15": $a13,
-              "android14-6.1":  $a14,
-              "android15-6.6":  $a15,
-              "android16-6.12": $a16
-            }')
-          
-          merged_matrix=$(echo "$merged_matrix" | jq \
-            --argjson hashes "$susfs_hashes_json" \
-            '[.[] | . + {susfs_resolved_hash: ($hashes["\(.android_version)-\(.kernel_version)"] // "unknown")}]')
-          
-          # Recalculate wrapped with updated matrix and write output
           wrapped=$(jq -c '{ include: . }' <<< "$merged_matrix")
           echo "matrix=$wrapped" >> "$GITHUB_OUTPUT"
           
@@ -769,6 +493,7 @@ jobs:
           
             cat << 'EOF'
           - Optimization: ${{ inputs.optimize_level }}
+          - MLGO: ${{ inputs.mlgo }}
           - Clean Build/No Ccache: ${{ inputs.clean_build && '✅ Yes' || '❌ No' }}
           - Create Release: ${{ inputs.make_release && '✅ Yes' || '❌ No' }}
           - Create Debug Artifacts: ${{ inputs.debug && '✅ Yes' || '❌ No' }}
@@ -831,7 +556,7 @@ jobs:
 
   prepare_ccache:
     name: Prepare ccache binary (download once)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download custom ccache once
         run: |
@@ -871,7 +596,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A16).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -895,10 +620,17 @@ jobs:
             sudo cp ccache-dl/ccache /usr/local/bin/
             sudo chmod +x /usr/local/bin/ccache
             ccache --version
+          elif command -v ccache >/dev/null 2>&1; then
+            echo "ccache already present on runner."
+            ccache --version
           else
             echo "::warning::ccache binary not found from artifact. Falling back to apt ccache."
-            sudo apt-get -o Acquire::Retries=3 update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ccache
+            if ! grep -q "1.1.1.1" /etc/resolv.conf 2>/dev/null; then
+              sudo sed -i '1inameserver 1.1.1.1\nnameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || true
+            fi
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ccache
             ccache --version
           fi
       - name: 🔨 Build Kernel
@@ -909,6 +641,7 @@ jobs:
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
+          mlgo: ${{ inputs.mlgo }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -924,7 +657,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A15).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -948,10 +681,17 @@ jobs:
             sudo cp ccache-dl/ccache /usr/local/bin/
             sudo chmod +x /usr/local/bin/ccache
             ccache --version
+          elif command -v ccache >/dev/null 2>&1; then
+            echo "ccache already present on runner."
+            ccache --version
           else
             echo "::warning::ccache binary not found from artifact. Falling back to apt ccache."
-            sudo apt-get -o Acquire::Retries=3 update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ccache
+            if ! grep -q "1.1.1.1" /etc/resolv.conf 2>/dev/null; then
+              sudo sed -i '1inameserver 1.1.1.1\nnameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || true
+            fi
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ccache
             ccache --version
           fi
       - name: 🔨 Build Kernel
@@ -962,6 +702,7 @@ jobs:
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
+          mlgo: ${{ inputs.mlgo }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -977,7 +718,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A14).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -1001,10 +742,17 @@ jobs:
             sudo cp ccache-dl/ccache /usr/local/bin/
             sudo chmod +x /usr/local/bin/ccache
             ccache --version
+          elif command -v ccache >/dev/null 2>&1; then
+            echo "ccache already present on runner."
+            ccache --version
           else
             echo "::warning::ccache binary not found from artifact. Falling back to apt ccache."
-            sudo apt-get -o Acquire::Retries=3 update -qq
-            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ccache
+            if ! grep -q "1.1.1.1" /etc/resolv.conf 2>/dev/null; then
+              sudo sed -i '1inameserver 1.1.1.1\nnameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || true
+            fi
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends ccache
             ccache --version
           fi
       - name: 🔨 Build Kernel
@@ -1015,6 +763,7 @@ jobs:
           ksu_branch_or_hash: ${{ matrix.ksu_resolved_hash }}
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
+          mlgo: ${{ inputs.mlgo }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -1023,7 +772,7 @@ jobs:
 
   trigger-release:
     needs: [set-op-model, build-A16, build-A15, build-A14]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ always() && inputs.make_release && !cancelled() && (inputs.workflow_mode == 'Release Only' || !failure()) }}
     environment: ${{ (github.ref_name == 'main' || github.ref_name == 'Beta-2' || github.ref_name == 'testing') && 'Production-Release' || '' }}
     env:
@@ -1081,8 +830,8 @@ jobs:
           echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag $NEW_TAG
-          git push origin $NEW_TAG
+          git tag -f $NEW_TAG
+          git push -f origin $NEW_TAG || true
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v8
@@ -1090,7 +839,28 @@ jobs:
           path: ./downloaded-artifacts
           merge-multiple: true
           skip-decompress: true
+          digest-mismatch: warn
           run-id: ${{ inputs.workflow_mode == 'Release Only' && inputs.run_id_to_release || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download KSUN Manager
+        uses: nullptr-t-oss/composite_actions/fetch_ksu_manager@main
+        if: ${{ fromJSON(needs.set-op-model.outputs.ksu_options_normalized)[0].type == 'KSUN' }}
+        continue-on-error: true
+        with:
+          ksu-type: ksun
+          dist-dir: ./downloaded-artifacts
+          commit-hash: ${{ needs.set-op-model.outputs.ksu_resolved_hash }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download KSU Manager
+        uses: nullptr-t-oss/composite_actions/fetch_ksu_manager@main
+        if: ${{ fromJSON(needs.set-op-model.outputs.ksu_options_normalized)[0].type == 'KSU' }}
+        continue-on-error: true
+        with:
+          ksu-type: ksu
+          dist-dir: ./downloaded-artifacts
+          commit-hash: ${{ needs.set-op-model.outputs.ksu_resolved_hash }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📋 List Downloaded Artifacts
@@ -1144,6 +914,7 @@ jobs:
           ksu_resolved_hash="${{ needs.set-op-model.outputs.ksu_resolved_hash }}"
           
           OPTIMIZE_LEVEL="${{ inputs.optimize_level }}"
+          MLGO="${{ inputs.mlgo }}"
           CLEAN_BUILD="${{ inputs.clean_build }}"
           
           # Hash map for GKI version
@@ -1175,8 +946,8 @@ jobs:
           
           # 🔥 OnePlus Kernels Release 🔥
           
-          [![Release](https://img.shields.io/badge/release-${NEW_TAG}-blue?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${NEW_TAG})
-          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${NEW_TAG}/total?style=flat-square&color=green&label=downloads)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${NEW_TAG})
+          [![Release](https://img.shields.io/static/v1?label=Release&message=${NEW_TAG}&color=007ec6&style=flat-square)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${NEW_TAG})
+          [![Downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${NEW_TAG}/total?style=flat-square&color=green&label=downloads&v=1)](${{ github.server_url }}/${{ github.repository }}/releases/tag/${NEW_TAG})
           [![Workflow](https://img.shields.io/badge/Workflow-Build--Kernel-orange?style=flat-square)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           
           <br>
@@ -1214,7 +985,7 @@ jobs:
             if [[ -n "$feature_flags" ]]; then
               IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync <<< "$feature_flags"
               [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
-              [[ "$susfs" == "true" ]] && features+=("ඞ SusFS")
+              features+=("ඞ SusFS (LKM)")
               if [[ "$bbr" == "true" ]]; then
                 # Show BBRv3 when bbr3 flag is true, otherwise BBR
                 bbr3_flag=$(echo "$JSON_BUILD_DATA" | jq -r --arg MODEL "$model" --arg ORIG_MODEL "$possible_orig_model" --arg OS "$os_ver" '
@@ -1256,6 +1027,7 @@ jobs:
           | **KernelSU Next Version** | \`$ksu_ver_global\` |
           | **SUSFS Version** | \`$SUSFS_BASE_VERSION\` |
           | **Optimization Level** | \`$OPTIMIZE_LEVEL\` |
+          | **MLGO** | \`$MLGO\` |
           | **Clean Build** | $( [ "$CLEAN_BUILD" = "true" ] && echo "✅ Yes" || echo "❌ No" ) |
           
           ### 📌 SUSFS Branch Mapping
@@ -1419,11 +1191,18 @@ jobs:
             --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" \
             --title "${{ env.RELEASE_NAME }}" \
             --notes-file release_notes.md \
-            --draft
+            --draft || gh release edit "$NEW_TAG" --repo "${{ env.REPO_OWNER }}/${{ env.REPO_NAME }}" --title "${{ env.RELEASE_NAME }}" --notes-file release_notes.md --draft
 
       - name: 📤 Upload Release Assets Dynamically
         run: |
           for file in ./downloaded-artifacts/*.zip; do
+            if [ -f "$file" ]; then
+              echo "Uploading $file..."
+              gh release upload "$NEW_TAG" "$file" --clobber
+            fi
+          done
+
+          for file in ./downloaded-artifacts/*.apk; do
             if [ -f "$file" ]; then
               echo "Uploading $file..."
               gh release upload "$NEW_TAG" "$file" --clobber

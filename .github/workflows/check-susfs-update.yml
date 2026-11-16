@@ -16,7 +16,7 @@ on:
 jobs:
   check-susfs:
     name: 🔍 Check for new SUSFS version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       issues: write
       contents: read
