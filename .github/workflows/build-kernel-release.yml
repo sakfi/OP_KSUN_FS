@@ -843,6 +843,26 @@ jobs:
           run-id: ${{ inputs.workflow_mode == 'Release Only' && inputs.run_id_to_release || github.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download KSUN Manager
+        uses: nullptr-t-oss/composite_actions/fetch_ksu_manager@main
+        if: ${{ fromJSON(needs.set-op-model.outputs.ksu_options_normalized)[0].type == 'KSUN' }}
+        continue-on-error: true
+        with:
+          ksu-type: ksun
+          dist-dir: ./downloaded-artifacts
+          commit-hash: ${{ needs.set-op-model.outputs.ksu_resolved_hash }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download KSU Manager
+        uses: nullptr-t-oss/composite_actions/fetch_ksu_manager@main
+        if: ${{ fromJSON(needs.set-op-model.outputs.ksu_options_normalized)[0].type == 'KSU' }}
+        continue-on-error: true
+        with:
+          ksu-type: ksu
+          dist-dir: ./downloaded-artifacts
+          commit-hash: ${{ needs.set-op-model.outputs.ksu_resolved_hash }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 📋 List Downloaded Artifacts
         run: |
           echo "=== Downloaded artifacts ==="
@@ -1176,6 +1196,13 @@ jobs:
       - name: 📤 Upload Release Assets Dynamically
         run: |
           for file in ./downloaded-artifacts/*.zip; do
+            if [ -f "$file" ]; then
+              echo "Uploading $file..."
+              gh release upload "$NEW_TAG" "$file" --clobber
+            fi
+          done
+
+          for file in ./downloaded-artifacts/*.apk; do
             if [ -f "$file" ]; then
               echo "Uploading $file..."
               gh release upload "$NEW_TAG" "$file" --clobber
