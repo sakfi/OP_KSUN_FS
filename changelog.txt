@@ -1,3 +1,17 @@
-• Updated KSUN version to 33403.
-• Updated SUSFS to v2.3.0+ across all GKI versions (5.10 - 6.12).
-• Updated all the latest kernel source code from OSS
+• Updated KSUN version to 33553.
+• Add SusFS v2.4.0 support and CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER.
+• Apply hide_adb_jdwp_sockets.patch to hide ADB and JDWP sockets.
+• Upload matching KSUN/KSU Manager APK alongside kernel release assets.
+• Add OnePlus 15 A16 6.12.23 Support (OP15-6.12.23).
+• Add OnePlus Nord CE6 A16 Support.
+• Add OnePlus N6X A16 Support.
+• Add OnePlus 13R A16 Support (OP13r-6.1.141).
+• Fix mt6895 boot issue caused by debloat vendor modules commit.
+• Enable CONFIG_MACVLAN for Updated Droidspaces support.
+• Add MLGO support with automatic compiler heuristic detection.
+• Fix sound issue caused by an exception in 5.10.226+ kernels (mtk-tfa98xx firmware traversal).
+• Fix bootloop caused by export test_task_ux in 6.1.141+ kernels.
+• Fix task_struct KABI alignment on 6.1.157 and above for Nord 5.
+• Fix missing linux/dma-buf.h on early Android 16 6.12 (below sublevel 92) kernels.
+• Transitioned to pure Built-in KSUN with modular SUSFS Guard LKM via KSUN Manager.
+• Updated all kernel source trees to the latest available OSS drops.
