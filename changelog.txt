@@ -12,6 +12,6 @@
 • Fix sound issue caused by an exception in 5.10.226+ kernels (mtk-tfa98xx firmware traversal).
 • Fix bootloop caused by export test_task_ux in 6.1.141+ kernels.
 • Fix task_struct KABI alignment on 6.1.157 and above for Nord 5.
-• Fix missing linux/dma-buf.h on early Android 16 6.12 (<92) kernels.
+• Fix missing linux/dma-buf.h on early Android 16 6.12 (below sublevel 92) kernels.
 • Transitioned to pure Built-in KSUN with modular SUSFS Guard LKM via KSUN Manager.
 • Updated all kernel source trees to the latest available OSS drops.

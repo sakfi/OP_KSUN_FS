@@ -142,40 +142,70 @@ jobs:
             CLEAN_CHANGELOG=$(echo "$REL_BODY" | awk '/^### This Release/ {flag=1; next} /^### Previous Releases/ || /^---/ || /^## / {flag=0} flag && /^- /')
           fi
           if [ -z "$CLEAN_CHANGELOG" ]; then CLEAN_CHANGELOG="- Minor updates and under the hood improvements"; fi
-          if [[ ${#CLEAN_CHANGELOG} -gt 3500 ]]; then CLEAN_CHANGELOG="${CLEAN_CHANGELOG:0:3500}..."; fi
+          if [[ ${#CLEAN_CHANGELOG} -gt 2500 ]]; then CLEAN_CHANGELOG="${CLEAN_CHANGELOG:0:2500}... (truncated)"; fi
+
+          # ── HTML Entity Escaping for Telegram HTML parse_mode ──
+          # Telegram HTML requires <, >, and & to be escaped as &lt;, &gt;, &amp; even inside <pre><code>
+          escape_html() {
+            python3 -c "import sys, html; sys.stdout.write(html.escape(sys.stdin.read(), quote=False))"
+          }
+
+          REL_TAG_ESC=$(echo -n "$REL_TAG" | escape_html)
+          REL_NAME_ESC=$(echo -n "$REL_NAME" | escape_html)
+          FEATURES_BLOCK_ESC=$(echo -n "$FEATURES_BLOCK" | escape_html)
+          CLEAN_CHANGELOG_ESC=$(echo -n "$CLEAN_CHANGELOG" | escape_html)
+          REL_URL_ESC=$(python3 -c "import sys, html; sys.stdout.write(html.escape(sys.stdin.read().strip(), quote=True))" <<< "$REL_URL")
 
           # Build message (HTML formatted)
           MESSAGE=$(cat <<EOF
-          <b>$EMOJI $STATUS</b>
+<b>$EMOJI $STATUS</b>
 
-          <pre><code class="language-markdown">Kernel Name: OnePlus Kernels with KSUN & SUSFS
-          Version / Tag: $REL_TAG
-          Title: $REL_NAME
-          Device: Any supported OnePlus device (Check GitHub for your device)
+<pre><code class="language-markdown">Kernel Name: OnePlus Kernels with KSUN &amp; SUSFS
+Version / Tag: $REL_TAG_ESC
+Title: $REL_NAME_ESC
+Device: Any supported OnePlus device (Check GitHub for your device)
 
-          $FEATURES_BLOCK
+$FEATURES_BLOCK_ESC
 
-          Changelog:
-          $CLEAN_CHANGELOG</code></pre>
+Changelog:
+$CLEAN_CHANGELOG_ESC</code></pre>
 
-          <b>Important:</b>
-          - Flash via Kernel Flasher (for KernelSU/Next) or FKM.
-          - If you run into issues, please provide logs in the GitHub repository.
-          - Support the development by leaving a 🌟 on GitHub!
+<b>Important:</b>
+- Flash via Kernel Flasher (for KernelSU/Next) or FKM.
+- If you run into issues, please provide logs in the GitHub repository.
+- Support the development by leaving a 🌟 on GitHub!
 
-          🔗 <a href="$REL_URL">Download Release on GitHub</a>
-          EOF
+🔗 <a href="$REL_URL_ESC">Download Release on GitHub</a>
+EOF
           )
 
           send_telegram() {
             local chat_id="$1"
             if [ -n "$chat_id" ]; then
               echo "Sending to $chat_id..."
-              curl -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+              RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
                 --data-urlencode "chat_id=$chat_id" \
                 --data-urlencode "text=$MESSAGE" \
-                --data-urlencode "parse_mode=HTML" \
-                -w "\n"
+                --data-urlencode "parse_mode=HTML")
+              echo "Response: $RESPONSE"
+
+              if ! echo "$RESPONSE" | grep -q '"ok":true'; then
+                echo "Warning: HTML message sending failed for $chat_id. Retrying with plain text fallback..."
+                FALLBACK_MSG=$(echo "$MESSAGE" | python3 -c "
+import html, re, sys
+raw = sys.stdin.read()
+clean = re.sub(r'<[^>]+>', '', raw)
+sys.stdout.write(html.unescape(clean))
+")
+                FB_RESP=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+                  --data-urlencode "chat_id=$chat_id" \
+                  --data-urlencode "text=$FALLBACK_MSG")
+                echo "Fallback response: $FB_RESP"
+                if ! echo "$FB_RESP" | grep -q '"ok":true'; then
+                  echo "::error::Telegram notification failed for $chat_id: $FB_RESP"
+                  exit 1
+                fi
+              fi
             else
               echo "Warning: Chat ID missing"
             fi
