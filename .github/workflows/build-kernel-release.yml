@@ -833,15 +833,117 @@ jobs:
           git tag -f $NEW_TAG
           git push -f origin $NEW_TAG || true
 
-      - name: 📥 Download Artifacts
+      - name: 📥 Download Artifacts (Current Run Runtime)
+        if: ${{ inputs.workflow_mode != 'Release Only' }}
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           path: ./downloaded-artifacts
           merge-multiple: true
           skip-decompress: true
           digest-mismatch: warn
-          run-id: ${{ inputs.workflow_mode == 'Release Only' && inputs.run_id_to_release || github.run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📥 Download Artifacts (Rate-Limit Safe Throttled Downloader)
+        env:
+          TARGET_RUN_ID: ${{ inputs.workflow_mode == 'Release Only' && inputs.run_id_to_release || github.run_id }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, sys, json, time, urllib.request, urllib.error
+          from concurrent.futures import ThreadPoolExecutor, as_completed
+
+          repo = os.environ["REPO_OWNER"] + "/" + os.environ["REPO_NAME"]
+          run_id = os.environ["TARGET_RUN_ID"].strip()
+          token = os.environ["GH_TOKEN"].strip()
+          dest_dir = "./downloaded-artifacts"
+          os.makedirs(dest_dir, exist_ok=True)
+
+          class NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  r = super().redirect_request(req, fp, code, msg, headers, newurl)
+                  r.headers.pop("Authorization", None)
+                  r.unredirected_hdrs.pop("Authorization", None)
+                  return r
+
+          opener = urllib.request.build_opener(NoAuthRedirect)
+
+          def api_get(url, retries=6):
+              for attempt in range(retries):
+                  try:
+                      req = urllib.request.Request(url, headers={
+                          "Authorization": f"Bearer {token}",
+                          "Accept": "application/vnd.github+json",
+                          "User-Agent": "OP_KSUN_FS-Release-Downloader"
+                      })
+                      return opener.open(req, timeout=60)
+                  except urllib.error.HTTPError as e:
+                      if e.code in (403, 429, 500, 502, 503, 504) and attempt < retries - 1:
+                          retry_after = int(e.headers.get("Retry-After", 0)) or (3 * (attempt + 1))
+                          print(f"[WARN] HTTP {e.code} on {url} — sleeping {retry_after}s (attempt {attempt+1}/{retries})...", flush=True)
+                          time.sleep(retry_after)
+                          continue
+                      raise
+
+          # 1. Fetch full paginated artifact list for TARGET_RUN_ID
+          artifacts = []
+          page = 1
+          while True:
+              url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100&page={page}"
+              with api_get(url) as resp:
+                  data = json.loads(resp.read().decode("utf-8"))
+              batch = data.get("artifacts", [])
+              artifacts.extend(batch)
+              if len(batch) < 100 or len(artifacts) >= data.get("total_count", 0):
+                  break
+              page += 1
+
+          print(f"Found {len(artifacts)} total artifacts in run {run_id}.", flush=True)
+
+          # Filter out internal ccache-binary artifact; keep kernel zips & matrix.json
+          to_download = []
+          for a in artifacts:
+              if a.get("expired"):
+                  continue
+              name = a["name"]
+              if name == "ccache-binary" or name.endswith("_patch_rejects") or name.endswith("_ccache.log"):
+                  continue
+              out_name = "matrix.json" if name == "build-matrix" else name
+              out_path = os.path.join(dest_dir, out_name)
+              if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+                  continue
+              to_download.append((a, out_path))
+
+          print(f"Need to download {len(to_download)} artifacts (throttled to 4 concurrent workers)...", flush=True)
+
+          def download_one(item):
+              art, out_path = item
+              dl_url = art["archive_download_url"]
+              tmp_path = out_path + ".part"
+              for attempt in range(5):
+                  try:
+                      with api_get(dl_url) as resp, open(tmp_path, "wb") as f:
+                          while True:
+                              chunk = resp.read(1024 * 256)
+                              if not chunk:
+                                  break
+                              f.write(chunk)
+                      os.replace(tmp_path, out_path)
+                      return art["name"]
+                  except Exception as exc:
+                      if attempt == 4:
+                          raise RuntimeError(f"Failed to download {art['name']}: {exc}") from exc
+                      time.sleep(2 * (attempt + 1))
+
+          completed = 0
+          with ThreadPoolExecutor(max_workers=4) as pool:
+              futures = [pool.submit(download_one, item) for item in to_download]
+              for fut in as_completed(futures):
+                  name = fut.result()
+                  completed += 1
+                  if completed % 10 == 0 or completed == len(to_download):
+                      print(f"Downloaded [{completed}/{len(to_download)}] ({name})", flush=True)
+
+          print("All artifacts downloaded successfully!", flush=True)
+          PYEOF
 
       - name: Download KSUN Manager
         uses: nullptr-t-oss/composite_actions/fetch_ksu_manager@main
