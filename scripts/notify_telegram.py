@@ -83,7 +83,7 @@ def extract_features(rel_body):
             variants.append(name)
         elif any(k in lower for k in ["bbr", "wireguard", "ttl", "ip.set", "ipset"]):
             network.append(name)
-        elif any(k in lower for k in ["droidspaces", "ntsync", "hmbird", "tmpfs"]):
+        elif any(k in lower for k in ["droidspaces", "ntsync", "hmbird", "tmpfs", "sdp", "charging"]):
             advanced.append(name)
         elif any(k in lower for k in ["bbg", "manual.hooks", "unicode", "socket"]):
             security.append(name)

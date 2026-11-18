@@ -1080,12 +1080,12 @@ jobs:
             feature_flags=$(echo "$JSON_BUILD_DATA" | jq -r --arg MODEL "$model" --arg ORIG_MODEL "$possible_orig_model" --arg OS "$os_ver" '
               ([ .[] | select(.model == $ORIG_MODEL and .os_version == $OS) ][0]) //
               ([ .[] | select(.model == $MODEL      and .os_version == $OS) ][0]) |
-              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)"
+              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)\t\(.sdp900ma // false)"
             ' | head -n 1)
             
             features=()
             if [[ -n "$feature_flags" ]]; then
-              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync <<< "$feature_flags"
+              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync sdp900ma <<< "$feature_flags"
               [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
               features+=("ඞ SusFS (LKM)")
               if [[ "$bbr" == "true" ]]; then
@@ -1107,6 +1107,7 @@ jobs:
               [[ "$unicode" == "true" ]] && features+=("🔧 Unicode")
               [[ "$ds" == "true" ]] && features+=("💻 Droidspaces")
               [[ "$ntsync" == "true" ]] && features+=("🔃 NTSync")
+              [[ "$sdp900ma" == "true" ]] && features+=("🔌 Faster SDP Charging")
             fi
             
             features_str=$(IFS=' '; echo "${features[*]:-N/A}")
@@ -1166,6 +1167,7 @@ jobs:
           | 🚀 **Optimization** | Memory, I/O, CPU scheduler, network tuning patches |
           | 🔋 **Battery** | Multi-patch suite for power efficiency and wakelock reduction |
           | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
+          | 🔌 **Faster SDP Charging** | Allow 900mA instead of 500mA on USB SDP data ports |
           
           <br>
           
