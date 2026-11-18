@@ -13,5 +13,6 @@
 • Fix bootloop caused by export test_task_ux in 6.1.141+ kernels.
 • Fix task_struct KABI alignment on 6.1.157 and above for Nord 5.
 • Fix missing linux/dma-buf.h on early Android 16 6.12 (below sublevel 92) kernels.
+• Allow 900 mA on (SDP) USB data ports instead of fixed 500mA.
 • Transitioned to pure Built-in KSUN with modular SUSFS Guard LKM via KSUN Manager.
 • Updated all kernel source trees to the latest available OSS drops.
