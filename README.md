@@ -164,10 +164,16 @@ Configurations are maintained under [`configs/`](./configs/). Build manifests su
 3. **Reboot**:
    - Reboot your device normally. Built-in **KernelSU-Next** will be active immediately on boot.
 
-4. **Enable SUSFS LKM in Manager**:
-   - Install or open the **KernelSU-Next Manager** APK from [KernelSU-Next Releases](https://github.com/KernelSU-Next/KernelSU-Next/releases).
-   - Navigate to **Settings** inside the Manager app and **enable SUSFS** (LKM).
+4. **Enable SUSFS LKM in Manager (Important)**:
+   - Install or open the **KernelSU-Next Manager** APK (bundled in our releases or from [KernelSU-Next Releases](https://github.com/KernelSU-Next/KernelSU-Next/releases)).
+   - Open **Settings** → tap **Load SUSFS LKM** (*"Load the SUSFS guard kernel module."*).
+   - Turn **ON** **Enable auto load** (*"Automatically load the SUSFS module during startup."*).
+   - Tap **Load** to activate the SUSFS guard kernel module immediately (the button will switch to **Unload** once loaded).
    - Enjoy built-in KernelSU-Next root with modular SUSFS stealth protection!
+
+   <div align="center">
+     <img src="assets/susfs_lkm_settings.jpg" alt="Load SUSFS LKM in KernelSU-Next Manager Settings" width="300" />
+   </div>
 
 ---
 
