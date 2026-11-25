@@ -29,7 +29,7 @@ inputs:
     type: string
     default: ''
   optimize_level:
-    description: 'Compiler optimization level (O2 or O3)'
+    description: 'Compiler optimization level (O2, O3, or Os)'
     required: false
     type: string
     default: O2
@@ -103,6 +103,11 @@ inputs:
     default: true
   docker_cgroups:
     description: 'Enable full Docker/LXC cgroups, veth, bridge & OverlayFS support'
+    required: false
+    type: boolean
+    default: true
+  usb_peripherals:
+    description: 'Enable USB Ethernet (RTL8152/AX88179), Serial, UVC Capture, USB-C DAC Audio, DriveDroid ISO & MPTCP'
     required: false
     type: boolean
     default: true
@@ -400,8 +405,8 @@ runs:
         fi
         
         case "$optimize" in
-          O2|O3) ;;
-          *) errors+=("optimize_level must be O2 or O3. Got: '$optimize'"); ;;
+          O2|O3|Os) ;;
+          *) errors+=("optimize_level must be O2, O3, or Os. Got: '$optimize'"); ;;
         esac
 
         case "${mlgo}" in
@@ -2312,6 +2317,30 @@ runs:
         CONFIG_OVERLAY_FS=y
         EOF
 
+    - name: Add USB Peripherals, Audio DAC, DriveDroid & MPTCP Pack
+      shell: bash
+      if: ${{ inputs.usb_peripherals == true || inputs.usb_peripherals == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add USB Ethernet, Serial, UVC Capture, USB-C DAC Audio, DriveDroid & MPTCP"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_USB_RTL8152=y
+        CONFIG_USB_NET_AX88179_178A=y
+        CONFIG_USB_NET_CDC_NCM=y
+        CONFIG_USB_SERIAL=y
+        CONFIG_USB_SERIAL_CH341=y
+        CONFIG_USB_SERIAL_CP210X=y
+        CONFIG_USB_SERIAL_FTDI_SIO=y
+        CONFIG_MEDIA_USB_SUPPORT=y
+        CONFIG_USB_VIDEO_CLASS=y
+        CONFIG_SND_USB_AUDIO=y
+        CONFIG_SND_HRTIMER=y
+        CONFIG_USB_CONFIGFS_MASS_STORAGE=y
+        CONFIG_USB_F_MASS_STORAGE=y
+        CONFIG_MPTCP=y
+        CONFIG_MPTCP_IPV6=y
+        EOF
+
     - name: Add Tmpfs Support
       shell: bash
       run: |
@@ -2790,10 +2819,13 @@ runs:
         fi
         
         if [ "${{ inputs.optimize_level }}" = "O3" ]; then
-          scripts/config --file "$OUT/.config" -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
+          scripts/config --file "$OUT/.config" -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
           KCFLAGS_EXTRA="-O3"
+        elif [ "${{ inputs.optimize_level }}" = "Os" ]; then
+          scripts/config --file "$OUT/.config" -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3 -e CC_OPTIMIZE_FOR_SIZE
+          KCFLAGS_EXTRA="-Os"
         else
-          scripts/config --file "$OUT/.config" -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+          scripts/config --file "$OUT/.config" -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3 -d CC_OPTIMIZE_FOR_SIZE
           KCFLAGS_EXTRA="-O2"
         fi
         
@@ -3226,6 +3258,7 @@ runs:
           echo "Gaming Controllers & HID: ${{ inputs.gaming_hid }}"
           echo "OTG Filesystems (NTFS3/exFAT): ${{ inputs.otg_fs }}"
           echo "Docker/LXC Cgroups: ${{ inputs.docker_cgroups }}"
+          echo "USB Ethernet/DAC/DriveDroid/MPTCP: ${{ inputs.usb_peripherals }}"
           echo "CVE-2026-43499 Fix: ${CVE_FIX_ACTIVE:-false}"
           echo "LZ4 1.10 / ZSTD 1.5.7: ${LZ4_ZSTD_ACTIVE:-false}"
           echo ""
@@ -3309,6 +3342,7 @@ runs:
           echo "| **Gaming Controllers & HID** | ${{ inputs.gaming_hid }} |"
           echo "| **OTG Filesystems (NTFS3/exFAT)** | ${{ inputs.otg_fs }} |"
           echo "| **Docker/LXC Cgroups** | ${{ inputs.docker_cgroups }} |"
+          echo "| **USB Ethernet/DAC/DriveDroid/MPTCP** | ${{ inputs.usb_peripherals }} |"
           echo "| **CVE-2026-43499 Fix** | ${CVE_FIX_ACTIVE:-false} |"
           echo "| **LZ4 1.10 / ZSTD 1.5.7** | ${LZ4_ZSTD_ACTIVE:-false} |"
           

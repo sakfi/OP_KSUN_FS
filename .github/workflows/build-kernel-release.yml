@@ -155,7 +155,7 @@ on:
           - main
         default: disk-api
       enable_feature_packs:
-        description: '📦 Enable Clean GKI Feature Packs (TPROXY, Controllers/HID, NTFS3/exFAT, Docker Cgroups)'
+        description: '📦 Clean GKI Feature Packs (TPROXY, Controllers/HID, NTFS3/exFAT, Docker, USB-Eth/DAC/DriveDroid/MPTCP)'
         required: false
         type: boolean
         default: true
@@ -165,10 +165,10 @@ on:
         type: boolean
         default: true
       optimize_level:
-        description: "Compiler optimization level"
+        description: "Compiler optimization level (O2 = balanced, O3 = max speed, Os = cool/battery I-cache)"
         required: true
         type: choice
-        options: [O2, O3]
+        options: [O2, O3, Os]
         default: O2
       mlgo:
         description: 'Do you want to enable mlgo? [Machine Learning Guided Optimization]'
@@ -673,6 +673,7 @@ jobs:
           gaming_hid: ${{ inputs.enable_feature_packs }}
           otg_fs: ${{ inputs.enable_feature_packs }}
           docker_cgroups: ${{ inputs.enable_feature_packs }}
+          usb_peripherals: ${{ inputs.enable_feature_packs }}
           cve_fixes: ${{ inputs.enable_external_patches }}
           lz4_zstd_opt: ${{ inputs.enable_external_patches }}
           build_timestamp: ${{ inputs.build_timestamp }}
@@ -746,6 +747,7 @@ jobs:
           gaming_hid: ${{ inputs.enable_feature_packs }}
           otg_fs: ${{ inputs.enable_feature_packs }}
           docker_cgroups: ${{ inputs.enable_feature_packs }}
+          usb_peripherals: ${{ inputs.enable_feature_packs }}
           cve_fixes: ${{ inputs.enable_external_patches }}
           lz4_zstd_opt: ${{ inputs.enable_external_patches }}
           build_timestamp: ${{ inputs.build_timestamp }}
@@ -819,6 +821,7 @@ jobs:
           gaming_hid: ${{ inputs.enable_feature_packs }}
           otg_fs: ${{ inputs.enable_feature_packs }}
           docker_cgroups: ${{ inputs.enable_feature_packs }}
+          usb_peripherals: ${{ inputs.enable_feature_packs }}
           cve_fixes: ${{ inputs.enable_external_patches }}
           lz4_zstd_opt: ${{ inputs.enable_external_patches }}
           build_timestamp: ${{ inputs.build_timestamp }}
@@ -1234,6 +1237,10 @@ jobs:
           | 🎮 **Controllers & HID** | Native DualSense, Xbox, Switch Pro controllers & USB HID gadget |
           | 💾 **NTFS3 & exFAT** | Native kernel read/write support for USB OTG storage |
           | 🐳 **Docker / LXC Cgroups** | Full cgroup, veth, bridge & OverlayFS container support |
+          | 🔌 **USB Ethernet, Serial & UVC** | Native RTL8152/AX88179 Gigabit LAN, CH341/CP210X/FTDI serial & HDMI UVC capture |
+          | 🎧 **USB-C DAC & Hi-Res Audio** | Native UAC1/2/3 USB Audio + high-resolution ALSA timer support |
+          | 💿 **DriveDroid ISO Boot** | USB Mass Storage / CD-ROM gadget support for booting PCs over USB-C |
+          | 📡 **Multipath TCP (MPTCP)** | Dual-path TCP networking (Wi-Fi + Cellular aggregation) |
           | 🔒 **CVE-2026-43499** | Security patch for Linux rtmutex vulnerability (6.1 / 6.6 / 6.12) |
           | 🗜️ **LZ4 1.10 / ZSTD 1.5.7** | ARM64 ASM accelerated ZRAM compression & decompression |
           
