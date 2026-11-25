@@ -56,6 +56,36 @@ inputs:
     required: false
     type: string
     default: 'builtin'
+  afdo:
+    description: 'Enable stock AutoFDO profile-guided optimization when kernel.afdo is available'
+    required: false
+    type: boolean
+    default: true
+  bbg_branch:
+    description: 'Baseband Guard branch to install (disk-api or main)'
+    required: false
+    type: string
+    default: 'disk-api'
+  wireguard:
+    description: 'Enable in-kernel WireGuard VPN support (CONFIG_WIREGUARD=y)'
+    required: false
+    type: boolean
+    default: true
+  battery_opt:
+    description: 'Enable MGLRU and ZRAM (LZ4/ZSTD) memory/battery optimizations'
+    required: false
+    type: boolean
+    default: true
+  usbadb_gate:
+    description: 'Global override: force-enable USB-gated ADB driver (usbadb_gate)'
+    required: false
+    type: boolean
+    default: false
+  zeromount:
+    description: 'Global override: enable experimental ZeroMount VFS redirection'
+    required: false
+    type: boolean
+    default: false
 
 outputs:
   kernel_version:
@@ -161,6 +191,16 @@ runs:
         ds="$OP_DS"
         ntsync="$OP_NTSYNC"
         sdp900ma="$OP_SDP900MA"
+        usbadb_gate="${OP_USBADB_GATE:-false}"
+        zeromount="${OP_ZEROMOUNT:-false}"
+        if [[ "${{ inputs.usbadb_gate }}" == "true" ]]; then
+          usbadb_gate="true"
+        fi
+        if [[ "${{ inputs.zeromount }}" == "true" ]]; then
+          zeromount="true"
+        fi
+        echo "OP_USBADB_GATE=$usbadb_gate" >> "$GITHUB_ENV"
+        echo "OP_ZEROMOUNT=$zeromount" >> "$GITHUB_ENV"
         blacklist_modules="$OP_BLACKLIST_MODULES"
         optimize='${{ inputs.optimize_level }}'
         mlgo='${{ inputs.mlgo }}'
@@ -320,6 +360,14 @@ runs:
         elif [[ "$sdp900ma" != "true" && "$sdp900ma" != "false" ]]; then
           errors+=("Input 'sdp900ma' contains invalid characters. Allowed: 'true' or 'false'. Got: '$sdp900ma'")
         fi
+
+        if [[ "$usbadb_gate" != "true" && "$usbadb_gate" != "false" ]]; then
+          errors+=("Input 'usbadb_gate' contains invalid characters. Allowed: 'true' or 'false'. Got: '$usbadb_gate'")
+        fi
+
+        if [[ "$zeromount" != "true" && "$zeromount" != "false" ]]; then
+          errors+=("Input 'zeromount' contains invalid characters. Allowed: 'true' or 'false'. Got: '$zeromount'")
+        fi
         
         case "$optimize" in
           O2|O3) ;;
@@ -432,6 +480,7 @@ runs:
         AK3_DIR="$CONFIG_DIR/AnyKernel3"
         DEBUG_ARTIFACTS_DIR="$GITHUB_WORKSPACE/debug_artifacts"
         KERNEL_PATCHES_DIR="$GITHUB_WORKSPACE/kernel_patches"
+        ZEROMOUNT_DIR="$GITHUB_WORKSPACE/Super-Builders"
         SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
         KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
         KSUN_DIR="$KERNEL_PLATFORM_DIR/KernelSU-Next"
@@ -439,6 +488,13 @@ runs:
         mkdir -p "$ARTIFACTS_DIR"
         mkdir -p "$DEBUG_ARTIFACTS_DIR"
         mkdir -p "$LKM_DIR"
+
+        AFDO_PROFILE=""
+        if [ -f "$COMMON_KERNEL_DIR/android/gki/aarch64/afdo/kernel.afdo" ]; then
+          AFDO_PROFILE="$COMMON_KERNEL_DIR/android/gki/aarch64/afdo/kernel.afdo"
+        elif [ -f "$COMMON_KERNEL_DIR/gki/aarch64/afdo/kernel.afdo" ]; then
+          AFDO_PROFILE="$COMMON_KERNEL_DIR/gki/aarch64/afdo/kernel.afdo"
+        fi
         
         # Save to environment for later steps
         echo "CONFIG_FOLDER=$CONFIG_DIR" >> "$GITHUB_ENV"
@@ -449,10 +505,12 @@ runs:
         echo "AK3_FOLDER=$AK3_DIR" >> "$GITHUB_ENV"
         echo "DEBUG_ARTIFACTS_FOLDER=$DEBUG_ARTIFACTS_DIR" >> "$GITHUB_ENV"
         echo "KERNEL_PATCHES_FOLDER=$KERNEL_PATCHES_DIR" >> "$GITHUB_ENV"
+        echo "ZEROMOUNT_FOLDER=$ZEROMOUNT_DIR" >> "$GITHUB_ENV"
         echo "SUSFS_FOLDER=$SUSFS_DIR" >> "$GITHUB_ENV"
         echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
         echo "KSUN_FOLDER=$KSUN_DIR" >> "$GITHUB_ENV"
         echo "LKM_FOLDER=$LKM_DIR" >> "$GITHUB_ENV"
+        echo "AFDO_PROFILE_PATH=$AFDO_PROFILE" >> "$GITHUB_ENV"
         
         DEBUG_ZIP_NAME="debug_${OP_MODEL}_${OP_OS_VERSION}.zip"
         echo "DEBUG_ZIP_NAME=$DEBUG_ZIP_NAME" >> "$GITHUB_ENV"
@@ -1575,9 +1633,15 @@ runs:
         set -euo pipefail
         echo "::group::Add BBG LSM"
         cd "$KERNEL_PLATFORM_FOLDER"
-        echo "Adding BBG..."
-        if ! wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash -s main; then
-          echo "::warning::BBG setup script failed, continuing anyway"
+        echo "Adding BBG (branch: ${{ inputs.bbg_branch }})..."
+        BBG_BRANCH="${{ inputs.bbg_branch }}"
+        if ! wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash -s "$BBG_BRANCH"; then
+          if [ "$BBG_BRANCH" != "main" ]; then
+            echo "::warning::BBG setup failed for branch '$BBG_BRANCH', falling back to 'main'..."
+            wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash -s main || echo "::warning::BBG setup script failed, continuing anyway"
+          else
+            echo "::warning::BBG setup script failed, continuing anyway"
+          fi
         fi
         echo "CONFIG_BBG=y" >> common/arch/arm64/configs/gki_defconfig
         sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' common/security/Kconfig
@@ -1741,7 +1805,27 @@ runs:
           fi
         done
 
-        ccache --set-config=extra_files_to_hash="$copied_modules"
+        if [ -n "$copied_modules" ]; then
+          echo "CCACHE_EXTRAFILES=$copied_modules" >> "$GITHUB_ENV"
+        fi
+
+        # Revert problematic F2FS commits on a14-6.1.141+ OnePlus kernels to fix bootloops
+        SUBLEVEL="${TKERNEL_VER##*.}"
+        if [ "$ANDROID_VER" = "android14" ] && [ "$KERNEL_VER" = "6.1" ] && [[ "$SUBLEVEL" =~ ^[0-9]+$ ]] && [ "$SUBLEVEL" -ge 141 ]; then
+          echo "Checking OnePlus a14-6.1.141+ F2FS bootloop revert patches..."
+          for rev_patch in \
+            "$KERNEL_PATCHES_FOLDER/oneplus/reverts/boost_priority_of_F2FS_checkpoint_flush_thread.patch" \
+            "$KERNEL_PATCHES_FOLDER/oneplus/reverts/f2fs_ignore_compressed.patch"; do
+            if [ -f "$rev_patch" ]; then
+              if patch --dry-run -p1 -R --batch < "$rev_patch" >/dev/null 2>&1; then
+                echo "Applying revert: $(basename "$rev_patch")"
+                patch -p1 -R --batch --no-backup-if-mismatch < "$rev_patch"
+              else
+                echo "ℹ️ Skipping revert $(basename "$rev_patch") (not present or already reverted)"
+              fi
+            fi
+          done
+        fi
 
         # Fix undefined get_PCB_Version symbol in wl2868c-regulator module (OP-N6 / mt6835)
         while IFS= read -r -d '' reg_file; do
@@ -1771,6 +1855,41 @@ runs:
         cd "$COMMON_KERNEL_FOLDER"
         patch -p1 < "$KERNEL_PATCHES_FOLDER/oneplus/0001-misc-oplus-sdp-900ma.patch"
         echo "✅ Faster SDP Charging support patch applied"
+        echo "::endgroup::"
+
+    - name: Add USB based ADB gating support
+      if: ${{ env.OP_USBADB_GATE == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Add USB based ADB gating support"
+        cd "$COMMON_KERNEL_FOLDER"
+
+        if [ "${KSUMODE:-builtin}" = "lkm" ] || [ ! -d "$KSUN_FOLDER" ]; then
+          echo "::warning::usbadb_gate requires built-in KernelSU-Next (KERNEL_SU_RC). Skipping for mode=${KSUMODE:-builtin}."
+        else
+          chmod +x "$KERNEL_PATCHES_FOLDER/common/usbadb-gate/patches/apply.sh"
+          "$KERNEL_PATCHES_FOLDER/common/usbadb-gate/patches/apply.sh" "$COMMON_KERNEL_FOLDER" "$KSUN_FOLDER"
+
+          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_USBADB_GATE=y
+        EOF
+
+          case "$OP_BRANCH" in
+            wild/sm*)
+              printf 'CONFIG_USBADB_GATE_UDC_STATE="%s"\n' \
+                  "/sys/class/udc/a600000.dwc3/state" \
+                  >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+            ;;
+            *)
+              printf 'CONFIG_USBADB_GATE_UDC_STATE="%s"\n' \
+                  "/sys/class/udc/11200000.usb/state" \
+                  >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+            ;;
+          esac
+
+          echo "✅ USB based ADB gating support patch applied"
+        fi
         echo "::endgroup::"
 
     - name: Apply Optimisation Patches
@@ -1907,6 +2026,63 @@ runs:
         else
             patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1+.patch"
         fi
+
+    - name: Apply ZeroMount Support
+      shell: bash
+      if: ${{ env.OP_ZEROMOUNT == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply ZeroMount Support"
+        rm -rf "$ZEROMOUNT_FOLDER"
+        for attempt in 1 2 3; do
+          echo "🔄 Attempt $attempt/3: cloning Enginex0/Super-Builders (feature/patch-restructure)..."
+          if git clone --branch "feature/patch-restructure" --depth 1 "https://github.com/Enginex0/Super-Builders.git" "$ZEROMOUNT_FOLDER"; then
+            break
+          fi
+          rm -rf "$ZEROMOUNT_FOLDER"
+          sleep $((attempt * 5))
+        done
+
+        ZM_PATCH="$ZEROMOUNT_FOLDER/${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}/KernelSU-Next/patches/60_zeromount-${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}.patch"
+        if [ -f "$ZM_PATCH" ]; then
+          cd "$COMMON_KERNEL_FOLDER"
+          patch -p1 -F3 --forward --no-backup-if-mismatch < "$ZM_PATCH"
+          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_ZEROMOUNT=y
+        CONFIG_KSU_SUSFS_SUS_KSTAT_REDIRECT=n
+        CONFIG_KSU_SUSFS_UNICODE_FILTER=n
+        CONFIG_KSU_SUSFS_HIDDEN_NAME=n
+        CONFIG_KSU_SUSFS_HARDENED=n
+        EOF
+          echo "✅ ZeroMount patch applied"
+        else
+          echo "::warning::ZeroMount patch not found for ${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION} at $ZM_PATCH; skipping."
+        fi
+        echo "::endgroup::"
+
+    - name: Add WireGuard Support
+      shell: bash
+      if: ${{ inputs.wireguard == true || inputs.wireguard == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add WireGuard Support"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_WIREGUARD=y
+        EOF
+
+    - name: Add MGLRU & ZRAM Memory Optimizations
+      shell: bash
+      if: ${{ inputs.battery_opt == true || inputs.battery_opt == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add MGLRU & ZRAM Memory Optimizations"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_LRU_GEN=y
+        CONFIG_LRU_GEN_ENABLED=y
+        CONFIG_CRYPTO_LZ4=y
+        CONFIG_CRYPTO_ZSTD=y
+        CONFIG_ZRAM_DEF_COMP_LZ4=y
+        EOF
 
     - name: Add Tmpfs Support
       shell: bash
@@ -2271,6 +2447,18 @@ runs:
 
         export KCFLAGS="${KCFLAGS:-} $MAP $MPMAP $FPMAP -no-canonical-prefixes -fdiagnostics-color=never -Qunused-arguments -Wno-unused-command-line-argument -D__ANDROID_COMMON_KERNEL__"
         export KCPPFLAGS="${KCPPFLAGS:-} $MAP $MPMAP $FPMAP"
+
+        if [[ "${{ inputs.afdo }}" = "true" ]] && [ -n "${AFDO_PROFILE_PATH:-}" ] && [ -f "${AFDO_PROFILE_PATH:-}" ]; then
+          echo "✅ Stock AutoFDO profile detected: $AFDO_PROFILE_PATH"
+          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_AUTOFDO_CLANG=y
+        EOF
+          export CLANG_AUTOFDO_PROFILE="$AFDO_PROFILE_PATH"
+          echo "AFDO_ACTIVE=true" >> "$GITHUB_ENV"
+        else
+          echo "ℹ️ AutoFDO skipped (enabled=${{ inputs.afdo }}, profile=${AFDO_PROFILE_PATH:-not found})"
+          echo "AFDO_ACTIVE=false" >> "$GITHUB_ENV"
+        fi
         
         export LLVM=1 LLVM_IAS=1
         export ARCH=arm64 SUBARCH=arm64
@@ -2800,6 +2988,12 @@ runs:
           echo "NTSync: ${{ env.OP_NTSYNC }}"
           echo "Droidspaces: ${{ env.OP_DS }}"
           echo "Faster SDP Charging Support: ${{ env.OP_SDP900MA }}"
+          echo "USB-ADB Gate: ${{ env.OP_USBADB_GATE }}"
+          echo "ZeroMount: ${{ env.OP_ZEROMOUNT }}"
+          echo "WireGuard: ${{ inputs.wireguard }}"
+          echo "MGLRU & ZRAM: ${{ inputs.battery_opt }}"
+          echo "AutoFDO: ${AFDO_ACTIVE:-false}"
+          echo "BBG Branch: ${{ inputs.bbg_branch }}"
           echo ""
           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
           echo "AnyKernel3 ZIP SHA256: ${{ steps.create_zip.outputs.zip_sha256 }}"
@@ -2871,6 +3065,12 @@ runs:
           echo "| **NTSync** | ${{ env.OP_NTSYNC }} |"
           echo "| **Droidspaces** | ${{ env.OP_DS }} |"
           echo "| **Faster SDP Charging Support** | ${{ env.OP_SDP900MA }} |"
+          echo "| **USB-ADB Gate** | ${{ env.OP_USBADB_GATE }} |"
+          echo "| **ZeroMount** | ${{ env.OP_ZEROMOUNT }} |"
+          echo "| **WireGuard** | ${{ inputs.wireguard }} |"
+          echo "| **MGLRU & ZRAM** | ${{ inputs.battery_opt }} |"
+          echo "| **AutoFDO** | ${AFDO_ACTIVE:-false} |"
+          echo "| **BBG Branch** | ${{ inputs.bbg_branch }} |"
           
           echo ""
           echo "### 📊 Build Metrics"

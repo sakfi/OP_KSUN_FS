@@ -120,17 +120,40 @@ on:
         description: '🛂 Global Master Switch: Enable WireGuard for all models'
         required: true
         type: boolean
-        default: false
+        default: true
       enable_battery_opt:
-        description: '🔋 Global Master Switch: Enable Battery Optimization for all models'
+        description: '🔋 Global Master Switch: Enable MGLRU & ZRAM (LZ4/ZSTD) optimizations'
         required: true
         type: boolean
-        default: false
+        default: true
       enable_ntsync:
         description: '🕹️ Global Master Switch: Enable NTSync for all models'
         required: true
         type: boolean
         default: false
+      enable_afdo:
+        description: '⚡ Enable stock AutoFDO profile-guided optimization (auto-detected)'
+        required: false
+        type: boolean
+        default: true
+      enable_usbadb_gate:
+        description: '♆ Global Override: Force-enable USB-ADB Gate for all models'
+        required: false
+        type: boolean
+        default: false
+      enable_zeromount:
+        description: '🌀 Global Override: Enable experimental ZeroMount VFS redirection'
+        required: false
+        type: boolean
+        default: false
+      bbg_branch:
+        description: '🛡️ Baseband Guard (BBG) branch'
+        required: false
+        type: choice
+        options:
+          - disk-api
+          - main
+        default: disk-api
       optimize_level:
         description: "Compiler optimization level"
         required: true
@@ -494,6 +517,12 @@ jobs:
             cat << 'EOF'
           - Optimization: ${{ inputs.optimize_level }}
           - MLGO: ${{ inputs.mlgo }}
+          - AutoFDO: ${{ inputs.enable_afdo && '✅ Auto' || '❌ Disabled' }}
+          - BBG Branch: `${{ inputs.bbg_branch }}`
+          - WireGuard: ${{ inputs.enable_wireguard && '✅ Enabled' || '❌ Disabled' }}
+          - MGLRU & ZRAM: ${{ inputs.enable_battery_opt && '✅ Enabled' || '❌ Disabled' }}
+          - USB-ADB Gate Override: ${{ inputs.enable_usbadb_gate && '✅ Forced' || '⚙️ Per-Device' }}
+          - ZeroMount (Experimental): ${{ inputs.enable_zeromount && '✅ Enabled' || '❌ Disabled' }}
           - Clean Build/No Ccache: ${{ inputs.clean_build && '✅ Yes' || '❌ No' }}
           - Create Release: ${{ inputs.make_release && '✅ Yes' || '❌ No' }}
           - Create Debug Artifacts: ${{ inputs.debug && '✅ Yes' || '❌ No' }}
@@ -642,6 +671,12 @@ jobs:
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
           mlgo: ${{ inputs.mlgo }}
+          afdo: ${{ inputs.enable_afdo }}
+          bbg_branch: ${{ inputs.bbg_branch }}
+          wireguard: ${{ inputs.enable_wireguard }}
+          battery_opt: ${{ inputs.enable_battery_opt }}
+          usbadb_gate: ${{ inputs.enable_usbadb_gate }}
+          zeromount: ${{ inputs.enable_zeromount }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -703,6 +738,12 @@ jobs:
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
           mlgo: ${{ inputs.mlgo }}
+          afdo: ${{ inputs.enable_afdo }}
+          bbg_branch: ${{ inputs.bbg_branch }}
+          wireguard: ${{ inputs.enable_wireguard }}
+          battery_opt: ${{ inputs.enable_battery_opt }}
+          usbadb_gate: ${{ inputs.enable_usbadb_gate }}
+          zeromount: ${{ inputs.enable_zeromount }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -764,6 +805,12 @@ jobs:
           susfs_commit_hash_or_branch: ${{ matrix.susfs_resolved_hash }}
           optimize_level: ${{ inputs.optimize_level }}
           mlgo: ${{ inputs.mlgo }}
+          afdo: ${{ inputs.enable_afdo }}
+          bbg_branch: ${{ inputs.bbg_branch }}
+          wireguard: ${{ inputs.enable_wireguard }}
+          battery_opt: ${{ inputs.enable_battery_opt }}
+          usbadb_gate: ${{ inputs.enable_usbadb_gate }}
+          zeromount: ${{ inputs.enable_zeromount }}
           build_timestamp: ${{ inputs.build_timestamp }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
@@ -1080,12 +1127,12 @@ jobs:
             feature_flags=$(echo "$JSON_BUILD_DATA" | jq -r --arg MODEL "$model" --arg ORIG_MODEL "$possible_orig_model" --arg OS "$os_ver" '
               ([ .[] | select(.model == $ORIG_MODEL and .os_version == $OS) ][0]) //
               ([ .[] | select(.model == $MODEL      and .os_version == $OS) ][0]) |
-              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)\t\(.sdp900ma // false)"
+              "\(.hmbird // false)\t\(.susfs // false)\t\(.bbr // false)\t\(.bbg // false)\t\(.ttl // false)\t\(.ip_set // false)\t\(.unicode // false)\t\(.ds // false)\t\(.ntsync // false)\t\(.sdp900ma // false)\t\(.usbadb_gate // false)\t\(.zeromount // false)"
             ' | head -n 1)
             
             features=()
             if [[ -n "$feature_flags" ]]; then
-              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync sdp900ma <<< "$feature_flags"
+              IFS=$'\t' read -r hmbird susfs bbr bbg ttl ip_set unicode ds ntsync sdp900ma usbadb_gate zeromount <<< "$feature_flags"
               [[ "$hmbird" == "true" ]] && features+=("🐦 HMBIRD")
               features+=("ඞ SusFS (LKM)")
               if [[ "$bbr" == "true" ]]; then
@@ -1108,6 +1155,8 @@ jobs:
               [[ "$ds" == "true" ]] && features+=("💻 Droidspaces")
               [[ "$ntsync" == "true" ]] && features+=("🔃 NTSync")
               [[ "$sdp900ma" == "true" ]] && features+=("🔌 Faster SDP Charging")
+              [[ "$usbadb_gate" == "true" || "${{ inputs.enable_usbadb_gate }}" == "true" ]] && features+=("♆ USB-ADB Gate")
+              [[ "$zeromount" == "true" || "${{ inputs.enable_zeromount }}" == "true" ]] && features+=("🌀 ZeroMount")
             fi
             
             features_str=$(IFS=' '; echo "${features[*]:-N/A}")
@@ -1165,9 +1214,12 @@ jobs:
           | ✅ **LTO** | Link Time Optimization |
           | ⚡️ **TMPFS XATTR** | Extended attributes for Mountify support |
           | 🚀 **Optimization** | Memory, I/O, CPU scheduler, network tuning patches |
-          | 🔋 **Battery** | Multi-patch suite for power efficiency and wakelock reduction |
+          | 🔋 **Battery** | Multi-patch suite for power efficiency, MGLRU, ZRAM (LZ4/ZSTD) & wakelock reduction |
           | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
           | 🔌 **Faster SDP Charging** | Allow 900mA instead of 500mA on USB SDP data ports |
+          | ♆ **USB-ADB Gate** | Hardware-gated ADB that activates only when a PC is connected via USB |
+          | ⚡ **AutoFDO** | Stock GKI profile-guided compiler optimization where available |
+          | 🌀 **ZeroMount** | Optional mountless VFS path redirection (experimental) |
           
           <br>
           
