@@ -112,6 +112,38 @@ def patch_wq_power_efficient_default(text: str) -> tuple[str, str]:
     return new_text, "wq_power_efficient forced true by default"
 
 
+def patch_page_cluster_zero(text: str) -> tuple[str, str]:
+    """Set default vm.page-cluster to 0 in mm/swap.c for zero-overhead single-page ZRAM reads."""
+    marker = "/* ZRAM optimal: disable multi-page swap readahead */"
+    if marker in text:
+        return text, "already applied"
+
+    pattern = re.compile(
+        r"(void __init swap_setup\(void\)\s*\{.*?)(page_cluster\s*=\s*[1-9]\s*;)",
+        re.DOTALL,
+    )
+
+    def repl(m: re.Match[str]) -> str:
+        # Replace all non-zero page_cluster assignments inside swap_setup with 0
+        body = m.group(1)
+        return f"{body}{marker}\n\t\tpage_cluster = 0;"
+
+    # Match the whole swap_setup function to ensure all branches set page_cluster = 0
+    fn_pat = re.compile(r"(void __init swap_setup\(void\)\s*\{)(.*?)(\n\})", re.DOTALL)
+    m_fn = fn_pat.search(text)
+    if not m_fn:
+        return text, "swap_setup() not found"
+
+    fn_body = m_fn.group(2)
+    new_body, count = re.subn(r"page_cluster\s*=\s*[1-9]\s*;", "page_cluster = 0;", fn_body)
+    if count == 0:
+        return text, "no non-zero page_cluster assignment found"
+
+    new_fn = f"{m_fn.group(1)}\n\t{marker}{new_body}{m_fn.group(3)}"
+    new_text = text[:m_fn.start()] + new_fn + text[m_fn.end():]
+    return new_text, f"page_cluster = 0 ({count} branch(es) updated)"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Apply universal GKI battery optimizations.")
     parser.add_argument("--root", required=True, help="Path to common kernel source root")
@@ -129,8 +161,9 @@ def main() -> int:
     applied += int(patch_file(root / "mm/page-writeback.c", "3x fewer dirty writeback wakeups", patch_dirty_writeback_interval))
     applied += int(patch_file(root / "init/init_task.c", "Coalesce default background timers", patch_timer_slack))
     applied += int(patch_file(root / "kernel/workqueue.c", "Default power-efficient workqueues", patch_wq_power_efficient_default))
+    applied += int(patch_file(root / "mm/swap.c", "Optimal ZRAM page-cluster=0", patch_page_cluster_zero))
 
-    print(f"✅ Universal battery optimization pass complete ({applied}/5 rules applied).")
+    print(f"✅ Universal battery optimization pass complete ({applied}/6 rules applied).")
     return 0
 
 

@@ -1,7 +1,8 @@
 • Added Universal Battery Optimization Suite (5.10 - 6.12):
   - Pruned SOT/idle-draining latency patches (500ms blanket wakelock cap, 50ms F2FS urgent GC, 6ms congestion polling, and EAS-disrupting CPU scan/cache-hot-buddy tweaks) when Battery Optimization is enabled.
   - Enabled WQ_POWER_EFFICIENT_DEFAULT, Tickless Idle (NO_HZ_IDLE & RCU_FAST_NO_HZ), RCU_LAZY + RCU_NOCB_CPU, native PM Wakelock GC, and stripped hot-path kernel debug overhead.
-  - Added universal KMI-safe battery patcher (scripts/battery_opt/apply_universal_battery_opt.py): forces full MGLRU (0x7) against init.rc resets, halves per-CPU vmstat wakeups (2x HZ), cuts periodic dirty writeback wakeups 3x (15s), coalesces default background timer slack (100us), and defaults power-efficient workqueues ON.
+  - Added universal KMI-safe battery patcher (scripts/battery_opt/apply_universal_battery_opt.py): forces full MGLRU (0x7) against init.rc resets, halves per-CPU vmstat wakeups (2x HZ), cuts periodic dirty writeback wakeups 3x (15s), coalesces default background timer slack (100us), defaults power-efficient workqueues ON, and sets vm.page-cluster=0 for zero-overhead ZRAM reads.
+  - Disabled scheduler stats & desktop autogroup overhead (CONFIG_SCHEDSTATS=n, CONFIG_SCHED_AUTOGROUP=n), set fq_codel as default network qdisc (CONFIG_DEFAULT_FQ_CODEL=y), and enabled mq-deadline, kyber & bfq I/O schedulers (full AutoSystemBoost / Kernel Manager compatibility).
 • Added LZ4 1.10.0 (ARM64 ASM) & ZSTD 1.5.7 ZRAM acceleration (6.1 / 6.6 / 6.12) with MGLRU & ZRAM writeback tuning.
 • Added CVE-2026-43499 Linux rtmutex security fix (6.1 / 6.6 / 6.12, dry-run guarded).
 • Added USB-Gated ADB (usbadb_gate) across all 170 device configs so adbd activates only when physically connected to a PC.
