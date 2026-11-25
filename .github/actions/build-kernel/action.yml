@@ -1414,7 +1414,7 @@ runs:
             dest_path="$COMMON_KERNEL_FOLDER/kernel/module_overlay/modules/${module_name}.ko"
           fi
           
-          if [ -z "$dest_path" ]; then
+          if [ -n "$dest_path" ]; then
             cp -v -- "$file" "$dest_path"
           fi
           
@@ -1425,7 +1425,7 @@ runs:
           fi
         done
 
-        ccache --set-config=extra_files_to_hash="$copied_modules"
+        echo "CCACHE_EXTRAFILES=$copied_modules" >> "$GITHUB_ENV"
 
         echo "✅ Other patches applied"
         echo "::endgroup::"
