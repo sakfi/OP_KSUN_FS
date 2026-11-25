@@ -86,6 +86,36 @@ inputs:
     required: false
     type: boolean
     default: false
+  tproxy:
+    description: 'Enable Transparent Proxy (TPROXY) netfilter support for Clash/Sing-box/Xray'
+    required: false
+    type: boolean
+    default: true
+  gaming_hid:
+    description: 'Enable DualSense, Xbox, Switch Pro controllers & USB HID gadget support'
+    required: false
+    type: boolean
+    default: true
+  otg_fs:
+    description: 'Enable native NTFS3 & exFAT filesystems for USB OTG storage'
+    required: false
+    type: boolean
+    default: true
+  docker_cgroups:
+    description: 'Enable full Docker/LXC cgroups, veth, bridge & OverlayFS support'
+    required: false
+    type: boolean
+    default: true
+  cve_fixes:
+    description: 'Apply CVE-2026-43499 rtmutex security fix for 6.1/6.6/6.12 kernels'
+    required: false
+    type: boolean
+    default: true
+  lz4_zstd_opt:
+    description: 'Apply LZ4 1.10.0 (ARM64 ASM) & ZSTD 1.5.7 ZRAM acceleration patches (6.1/6.6/6.12)'
+    required: false
+    type: boolean
+    default: true
 
 outputs:
   kernel_version:
@@ -2084,6 +2114,168 @@ runs:
         CONFIG_ZRAM_DEF_COMP_LZ4=y
         EOF
 
+    - name: Apply CVE-2026-43499 rtmutex Security Fix
+      shell: bash
+      if: ${{ inputs.cve_fixes == true || inputs.cve_fixes == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply CVE-2026-43499 rtmutex Security Fix"
+        cd "$COMMON_KERNEL_FOLDER"
+        CVE_URL=""
+        case "${KERNEL_VER:-}" in
+          6.1)
+            CVE_URL="https://raw.githubusercontent.com/cctv18/oppo_oplus_realme_sm8650/main/other_patch/cve-2026-43499-rtmutex-6.1.patch"
+            ;;
+          6.6)
+            CVE_URL="https://raw.githubusercontent.com/cctv18/oppo_oplus_realme_sm8750/main/other_patch/cve-2026-43499-rtmutex-6.6.patch"
+            ;;
+          6.12)
+            CVE_URL="https://raw.githubusercontent.com/cctv18/oppo_oplus_realme_sm8850/main/other_patch/cve-2026-43499-rtmutex-6.12.patch"
+            ;;
+        esac
+
+        if [ -n "$CVE_URL" ]; then
+          CVE_FILE="/tmp/cve-2026-43499-rtmutex.patch"
+          if curl -fsSL --retry 3 --connect-timeout 20 -o "$CVE_FILE" "$CVE_URL"; then
+            if patch --dry-run --forward --batch -p1 -F 3 < "$CVE_FILE" >/dev/null 2>&1; then
+              patch --forward --batch --no-backup-if-mismatch -p1 -F 3 < "$CVE_FILE"
+              echo "✅ Applied CVE-2026-43499 rtmutex security fix for $KERNEL_VER"
+              echo "CVE_FIX_ACTIVE=true" >> "$GITHUB_ENV"
+            else
+              echo "ℹ️ CVE-2026-43499 patch not applicable or already applied on this tree; skipping."
+              echo "CVE_FIX_ACTIVE=skipped" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "::warning::Failed to download CVE-2026-43499 patch from $CVE_URL; skipping."
+            echo "CVE_FIX_ACTIVE=false" >> "$GITHUB_ENV"
+          fi
+        else
+          echo "ℹ️ No CVE-2026-43499 patch mapped for kernel ${KERNEL_VER:-unknown}; skipping."
+          echo "CVE_FIX_ACTIVE=skipped" >> "$GITHUB_ENV"
+        fi
+        echo "::endgroup::"
+
+    - name: Apply LZ4 1.10 & ZSTD 1.5.7 ZRAM Acceleration
+      shell: bash
+      if: ${{ inputs.lz4_zstd_opt == true || inputs.lz4_zstd_opt == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "::group::Apply LZ4 1.10 & ZSTD 1.5.7 ZRAM Acceleration"
+        cd "$COMMON_KERNEL_FOLDER"
+        ZRAM_REPO=""
+        NEED_ASM=false
+        case "${KERNEL_VER:-}" in
+          6.1)
+            ZRAM_REPO="https://raw.githubusercontent.com/cctv18/oppo_oplus_realme_sm8650/main/zram_patch"
+            NEED_ASM=true
+            ;;
+          6.6)
+            ZRAM_REPO="https://raw.githubusercontent.com/cctv18/oppo_oplus_realme_sm8750/main/zram_patch"
+            NEED_ASM=true
+            ;;
+          6.12)
+            ZRAM_REPO="https://raw.githubusercontent.com/cctv18/oppo_oplus_realme_sm8850/main/zram_patch"
+            NEED_ASM=false
+            ;;
+        esac
+
+        LZ4_APPLIED=false
+        ZSTD_APPLIED=false
+        if [ -n "$ZRAM_REPO" ]; then
+          if curl -fsSL --retry 3 --connect-timeout 20 -o /tmp/001-lz4.patch "$ZRAM_REPO/001-lz4.patch"; then
+            if [ "$NEED_ASM" = true ]; then
+              curl -fsSL --retry 3 --connect-timeout 20 -o "$COMMON_KERNEL_FOLDER/lib/lz4armv8.S" "$ZRAM_REPO/lz4armv8.S" || true
+            fi
+            if git apply --check /tmp/001-lz4.patch >/dev/null 2>&1; then
+              git apply /tmp/001-lz4.patch
+              LZ4_APPLIED=true
+              echo "✅ Applied LZ4 1.10.0 + ARM64 ASM acceleration patch"
+            elif patch --dry-run --forward --batch -p1 -F 3 < /tmp/001-lz4.patch >/dev/null 2>&1; then
+              patch --forward --batch --no-backup-if-mismatch -p1 -F 3 < /tmp/001-lz4.patch
+              LZ4_APPLIED=true
+              echo "✅ Applied LZ4 1.10.0 + ARM64 ASM acceleration patch (via patch)"
+            else
+              echo "ℹ️ LZ4 1.10.0 patch not cleanly applicable on this tree; skipping."
+              [ "$NEED_ASM" = true ] && rm -f "$COMMON_KERNEL_FOLDER/lib/lz4armv8.S"
+            fi
+          fi
+
+          if curl -fsSL --retry 3 --connect-timeout 20 -o /tmp/002-zstd.patch "$ZRAM_REPO/002-zstd.patch"; then
+            if patch --dry-run --forward --batch -p1 -F 3 < /tmp/002-zstd.patch >/dev/null 2>&1; then
+              patch --forward --batch --no-backup-if-mismatch -p1 -F 3 < /tmp/002-zstd.patch
+              ZSTD_APPLIED=true
+              echo "✅ Applied ZSTD 1.5.7 acceleration patch"
+            else
+              echo "ℹ️ ZSTD 1.5.7 patch not cleanly applicable on this tree; skipping."
+            fi
+          fi
+        else
+          echo "ℹ️ No LZ4/ZSTD acceleration patch mapped for kernel ${KERNEL_VER:-unknown}; skipping."
+        fi
+        echo "LZ4_ZSTD_ACTIVE=lz4:${LZ4_APPLIED},zstd:${ZSTD_APPLIED}" >> "$GITHUB_ENV"
+        echo "::endgroup::"
+
+    - name: Add Transparent Proxy (TPROXY) Support
+      shell: bash
+      if: ${{ inputs.tproxy == true || inputs.tproxy == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add Transparent Proxy (TPROXY) Support"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_NETFILTER_XT_TARGET_TPROXY=y
+        CONFIG_NETFILTER_XT_MATCH_SOCKET=y
+        CONFIG_NETFILTER_XT_MATCH_STATE=y
+        CONFIG_NETFILTER_XT_MATCH_MARK=y
+        CONFIG_NF_TPROXY_IPV4=y
+        CONFIG_NF_TPROXY_IPV6=y
+        EOF
+
+    - name: Add Gaming Controllers & USB HID Support
+      shell: bash
+      if: ${{ inputs.gaming_hid == true || inputs.gaming_hid == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add Gaming Controllers & USB HID Support"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_HID_BATTERY_STRENGTH=y
+        CONFIG_HID_SONY=y
+        CONFIG_SONY_FF=y
+        CONFIG_HID_PLAYSTATION=y
+        CONFIG_PLAYSTATION_FF=y
+        CONFIG_JOYSTICK_XPAD=y
+        CONFIG_JOYSTICK_XPAD_FF=y
+        CONFIG_JOYSTICK_XPAD_LEDS=y
+        CONFIG_HID_NINTENDO=y
+        CONFIG_BT_HIDP=y
+        CONFIG_USB_F_HID=y
+        EOF
+
+    - name: Add USB OTG Filesystems (NTFS3 & exFAT)
+      shell: bash
+      if: ${{ inputs.otg_fs == true || inputs.otg_fs == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add USB OTG Filesystems (NTFS3 & exFAT)"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_NTFS3_FS=y
+        CONFIG_EXFAT_FS=y
+        EOF
+
+    - name: Add Full Docker / LXC Cgroups Support
+      shell: bash
+      if: ${{ inputs.docker_cgroups == true || inputs.docker_cgroups == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add Full Docker / LXC Cgroups Support"
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_CGROUP_DEVICE=y
+        CONFIG_CGROUP_PIDS=y
+        CONFIG_CFS_BANDWIDTH=y
+        CONFIG_VETH=y
+        CONFIG_BRIDGE=y
+        CONFIG_OVERLAY_FS=y
+        EOF
+
     - name: Add Tmpfs Support
       shell: bash
       run: |
@@ -2994,6 +3186,12 @@ runs:
           echo "MGLRU & ZRAM: ${{ inputs.battery_opt }}"
           echo "AutoFDO: ${AFDO_ACTIVE:-false}"
           echo "BBG Branch: ${{ inputs.bbg_branch }}"
+          echo "TPROXY: ${{ inputs.tproxy }}"
+          echo "Gaming Controllers & HID: ${{ inputs.gaming_hid }}"
+          echo "OTG Filesystems (NTFS3/exFAT): ${{ inputs.otg_fs }}"
+          echo "Docker/LXC Cgroups: ${{ inputs.docker_cgroups }}"
+          echo "CVE-2026-43499 Fix: ${CVE_FIX_ACTIVE:-false}"
+          echo "LZ4 1.10 / ZSTD 1.5.7: ${LZ4_ZSTD_ACTIVE:-false}"
           echo ""
           echo "Image SHA256: ${{ steps.collect_stats.outputs.image_sha256 }}"
           echo "AnyKernel3 ZIP SHA256: ${{ steps.create_zip.outputs.zip_sha256 }}"
@@ -3071,6 +3269,12 @@ runs:
           echo "| **MGLRU & ZRAM** | ${{ inputs.battery_opt }} |"
           echo "| **AutoFDO** | ${AFDO_ACTIVE:-false} |"
           echo "| **BBG Branch** | ${{ inputs.bbg_branch }} |"
+          echo "| **TPROXY** | ${{ inputs.tproxy }} |"
+          echo "| **Gaming Controllers & HID** | ${{ inputs.gaming_hid }} |"
+          echo "| **OTG Filesystems (NTFS3/exFAT)** | ${{ inputs.otg_fs }} |"
+          echo "| **Docker/LXC Cgroups** | ${{ inputs.docker_cgroups }} |"
+          echo "| **CVE-2026-43499 Fix** | ${CVE_FIX_ACTIVE:-false} |"
+          echo "| **LZ4 1.10 / ZSTD 1.5.7** | ${LZ4_ZSTD_ACTIVE:-false} |"
           
           echo ""
           echo "### 📊 Build Metrics"
