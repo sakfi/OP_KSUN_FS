@@ -1,18 +1,21 @@
-• Updated KSUN version to 33553.
-• Add SusFS v2.4.0 support and CONFIG_KSU_SUSFS_PRIORITY_UID_FILTER.
-• Apply hide_adb_jdwp_sockets.patch to hide ADB and JDWP sockets.
-• Upload matching KSUN/KSU Manager APK alongside kernel release assets.
-• Add OnePlus 15 A16 6.12.23 Support (OP15-6.12.23).
-• Add OnePlus Nord CE6 A16 Support.
-• Add OnePlus N6X A16 Support.
-• Add OnePlus 13R A16 Support (OP13r-6.1.141).
-• Fix mt6895 boot issue caused by debloat vendor modules commit.
-• Enable CONFIG_MACVLAN for Updated Droidspaces support.
-• Add MLGO support with automatic compiler heuristic detection.
-• Fix sound issue caused by an exception in 5.10.226+ kernels (mtk-tfa98xx firmware traversal).
-• Fix bootloop caused by export test_task_ux in 6.1.141+ kernels.
-• Fix task_struct KABI alignment on 6.1.157 and above for Nord 5.
-• Fix missing linux/dma-buf.h on early Android 16 6.12 (below sublevel 92) kernels.
-• Allow 900 mA on (SDP) USB data ports instead of fixed 500mA.
-• Transitioned to pure Built-in KSUN with modular SUSFS Guard LKM via KSUN Manager.
-• Updated all kernel source trees to the latest available OSS drops.
+• Added Universal Battery Optimization Suite (5.10 - 6.12):
+  - Pruned SOT/idle-draining latency patches (500ms blanket wakelock cap, 50ms F2FS urgent GC, 6ms congestion polling, and EAS-disrupting CPU scan/cache-hot-buddy tweaks) when Battery Optimization is enabled.
+  - Enabled WQ_POWER_EFFICIENT_DEFAULT, Tickless Idle (NO_HZ_IDLE & RCU_FAST_NO_HZ), RCU_LAZY + RCU_NOCB_CPU, native PM Wakelock GC, and stripped hot-path kernel debug overhead.
+  - Added universal KMI-safe battery patcher (scripts/battery_opt/apply_universal_battery_opt.py): forces full MGLRU (0x7) against init.rc resets, halves per-CPU vmstat wakeups (2x HZ), cuts periodic dirty writeback wakeups 3x (15s), coalesces default background timer slack (100us), and defaults power-efficient workqueues ON.
+• Added LZ4 1.10.0 (ARM64 ASM) & ZSTD 1.5.7 ZRAM acceleration (6.1 / 6.6 / 6.12) with MGLRU & ZRAM writeback tuning.
+• Added CVE-2026-43499 Linux rtmutex security fix (6.1 / 6.6 / 6.12, dry-run guarded).
+• Added USB-Gated ADB (usbadb_gate) across all 170 device configs so adbd activates only when physically connected to a PC.
+• Added stock AutoFDO (CONFIG_AUTOFDO_CLANG) auto-detection alongside MLGO, plus -Os (CONFIG_CC_OPTIMIZE_FOR_SIZE) compiler profile option.
+• Upgraded Baseband Guard (BBG) to disk-api branch with automatic fallback to main.
+• Added OnePlus android14-6.1.141+ F2FS bootloop revert guards and fixed module overlay ccache hashing via CCACHE_EXTRAFILES.
+• Added Clean GKI Feature Packs (100% boot-safe & universal across 5.10 - 6.12):
+  - In-kernel WireGuard VPN (CONFIG_WIREGUARD=y).
+  - Transparent Proxy (TPROXY) netfilter support for Clash, Sing-box & Xray.
+  - Gaming Controllers (DualSense/DualShock, Xbox, Switch Pro) & USB HID Gadget support.
+  - Native NTFS3 & exFAT filesystems for USB OTG storage.
+  - Full Docker / LXC Cgroups, veth, bridge & OverlayFS container support.
+  - USB Ethernet (RTL8152/AX88179/CDC_NCM), USB Serial (CH341/CP210X/FTDI) & HDMI UVC Capture Card drivers.
+  - Audiophile USB-C DAC & Hi-Res Audio (UAC1/2/3 + ALSA HRTimer).
+  - DriveDroid bootable USB ISO / Mass Storage gadget support & Multipath TCP (MPTCP).
+• Added opt-in experimental ZeroMount VFS redirection toggle (disabled by default to preserve Clean GKI + SUSFS LKM).
+• Cleaned up legacy unused workflow inputs to stay within GitHub Actions' 25-input workflow_dispatch limit.
