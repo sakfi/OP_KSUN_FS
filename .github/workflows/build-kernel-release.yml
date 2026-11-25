@@ -1224,7 +1224,7 @@ jobs:
           | ✅ **LTO** | Link Time Optimization |
           | ⚡️ **TMPFS XATTR** | Extended attributes for Mountify support |
           | 🚀 **Optimization** | Memory, I/O, CPU scheduler, network tuning patches |
-          | 🔋 **Battery** | WQ_POWER_EFFICIENT, Tickless Idle (NO_HZ), MGLRU, ZRAM (LZ4/ZSTD), clean EAS & wakelock GC |
+          | 🔋 **Battery** | RCU_LAZY, WQ_POWER_EFFICIENT, Tickless Idle, Forced MGLRU (0x7), ZRAM (LZ4/ZSTD), 2× vmstat / 3× writeback wakeup reduction & debug stripping |
           | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
           | 🔌 **Faster SDP Charging** | Allow 900mA instead of 500mA on USB SDP data ports |
           | ♆ **USB-ADB Gate** | Hardware-gated ADB that activates only when a PC is connected via USB |

@@ -2109,16 +2109,19 @@ runs:
         CONFIG_WIREGUARD=y
         EOF
 
-    - name: Add Battery, Power & Memory Optimizations (WQ_POWER_EFFICIENT, Tickless Idle, MGLRU, ZRAM)
+    - name: Add Battery, Power & Memory Optimizations (WQ_POWER_EFFICIENT, RCU_LAZY, Tickless Idle, MGLRU, ZRAM)
       shell: bash
       if: ${{ inputs.battery_opt == true || inputs.battery_opt == 'true' }}
       run: |
         set -euo pipefail
-        echo "Add Battery, Power & Memory Optimizations"
+        echo "::group::Add Battery, Power & Memory Optimizations"
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_WQ_POWER_EFFICIENT_DEFAULT=y
         CONFIG_NO_HZ_IDLE=y
         CONFIG_RCU_FAST_NO_HZ=y
+        CONFIG_RCU_NOCB_CPU=y
+        CONFIG_RCU_NOCB_CPU_DEFAULT_ALL=y
+        CONFIG_RCU_LAZY=y
         CONFIG_PM_WAKELOCKS_GC=y
         CONFIG_ENERGY_MODEL=y
         CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
@@ -2129,7 +2132,23 @@ runs:
         CONFIG_CRYPTO_ZSTD=y
         CONFIG_ZRAM_DEF_COMP_LZ4=y
         CONFIG_ZRAM_WRITEBACK=y
+        CONFIG_SCHED_DEBUG=n
+        CONFIG_DEBUG_PREEMPT=n
+        CONFIG_PM_ADVANCED_DEBUG=n
+        CONFIG_SLUB_DEBUG=n
+        CONFIG_LOCK_STAT=n
+        CONFIG_DEBUG_RT_MUTEXES=n
+        CONFIG_DEBUG_SPINLOCK=n
+        CONFIG_DEBUG_MUTEXES=n
         EOF
+
+        BATT_PY="${GITHUB_WORKSPACE}/action-source/scripts/battery_opt/apply_universal_battery_opt.py"
+        if [ -f "$BATT_PY" ]; then
+          python3 "$BATT_PY" --root "$COMMON_KERNEL_FOLDER"
+        else
+          echo "⚠️ $BATT_PY not found, skipping universal source battery patcher."
+        fi
+        echo "::endgroup::"
 
     - name: Apply CVE-2026-43499 rtmutex Security Fix
       shell: bash
