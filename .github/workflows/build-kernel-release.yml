@@ -151,9 +151,9 @@ on:
         required: false
         type: choice
         options:
-          - disk-api
           - main
-        default: disk-api
+          - disk-api
+        default: main
       enable_feature_packs:
         description: '📦 Clean GKI Feature Packs (TPROXY, Controllers/HID, NTFS3/exFAT, Docker, USB-Eth/DAC/DriveDroid/MPTCP)'
         required: false

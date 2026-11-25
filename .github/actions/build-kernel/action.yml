@@ -62,10 +62,10 @@ inputs:
     type: boolean
     default: true
   bbg_branch:
-    description: 'Baseband Guard branch to install (disk-api or main)'
+    description: 'Baseband Guard branch to install (main or disk-api)'
     required: false
     type: string
-    default: 'disk-api'
+    default: 'main'
   wireguard:
     description: 'Enable in-kernel WireGuard VPN support (CONFIG_WIREGUARD=y)'
     required: false
@@ -2090,17 +2090,23 @@ runs:
         ZM_PATCH="$ZEROMOUNT_FOLDER/${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}/KernelSU-Next/patches/60_zeromount-${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}.patch"
         if [ -f "$ZM_PATCH" ]; then
           cd "$COMMON_KERNEL_FOLDER"
-          patch -p1 -F3 --forward --no-backup-if-mismatch < "$ZM_PATCH"
-          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+          if patch --dry-run -p1 -F3 --forward --batch < "$ZM_PATCH" >/dev/null 2>&1; then
+            patch -p1 -F3 --forward --batch --no-backup-if-mismatch < "$ZM_PATCH"
+            cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_ZEROMOUNT=y
         CONFIG_KSU_SUSFS_SUS_KSTAT_REDIRECT=n
         CONFIG_KSU_SUSFS_UNICODE_FILTER=n
         CONFIG_KSU_SUSFS_HIDDEN_NAME=n
         CONFIG_KSU_SUSFS_HARDENED=n
         EOF
-          echo "✅ ZeroMount patch applied"
+            echo "✅ ZeroMount patch applied"
+          else
+            echo "::warning::ZeroMount patch ($ZM_PATCH) has hunk conflicts on Clean GKI (requires in-tree SUSFS context in fs/readdir.c & fs/namei.c); skipping ZeroMount to keep build clean."
+            echo "OP_ZEROMOUNT=skipped" >> "$GITHUB_ENV"
+          fi
         else
           echo "::warning::ZeroMount patch not found for ${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION} at $ZM_PATCH; skipping."
+          echo "OP_ZEROMOUNT=skipped" >> "$GITHUB_ENV"
         fi
         echo "::endgroup::"
 
