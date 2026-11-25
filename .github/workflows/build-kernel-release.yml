@@ -122,7 +122,7 @@ on:
         type: boolean
         default: true
       enable_battery_opt:
-        description: '🔋 Global Master Switch: Enable MGLRU & ZRAM (LZ4/ZSTD) optimizations'
+        description: '🔋 Battery Optimization Suite (WQ_POWER_EFFICIENT, Tickless Idle, MGLRU/ZRAM, prunes SOT-draining patches)'
         required: true
         type: boolean
         default: true
@@ -1224,7 +1224,7 @@ jobs:
           | ✅ **LTO** | Link Time Optimization |
           | ⚡️ **TMPFS XATTR** | Extended attributes for Mountify support |
           | 🚀 **Optimization** | Memory, I/O, CPU scheduler, network tuning patches |
-          | 🔋 **Battery** | Multi-patch suite for power efficiency, MGLRU, ZRAM (LZ4/ZSTD) & wakelock reduction |
+          | 🔋 **Battery** | WQ_POWER_EFFICIENT, Tickless Idle (NO_HZ), MGLRU, ZRAM (LZ4/ZSTD), clean EAS & wakelock GC |
           | 🛂 **WireGuard** | Fast, modern, and secure kernel-level VPN |
           | 🔌 **Faster SDP Charging** | Allow 900mA instead of 500mA on USB SDP data ports |
           | ♆ **USB-ADB Gate** | Hardware-gated ADB that activates only when a PC is connected via USB |
