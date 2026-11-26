@@ -62,9 +62,11 @@ inputs:
     type: boolean
     default: true
   bbg_branch:
+    description: 'Baseband Guard branch to install (disk-api or main)'
     description: 'Baseband Guard branch to install (main or disk-api)'
     required: false
     type: string
+    default: 'disk-api'
     default: 'main'
   wireguard:
     description: 'Enable in-kernel WireGuard VPN support (CONFIG_WIREGUARD=y)'
@@ -1684,7 +1686,15 @@ runs:
         case "$OP_BRANCH" in
           wild/sm8850|wild/sm8845)
             echo "Applying BBG efisp abl whitelist patch"
-            patch -p1 < "$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-abl-and-efisp-flashing-for-efisp-exploit-devices.patch"
+            BBG_EFISP_PATCH="$KERNEL_PATCHES_FOLDER/common/bbg/0001-Enable-abl-and-efisp-flashing-for-efisp-exploit-devices.patch"
+            if [ -f "$BBG_EFISP_PATCH" ]; then
+              if patch --dry-run --forward --batch -p1 -F 3 < "$BBG_EFISP_PATCH" >/dev/null 2>&1; then
+                patch --forward --batch --no-backup-if-mismatch -p1 -F 3 < "$BBG_EFISP_PATCH"
+                echo "✅ BBG efisp abl whitelist patch applied"
+              else
+                echo "::warning::BBG efisp abl whitelist patch conflicts with upstream Baseband-guard; skipping to keep build clean."
+              fi
+            fi
           ;;
         esac
         
@@ -2090,6 +2100,8 @@ runs:
         ZM_PATCH="$ZEROMOUNT_FOLDER/${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}/KernelSU-Next/patches/60_zeromount-${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}.patch"
         if [ -f "$ZM_PATCH" ]; then
           cd "$COMMON_KERNEL_FOLDER"
+          patch -p1 -F3 --forward --no-backup-if-mismatch < "$ZM_PATCH"
+          cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
           if patch --dry-run -p1 -F3 --forward --batch < "$ZM_PATCH" >/dev/null 2>&1; then
             patch -p1 -F3 --forward --batch --no-backup-if-mismatch < "$ZM_PATCH"
             cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
@@ -2099,6 +2111,7 @@ runs:
         CONFIG_KSU_SUSFS_HIDDEN_NAME=n
         CONFIG_KSU_SUSFS_HARDENED=n
         EOF
+          echo "✅ ZeroMount patch applied"
             echo "✅ ZeroMount patch applied"
           else
             echo "::warning::ZeroMount patch ($ZM_PATCH) has hunk conflicts on Clean GKI (requires in-tree SUSFS context in fs/readdir.c & fs/namei.c); skipping ZeroMount to keep build clean."
@@ -2187,19 +2200,24 @@ runs:
         esac
 
         if [ -n "$CVE_URL" ]; then
-          CVE_FILE="/tmp/cve-2026-43499-rtmutex.patch"
-          if curl -fsSL --retry 3 --connect-timeout 20 -o "$CVE_FILE" "$CVE_URL"; then
-            if patch --dry-run --forward --batch -p1 -F 3 < "$CVE_FILE" >/dev/null 2>&1; then
-              patch --forward --batch --no-backup-if-mismatch -p1 -F 3 < "$CVE_FILE"
-              echo "✅ Applied CVE-2026-43499 rtmutex security fix for $KERNEL_VER"
-              echo "CVE_FIX_ACTIVE=true" >> "$GITHUB_ENV"
-            else
-              echo "ℹ️ CVE-2026-43499 patch not applicable or already applied on this tree; skipping."
-              echo "CVE_FIX_ACTIVE=skipped" >> "$GITHUB_ENV"
-            fi
+          if ! grep -q "define scoped_guard" include/linux/cleanup.h 2>/dev/null; then
+            echo "ℹ️ Kernel lacks scoped_guard() in include/linux/cleanup.h (e.g. older 6.1.75 tree); skipping CVE-2026-43499 patch."
+            echo "CVE_FIX_ACTIVE=skipped" >> "$GITHUB_ENV"
           else
-            echo "::warning::Failed to download CVE-2026-43499 patch from $CVE_URL; skipping."
-            echo "CVE_FIX_ACTIVE=false" >> "$GITHUB_ENV"
+            CVE_FILE="/tmp/cve-2026-43499-rtmutex.patch"
+            if curl -fsSL --retry 3 --connect-timeout 20 -o "$CVE_FILE" "$CVE_URL"; then
+              if patch --dry-run --forward --batch -p1 -F 3 < "$CVE_FILE" >/dev/null 2>&1; then
+                patch --forward --batch --no-backup-if-mismatch -p1 -F 3 < "$CVE_FILE"
+                echo "✅ Applied CVE-2026-43499 rtmutex security fix for $KERNEL_VER"
+                echo "CVE_FIX_ACTIVE=true" >> "$GITHUB_ENV"
+              else
+                echo "ℹ️ CVE-2026-43499 patch not applicable or already applied on this tree; skipping."
+                echo "CVE_FIX_ACTIVE=skipped" >> "$GITHUB_ENV"
+              fi
+            else
+              echo "::warning::Failed to download CVE-2026-43499 patch from $CVE_URL; skipping."
+              echo "CVE_FIX_ACTIVE=false" >> "$GITHUB_ENV"
+            fi
           fi
         else
           echo "ℹ️ No CVE-2026-43499 patch mapped for kernel ${KERNEL_VER:-unknown}; skipping."
