@@ -62,11 +62,9 @@ inputs:
     type: boolean
     default: true
   bbg_branch:
-    description: 'Baseband Guard branch to install (disk-api or main)'
     description: 'Baseband Guard branch to install (main or disk-api)'
     required: false
     type: string
-    default: 'disk-api'
     default: 'main'
   wireguard:
     description: 'Enable in-kernel WireGuard VPN support (CONFIG_WIREGUARD=y)'
